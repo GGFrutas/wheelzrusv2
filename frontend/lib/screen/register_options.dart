@@ -60,7 +60,7 @@ class _RegisterOptionsScreenState extends State<RegisterOptionsScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => IndividualRegisterScreen(),
+                        builder: (context) => const IndividualRegisterScreen(),
                       ),
                     );
                   },
@@ -92,7 +92,7 @@ class _RegisterOptionsScreenState extends State<RegisterOptionsScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => CompanyRegisterScreen(),
+                        builder: (context) => const CompanyRegisterScreen(),
                       ),
                     );
                   },

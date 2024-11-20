@@ -17,8 +17,8 @@ Route::middleware([HandleCors::class])->group(function () {
             'message' => 'Api is working'
         ], 200);
     });
-
-    Route::post('createTransaction', [TransactionController::class, 'create']);
+    Route::post('/createTransaction', [TransactionController::class, 'create'])->middleware('api');
+    // Route::post('createTransaction', [TransactionController::class, 'create']);
     Route::post('loginDriver', [AuthenticationController::class, 'loginDriver']);
     Route::post('register', [AuthenticationController::class, 'register']);
     Route::post('login', [AuthenticationController::class, 'login']);

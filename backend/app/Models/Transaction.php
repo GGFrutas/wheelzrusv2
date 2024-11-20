@@ -22,11 +22,18 @@ class Transaction extends Model
         'destination',
         'eta',
         'etd',
-        'status'
+        'status',
+        'signature_path', // Add this to allow signature path saving
     ];
 
     // Define relationships
     public function user() {
         return $this->belongsTo(User::class);
     }
+
+    protected $casts = [
+        'eta' => 'datetime',
+        'etd' => 'datetime',
+        'transaction_date' => 'datetime',
+    ];
 }

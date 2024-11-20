@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'dart:math';
 import 'package:frontend/notifiers/transaction_notifier.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/material.dart';
@@ -6,6 +8,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/provider/accepted_transaction.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:location/location.dart';
+import 'package:signature/signature.dart'; // Import signature package
+import 'package:path_provider/path_provider.dart';
+import 'dart:typed_data';
 
 class TransactionScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic> user;
@@ -17,6 +22,12 @@ class TransactionScreen extends ConsumerStatefulWidget {
 }
 
 class _TransactionScreenState extends ConsumerState<TransactionScreen> {
+  final SignatureController _controller = SignatureController(
+    penStrokeWidth: 5,
+    penColor: Colors.black,
+    exportBackgroundColor: Colors.white,
+  );
+
   @override
   void initState() {
     initLocation();
@@ -54,7 +65,6 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           setState(() {
-            print(_locationData.toString());
             mapController.move(
               LatLng(
                   _locationData?.latitude ?? 0, _locationData?.longitude ?? 0),
@@ -66,22 +76,73 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
     }
   }
 
-  void _success(transaction) {
+  Future<void> saveSignature(Uint8List signatureBytes) async {
+    final directory = await getApplicationDocumentsDirectory();
+    final filePath = '${directory.path}/signature.png';
+    final file = File(filePath);
+    await file.writeAsBytes(signatureBytes);
+    print('Signature saved to $filePath');
+  }
+
+  void _success(transaction, context) async {
+    // Export the signature as a PNG byte array
+    final signatureBytes =
+        await _controller.toPngBytes(height: 1000, width: 1000);
+    if (signatureBytes == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          key: Key('snackbarNoImage'),
+          content: Text('Failed to generate signature image'),
+        ),
+      );
+      return;
+    }
+    await saveSignature(signatureBytes);
+
+    final random = Random();
+    final transactionId = random.nextInt(1000000);
+    // Pass the signature bytes to the submitTransaction function
     ref.read(transactionNotifierProvider.notifier).submitTransaction(
-        userId: transaction.id,
-        amount: transaction.amount,
-        transactionDate:
-            DateTime.parse(transaction.eta), //transaction.transactionDate,
-        description: transaction.booking, //transaction.description,
-        transactionId:
-            "89", //transaction.id.toString(), //transaction.transactionId,
-        booking: transaction.booking,
-        location: transaction.location,
-        destination: transaction.destination,
-        eta: DateTime.parse(transaction.eta),
-        etd: DateTime.parse(transaction.etd),
-        status: transaction.status,
-        context: context);
+          userId: 1,
+          amount: transaction.amount,
+          transactionDate: DateTime.now(),
+          description: transaction.booking,
+          transactionId:
+              transactionId.toString(), // Use your actual transaction ID
+          booking: transaction.booking,
+          location: transaction.location,
+          destination: transaction.destination,
+          eta: DateTime.now(),
+          etd: DateTime.now(),
+          status: transaction.status,
+          signature: signatureBytes, // Pass the signature bytes here
+          context: context,
+        );
+
+    if (mounted) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => Scaffold(
+            appBar: AppBar(
+              title: const Text('PNG Image'),
+            ),
+            body: Center(
+              child: Container(
+                color: Colors.grey[300],
+                child: Image.memory(signatureBytes),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
@@ -105,11 +166,10 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
               children: [
                 // Map and Booking Details Combined in One Card
                 Container(
-                  // Combine Map and Details
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(15),
-                    color: Colors.white, // Background color of the card
+                    color: Colors.white,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -178,6 +238,39 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                       const SizedBox(
                           height: 10), // Space between the map and details
 
+                      // Signature Widget (Signature Canvas)
+                      const SizedBox(height: 20),
+                      Text(
+                        'Please provide your signature below:',
+                        style: GoogleFonts.poppins(fontSize: 16),
+                      ),
+                      Signature(
+                        controller: _controller,
+                        width: 300,
+                        height: 150,
+                        backgroundColor: Colors.grey[200]!,
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Clear Button to clear the signature
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          style: TextButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 10),
+                          ),
+                          onPressed: () => _controller.clear(),
+                          child: const Text('Clear Signature',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                      const SizedBox(
+                          height: 10), // Space between signature and details
+
                       // Booking details below the map
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -188,30 +281,29 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                               child: Text(
                                 transact.booking,
                                 style: GoogleFonts.poppins(
-                                    // color: Colors.black, // Text color for status
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 22,
-                                    letterSpacing: 0.9),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 22,
+                                  letterSpacing: 0.9,
+                                ),
                               )),
                           Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 36, vertical: 8),
                             decoration: BoxDecoration(
-                                color: _getStatusColor(transact
-                                    .status), // Background color for status
-                                borderRadius: BorderRadius.circular(5)),
+                              color: _getStatusColor(transact.status),
+                              borderRadius: BorderRadius.circular(5),
+                            ),
                             child: Text(
                               transact.status,
                               style: GoogleFonts.poppins(
-                                color: Colors.white, // Text color for status
-                                // fontSize: 16,
+                                color: Colors.white,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),
                         ],
                       ),
-
+                      // ... Rest of the booking details ...
                       Row(
                         children: [
                           const Icon(Icons.location_on,
@@ -267,12 +359,11 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 10),
                       Align(
                         alignment: Alignment.centerLeft,
                         child: TextButton(
                           onPressed: () {
-                            _success(transact);
+                            _success(transact, context);
                           },
                           style: TextButton.styleFrom(
                             backgroundColor: Colors.blue,
@@ -282,16 +373,14 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                           child: const Text(
                             'Done',
                             style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold),
                           ),
                         ),
                       ),
-                      // ... other rows of booking details ...
                     ],
                   ),
-                )
+                ),
               ],
             ),
           );

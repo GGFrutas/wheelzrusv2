@@ -12,10 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('transactions', function (Blueprint $table) {
-            $table->date('transaction_date')->nullable();
-            $table->date('eta')->nullable();
-            $table->date('etd')->nullable();
-            //
+            $table->string('signature_path')->nullable()->after('status'); // Add the new column
         });
     }
 
@@ -25,8 +22,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('transactions', function (Blueprint $table) {
-            $table->dropColumn('etd');
-            //
+            $table->dropColumn('signature_path'); // Drop the column if rolling back
         });
     }
 };

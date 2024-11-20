@@ -109,7 +109,7 @@ class _UpdateUserScreenState extends ConsumerState<UpdateUserScreen> {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (context) => LoginScreen(),
+        builder: (context) => const LoginScreen(),
       ),
     );
   }

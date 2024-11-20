@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/provider/location_provider.dart';
 
 class LocationScreen extends ConsumerWidget {
+  const LocationScreen({super.key});
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final locationState = ref.watch(locationProvider);
@@ -10,7 +12,7 @@ class LocationScreen extends ConsumerWidget {
     final locationService = ref.read(locationServiceProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text('Location Example')),
+      appBar: AppBar(title: const Text('Location Example')),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -25,7 +27,7 @@ class LocationScreen extends ConsumerWidget {
                 context: context,
               );
             },
-            child: Text('Get Location'),
+            child: const Text('Get Location'),
           ),
         ],
       ),

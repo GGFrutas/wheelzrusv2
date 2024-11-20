@@ -29,7 +29,7 @@ class HomePage extends ConsumerWidget {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (context) => LoginScreen(),
+        builder: (context) => const LoginScreen(),
       ),
     );
   }

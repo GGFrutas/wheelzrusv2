@@ -30,7 +30,7 @@ class LocationService {
       // Display a snackbar using Riverpod to handle opening app settings
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
+          content: const Text(
               'We need permission to get your location to provide services.'),
           action: SnackBarAction(
             label: 'Open Settings',

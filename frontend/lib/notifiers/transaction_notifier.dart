@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/models/transaction_submit.dart';
 import 'package:frontend/services/transaction_service.dart';
+import 'dart:typed_data';
 
 final transactionNotifierProvider =
     StateNotifierProvider<TransactionNotifier, TransactionSub>(
@@ -20,45 +21,47 @@ class TransactionNotifier extends StateNotifier<TransactionSub> {
       : super(TransactionSub(
           userId: '',
           amount: 0.0,
-          transactionDate: DateTime.now(),
+          transactionDate: null,
           description: '',
           transactionId: '',
           booking: '',
           location: '',
           destination: '',
-          eta: DateTime.now(),
-          etd: DateTime.now(),
+          eta: null,
+          etd: null,
           status: '',
+          signature: Uint8List(0), // Empty Uint8List as default
         ));
 
   Future<void> submitTransaction({
     required int userId,
     required double amount,
-    required DateTime transactionDate,
+    DateTime? transactionDate,
     required String description,
     required String transactionId,
     required String booking,
     required String location,
     required String destination,
-    required DateTime eta,
-    required DateTime etd,
+    DateTime? eta,
+    DateTime? etd,
     required String status,
+    required Uint8List signature,
     required BuildContext context,
   }) async {
     try {
       final response = await _transactionService.submit(
-        userId,
-        amount,
-        transactionDate,
-        description,
-        transactionId,
-        booking,
-        location,
-        destination,
-        eta,
-        etd,
-        status,
-      );
+          userId,
+          amount,
+          transactionDate,
+          description,
+          transactionId,
+          booking,
+          location,
+          destination,
+          eta,
+          etd,
+          status,
+          signature);
 
       final data =
           response is String ? jsonDecode(response as String) : response;

@@ -375,7 +375,7 @@ class _CompanyRegisterScreenState extends ConsumerState<CompanyRegisterScreen> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => LoginScreen(),
+                                  builder: (context) => const LoginScreen(),
                                 ),
                               );
                             },

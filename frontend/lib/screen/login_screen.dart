@@ -211,7 +211,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => RegisterOptionsScreen(),
+                              builder: (context) => const RegisterOptionsScreen(),
                             ),
                           );
                         },
