@@ -27,6 +27,9 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
   void initState() {
     initLocation();
     super.initState();
+    _controller.addListener(() {
+      setState(() {}); // Rebuild to update the visibility of the Clear button
+    });
   }
 
   final SignatureController _controller = SignatureController(
