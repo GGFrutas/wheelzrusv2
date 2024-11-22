@@ -66,7 +66,117 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
     }
   }
 
-  void _success(transaction) {
+  // File? _image; // Variable to store the selected image
+
+  List<File> _images = [];
+
+  Future<void> _pickImage() async {
+    final ImagePicker picker = ImagePicker();
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Gallery'),
+                onTap: () async {
+                  final XFile? pickedFile =
+                      await picker.pickImage(source: ImageSource.gallery);
+                  if (pickedFile != null) {
+                    setState(() {
+                      _images
+                          .add(File(pickedFile.path)); // Add image to the list
+                    });
+                  }
+                  Navigator.of(context).pop();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Camera'),
+                onTap: () async {
+                  final XFile? pickedFile =
+                      await picker.pickImage(source: ImageSource.camera);
+                  if (pickedFile != null) {
+                    setState(() {
+                      _images
+                          .add(File(pickedFile.path)); // Add image to the list
+                    });
+                  }
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildImageThumbnail(File image) {
+    return Stack(
+      children: [
+        Container(
+          margin: const EdgeInsets.all(4),
+          width: 70,
+          height: 70,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            image: DecorationImage(
+              image: FileImage(image),
+              fit: BoxFit.cover,
+            ),
+          ),
+        ),
+        Positioned(
+          top: 0,
+          right: 0,
+          child: GestureDetector(
+            onTap: () {
+              setState(() {
+                _images.remove(image); // Remove the selected image
+              });
+            },
+            child: const Icon(
+              Icons.cancel,
+              color: Colors.red,
+              size: 20,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> saveSignature(Uint8List signatureBytes) async {
+    final directory = await getApplicationDocumentsDirectory();
+    final filePath = '${directory.path}/signature.png';
+    final file = File(filePath);
+    await file.writeAsBytes(signatureBytes);
+    print('Signature saved to $filePath');
+  }
+
+  void _success(transaction, context) async {
+    // Export the signature as a PNG byte array
+    final signatureBytes =
+        await _controller.toPngBytes(height: 1000, width: 1000);
+    if (signatureBytes == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          key: Key('snackbarNoImage'),
+          content: Text('Failed to generate signature image'),
+        ),
+      );
+      return;
+    }
+    await saveSignature(signatureBytes);
+
+    final random = Random();
+    final transactionId = random.nextInt(1000000);
+    // Pass the signature bytes to the submitTransaction function
     ref.read(transactionNotifierProvider.notifier).submitTransaction(
         userId: transaction.id,
         amount: transaction.amount,
@@ -177,6 +287,79 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                       ),
                       const SizedBox(
                           height: 10), // Space between the map and details
+
+                      // Signature Widget (Signature Canvas)
+                      const SizedBox(height: 20),
+                      Text(
+                        'Please provide your signature below:',
+                        style: GoogleFonts.poppins(fontSize: 16),
+                      ),
+                      Signature(
+                        controller: _controller,
+                        width: 300,
+                        height: 150,
+                        backgroundColor: Colors.grey[200]!,
+                      ),
+                      const SizedBox(height: 10),
+                      // Clear Button to clear the signature
+                      Visibility(
+                        visible: _controller
+                            .isNotEmpty, // Show only if the canvas has content
+                        child: Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            style: TextButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 5),
+                            ),
+                            onPressed: () {
+                              _controller.clear(); // Clear the signature
+                              setState(
+                                  () {}); // Trigger a rebuild to update visibility
+                            },
+                            child: const Text(
+                              'Clear Signature',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Text(
+                        'Upload an Image Below:',
+                        style: GoogleFonts.poppins(fontSize: 16),
+                      ),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            ..._images
+                                .map((image) => _buildImageThumbnail(image))
+                                .toList(),
+                            GestureDetector(
+                              onTap: _pickImage,
+                              child: Container(
+                                margin: const EdgeInsets.all(4),
+                                width: 70,
+                                height: 70,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[200],
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.grey),
+                                ),
+                                child: const Icon(Icons.add,
+                                    size: 30, color: Colors.grey),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(
+                          height: 10), // Space between signature and details
 
                       // Booking details below the map
                       Row(
