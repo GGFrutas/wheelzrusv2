@@ -31,6 +31,11 @@ class NavigationMenu extends ConsumerWidget {
           icon: Icon(Icons.person_outline),
           label: 'Account',
         ),
+        NavigationDestination(
+          selectedIcon: Icon(Icons.history_edu),
+          icon: Icon(Icons.history_edu_outlined),
+          label: 'History',
+        ),
       ],
     );
   }
