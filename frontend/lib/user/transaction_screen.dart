@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'dart:math';
 import 'package:frontend/notifiers/transaction_notifier.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/material.dart';
@@ -6,6 +8,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/provider/accepted_transaction.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:location/location.dart';
+import 'package:signature/signature.dart'; // Import signature package
+import 'package:path_provider/path_provider.dart';
+import 'dart:typed_data';
+import 'package:image_picker/image_picker.dart';
 
 class TransactionScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic> user;
@@ -23,6 +29,11 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
     super.initState();
   }
 
+  final SignatureController _controller = SignatureController(
+    penStrokeWidth: 5,
+    penColor: Colors.black,
+    exportBackgroundColor: Colors.white,
+  );
   MapController mapController = MapController();
   Location location = Location();
   bool _serviceEnabled = false;
@@ -455,7 +466,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                         alignment: Alignment.centerLeft,
                         child: TextButton(
                           onPressed: () {
-                            _success(transact);
+                            _success(transact, context);
                           },
                           style: TextButton.styleFrom(
                             backgroundColor: Colors.blue,

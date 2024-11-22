@@ -642,6 +642,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.0.2"
+  image:
+    dependency: transitive
+    description:
+      name: image
+      sha256: f31d52537dc417fdcde36088fdf11d191026fd5e4fae742491ebd40e5a8bea7d
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.3.0"
   image_picker:
     dependency: "direct main"
     description:
@@ -1343,6 +1351,14 @@ packages:
     description:
       name: signals_core
       sha256: f4af1dd285e89bf0bb268676c9d175ea6fb6a894d81260f6b564decad46ad240
+      url: "https://pub.dev"
+    source: hosted
+    version: "5.5.0"
+  signature:
+    dependency: "direct main"
+    description:
+      name: signature
+      sha256: "8056e091ad59c2eb5735fee975ec649d0caf8ce802bb1ffb1e0955b00a6d0daa"
       url: "https://pub.dev"
     source: hosted
     version: "5.5.0"
