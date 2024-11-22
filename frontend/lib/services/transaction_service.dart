@@ -18,18 +18,21 @@ class TransactionService {
   );
 
   Future<Map<String, dynamic>> submit(
-      int userId,
-      double amount,
-      DateTime? transactionDate,
-      String description,
-      String transactionId,
-      String booking,
-      String location,
-      String destination,
-      DateTime? eta,
-      DateTime? etd,
-      String status,
-      Uint8List signature) async {
+    int userId,
+    double amount,
+    DateTime? transactionDate,
+    String description,
+    String transactionId,
+    String booking,
+    String location,
+    String destination,
+    DateTime? eta,
+    DateTime? etd,
+    String status,
+    //Uint8List signature
+    List<Uint8List> proofs, // List of file bytes for proofs
+    List<String> proofsType,
+  ) async {
     // Create the request data map
     FormData formData = FormData.fromMap({
       'user_id': userId,
@@ -45,7 +48,7 @@ class TransactionService {
       'status': status,
       'signature_path': MultipartFile.fromBytes(
         signature,
-        filename: 'signature.png',
+        filename: '$signature.png',
         contentType: MediaType('image', 'png'), // Specify MIME type here
       ),
     });

@@ -12,7 +12,8 @@ class TransactionSub {
   final DateTime? eta;
   final DateTime? etd;
   final String status;
-  final Uint8List signature;
+  final List<Uint8List> transactionImages;
+  final List<String> transactionImagesType;
   final bool isAccepted;
 
   const TransactionSub({
@@ -27,7 +28,8 @@ class TransactionSub {
     this.eta,
     this.etd,
     required this.status,
-    required this.signature,
+    required this.transactionImages,
+    required this.transactionImagesType,
     this.isAccepted = false,
   });
 
@@ -44,7 +46,8 @@ class TransactionSub {
       eta: eta,
       etd: etd,
       status: status ?? this.status,
-      signature: signature,
+      transactionImages: transactionImages,
+      transactionImagesType: transactionImagesType,
       isAccepted: isAccepted ?? this.isAccepted,
     );
   }

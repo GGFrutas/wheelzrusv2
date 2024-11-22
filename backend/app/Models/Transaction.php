@@ -23,14 +23,17 @@ class Transaction extends Model
         'eta',
         'etd',
         'status',
-        'signature_path', // Add this to allow signature path saving
+        //'signature_path', // Add this to allow signature path saving
     ];
 
     // Define relationships
     public function user() {
         return $this->belongsTo(User::class);
     }
-
+    public function images()
+    {
+        return $this->hasMany(TransactionImage::class); // A transaction has many proofs (signature/image proofs)
+    }
     protected $casts = [
         'eta' => 'datetime',
         'etd' => 'datetime',
