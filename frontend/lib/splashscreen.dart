@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/screen/location.dart';
 import 'package:frontend/screen/login_screen.dart';
 import 'package:lottie/lottie.dart';
 

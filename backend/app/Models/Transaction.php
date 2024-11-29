@@ -23,7 +23,7 @@ class Transaction extends Model
         'eta',
         'etd',
         'status',
-        //'signature_path', // Add this to allow signature path saving
+       'signature_path', // Add this to allow signature path saving
     ];
 
     // Define relationships

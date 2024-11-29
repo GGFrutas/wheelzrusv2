@@ -1,4 +1,5 @@
 // Import for jsonEncode to convert Map to JSON if needed
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:typed_data';
@@ -18,21 +19,20 @@ class TransactionService {
   );
 
   Future<Map<String, dynamic>> submit(
-    int userId,
-    double amount,
-    DateTime? transactionDate,
-    String description,
-    String transactionId,
-    String booking,
-    String location,
-    String destination,
-    DateTime? eta,
-    DateTime? etd,
-    String status,
-    //Uint8List signature
-    List<Uint8List> proofs, // List of file bytes for proofs
-    List<String> proofsType,
-  ) async {
+      int userId,
+      double amount,
+      DateTime? transactionDate,
+      String description,
+      String transactionId,
+      String booking,
+      String location,
+      String destination,
+      DateTime? eta,
+      DateTime? etd,
+      String status,
+      Uint8List signature,
+      List<Uint8List> transactionImages) async {
+    // Convert Uint8List transaction images to MultipartFile
     // Create the request data map
     FormData formData = FormData.fromMap({
       'user_id': userId,

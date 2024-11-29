@@ -18,22 +18,21 @@ class TransactionNotifier extends StateNotifier<TransactionSub> {
   final TransactionService _transactionService;
 
   TransactionNotifier(this._transactionService)
-      : super(const TransactionSub(
-            userId: '',
-            amount: 0.0,
-            transactionDate: null,
-            description: '',
-            transactionId: '',
-            booking: '',
-            location: '',
-            destination: '',
-            eta: null,
-            etd: null,
-            status: '',
-            transactionImages: [],
-            transactionImagesType: []
-            //signature: Uint8List(0), // Empty Uint8List as default
-            ));
+      : super(TransactionSub(
+          userId: '',
+          amount: 0.0,
+          transactionDate: null,
+          description: '',
+          transactionId: '',
+          booking: '',
+          location: '',
+          destination: '',
+          eta: null,
+          etd: null,
+          status: '',
+          signature: Uint8List(0), // Empty Uint8List as default
+          transactionImages: const [], // Initialize empty list
+        ));
 
   Future<void> submitTransaction({
     required int userId,
@@ -47,7 +46,8 @@ class TransactionNotifier extends StateNotifier<TransactionSub> {
     DateTime? eta,
     DateTime? etd,
     required String status,
-    //required Uint8List signature,
+    required Uint8List signature,
+    required List<Uint8List> transactionImages,
     required BuildContext context,
   }) async {
     try {
@@ -63,7 +63,8 @@ class TransactionNotifier extends StateNotifier<TransactionSub> {
           eta,
           etd,
           status,
-          signature);
+          signature,
+          transactionImages);
 
       final data =
           response is String ? jsonDecode(response as String) : response;

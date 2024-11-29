@@ -12,9 +12,8 @@ class TransactionSub {
   final DateTime? eta;
   final DateTime? etd;
   final String status;
+  final Uint8List signature;
   final List<Uint8List> transactionImages;
-  final List<String> transactionImagesType;
-  final bool isAccepted;
 
   const TransactionSub({
     required this.userId,
@@ -28,27 +27,39 @@ class TransactionSub {
     this.eta,
     this.etd,
     required this.status,
+    required this.signature,
     required this.transactionImages,
-    required this.transactionImagesType,
-    this.isAccepted = false,
   });
 
-  TransactionSub copyWith({String? status, bool? isAccepted}) {
+  TransactionSub copyWith({
+    String? userId,
+    double? amount,
+    DateTime? transactionDate,
+    String? description,
+    String? transactionId,
+    String? booking,
+    String? location,
+    String? destination,
+    DateTime? eta,
+    DateTime? etd,
+    String? status,
+    Uint8List? signature,
+    List<Uint8List>? transactionImages,
+  }) {
     return TransactionSub(
-      userId: userId,
-      amount: amount,
-      transactionDate: transactionDate,
-      description: description,
-      transactionId: transactionId,
-      booking: booking,
-      location: location,
-      destination: destination,
-      eta: eta,
-      etd: etd,
+      userId: userId ?? this.userId,
+      amount: amount ?? this.amount,
+      transactionDate: transactionDate ?? this.transactionDate,
+      description: description ?? this.description,
+      transactionId: transactionId ?? this.transactionId,
+      booking: booking ?? this.booking,
+      location: location ?? this.location,
+      destination: destination ?? this.destination,
+      eta: eta ?? this.eta,
+      etd: etd ?? this.etd,
       status: status ?? this.status,
-      transactionImages: transactionImages,
-      transactionImagesType: transactionImagesType,
-      isAccepted: isAccepted ?? this.isAccepted,
+      signature: signature ?? this.signature,
+      transactionImages: transactionImages ?? this.transactionImages,
     );
   }
 }
