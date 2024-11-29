@@ -34,12 +34,21 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
     initLocation();
     super.initState();
     _controller.addListener(() {
+<<<<<<< HEAD
       if (mounted) {
         setState(() {}); // Update the UI whenever the signature content changes
       }
+=======
+      setState(() {}); // Rebuild to update the visibility of the Clear button
+>>>>>>> main
     });
   }
 
+  final SignatureController _controller = SignatureController(
+    penStrokeWidth: 5,
+    penColor: Colors.black,
+    exportBackgroundColor: Colors.white,
+  );
   MapController mapController = MapController();
   Location location = Location();
   bool _serviceEnabled = false;
@@ -82,7 +91,13 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
     }
   }
 
+<<<<<<< HEAD
   final List<File> _images = [];
+=======
+  // File? _image; // Variable to store the selected image
+
+  List<File> _images = [];
+>>>>>>> main
 
   Future<void> _pickImage() async {
     final ImagePicker picker = ImagePicker();
@@ -188,8 +203,11 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
     }
     await saveSignature(signatureBytes);
 
+<<<<<<< HEAD
     List<Uint8List> transactionImages =
         _images.map((file) => file.readAsBytesSync()).toList();
+=======
+>>>>>>> main
     final random = Random();
     final transactionId = random.nextInt(1000000);
     // Pass the signature bytes to the submitTransaction function
@@ -381,6 +399,8 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                             ..._images
                                 .map((image) => _buildImageThumbnail(image))
                                 ,
+                                .toList(),
+
                             GestureDetector(
                               onTap: _pickImage,
                               child: Container(
