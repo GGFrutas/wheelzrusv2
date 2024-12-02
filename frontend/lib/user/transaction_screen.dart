@@ -41,11 +41,11 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
     });
   }
 
-  final SignatureController _controller = SignatureController(
-    penStrokeWidth: 5,
-    penColor: Colors.black,
-    exportBackgroundColor: Colors.white,
-  );
+  // final SignatureController _controller = SignatureController(
+  //   penStrokeWidth: 5,
+  //   penColor: Colors.black,
+  //   exportBackgroundColor: Colors.white,
+  // );
   MapController mapController = MapController();
   Location location = Location();
   bool _serviceEnabled = false;
@@ -388,9 +388,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                           children: [
                             ..._images
                                 .map((image) => _buildImageThumbnail(image))
-                                ,
                                 .toList(),
-
                             GestureDetector(
                               onTap: _pickImage,
                               child: Container(
