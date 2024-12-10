@@ -12,9 +12,15 @@ class TransactionController extends Controller
     public function create(Request $request)
     {
         try {
-            Log::info($request->all());
-            Log::info($request->headers->all()); // Log all headers
-    
+            // Log::info($request->all());
+            // Log::info($request->headers->all()); // Log all headers
+            Log::info($request->allFiles());
+            Log::info('transaction_image_path:', $request->file('transaction_image_path'));
+            // if ($request->hasFile('transaction_image_path')) {
+            //     // Store the image and get the file path
+            //     $path = $request->file('transactichcon_image_path')->store('transaction_images', 'public');
+            //     $validatedData['transaction_image_path'] = $path; // Save the path in validated data
+            // }
             // Validate the request
             $validated = $request->validate([
                 'user_id' => 'required|integer',
@@ -28,9 +34,9 @@ class TransactionController extends Controller
                 'eta' => 'required|date',
                 'etd' => 'required|date',
                 'status' => 'required|string',
-                'signature_path' => 'required|file|mimes:png,jpeg,jpg', // Accept PNG/JPEG/JPG
-                'photos' => 'nullable|array', // Expect an array of images
-                'photos.*' => 'file|mimes:png,jpeg,jpg', // Validate each image
+                'signature_path' => 'required|file|mimes:png,jpeg,jpg',
+                'transaction_image_path' => 'required|array', // Accept PNG/JPEG/JPG
+                'transaction_image_path.*' => 'file|mimes:png,jpeg,jpg',
             ]);
             Log::info('Validation passed.', $validated);
     
@@ -57,16 +63,19 @@ class TransactionController extends Controller
                         'signature_path' => $signaturePath, // Store the file path
                     ]);
                     $transaction->save();
-                    Log::info('Transaction saved successfully.');
-                    if ($request->hasFile('photos')) {
-                        $photos = $request->file('photos');
-        
+
+                    
+                    if ($request->hasFile('transaction_image_path')) {
+                        $photos = $request->file('transaction_image_path');
+                    
+                        // Ensure $photos is an array
+                        if (!is_array($photos)) {
+                            $photos = [$photos];
+                        }
+                    
                         foreach ($photos as $file) {
                             if ($file->isValid()) {
-                                $filePath = $file->store('transaction_photos', 'public'); // Store the photo
-                                Log::info('Photo stored at: ' . $filePath);
-        
-                                // Create a record in the transaction_photo table
+                                $filePath = $file->store('transaction_images', 'public');
                                 TransactionImage::create([
                                     'transaction_id' => $transaction->id,
                                     'file_path' => $filePath,

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -47,7 +48,7 @@ class TransactionNotifier extends StateNotifier<TransactionSub> {
     DateTime? etd,
     required String status,
     required Uint8List signature,
-    required List<Uint8List> transactionImages,
+    required List<File?> transactionImages,
     required BuildContext context,
   }) async {
     try {

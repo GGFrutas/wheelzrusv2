@@ -1,5 +1,7 @@
 // Import for jsonEncode to convert Map to JSON if needed
 
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:typed_data';
@@ -31,9 +33,18 @@ class TransactionService {
       DateTime? etd,
       String status,
       Uint8List signature,
-      List<Uint8List> transactionImages) async {
+      List<File?> transactionImages) async {
     // Convert Uint8List transaction images to MultipartFile
-    // Create the request data map
+    List<MultipartFile> imageFiles =
+        transactionImages.where((file) => file != null).map((file) {
+      return MultipartFile.fromFileSync(
+        file!.path,
+        filename: file.path.split('/').last,
+        contentType:
+            MediaType('image', 'jpeg'), // Adjust MIME type as necessary
+      );
+    }).toList();
+
     FormData formData = FormData.fromMap({
       'user_id': userId,
       'amount': amount,
@@ -49,8 +60,11 @@ class TransactionService {
       'signature_path': MultipartFile.fromBytes(
         signature,
         filename: '$signature.png',
-        contentType: MediaType('image', 'png'), // Specify MIME type here
+        contentType: MediaType('image', 'png'),
+
+        // Specify MIME type here
       ),
+      'transaction_image_path': imageFiles,
     });
 
     try {

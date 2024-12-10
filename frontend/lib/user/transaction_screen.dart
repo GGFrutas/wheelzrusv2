@@ -41,11 +41,6 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
     });
   }
 
-  // final SignatureController _controller = SignatureController(
-  //   penStrokeWidth: 5,
-  //   penColor: Colors.black,
-  //   exportBackgroundColor: Colors.white,
-  // );
   MapController mapController = MapController();
   Location location = Location();
   bool _serviceEnabled = false;
@@ -90,7 +85,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
 
   // File? _image; // Variable to store the selected image
 
-  List<File> _images = [];
+  final List<File?> _images = [];
 
   Future<void> _pickImage() async {
     final ImagePicker picker = ImagePicker();
@@ -196,8 +191,9 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
     }
     await saveSignature(signatureBytes);
 
-    List<Uint8List> transactionImages =
-        _images.map((file) => file.readAsBytesSync()).toList();
+    // List<Uint8List> transactionImages =
+    //     _images.map((file) => file.readAsBytesSync()).toList();
+
     final random = Random();
     final transactionId = random.nextInt(1000000);
     // Pass the signature bytes to the submitTransaction function
@@ -215,7 +211,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
           etd: DateTime.now(),
           status: transaction.status,
           signature: signatureBytes, // Pass the signature bytes here
-          transactionImages: transactionImages,
+          transactionImages: _images,
           context: context,
         );
 
@@ -387,8 +383,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                         child: Row(
                           children: [
                             ..._images
-                                .map((image) => _buildImageThumbnail(image))
-                                .toList(),
+                                .map((image) => _buildImageThumbnail(image!)),
                             GestureDetector(
                               onTap: _pickImage,
                               child: Container(
