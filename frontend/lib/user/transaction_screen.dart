@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/provider/accepted_transaction.dart';
-import 'package:latlong2/latlong.dart';
+// import 'package:latlong2/latlong.dart';
 import 'package:location/location.dart';
 import 'package:signature/signature.dart'; // Import signature package
 import 'package:path_provider/path_provider.dart';
@@ -34,7 +34,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
     initLocation();
     super.initState();
     _controller.addListener(() {
-      if (mounted) {
+      if (mounted) {  
         setState(() {}); // Update the UI whenever the signature content changes
       }
       setState(() {}); // Rebuild to update the visibility of the Clear button
@@ -45,8 +45,8 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
   Location location = Location();
   bool _serviceEnabled = false;
   PermissionStatus? _permissionGranted;
-  LocationData? _locationData;
-  bool _isMapReady = false; // Flag to check if the map is ready
+  // LocationData? _locationData;
+  // bool _isMapReady = false; // Flag to check if the map is ready
 
   initLocation() async {
     _serviceEnabled = await location.serviceEnabled();
@@ -65,22 +65,22 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
       }
     }
 
-    _locationData = await location.getLocation();
+    // _locationData = await location.getLocation();
 
-    if (_isMapReady) {
-      // Ensure the map is ready before moving the controller
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          setState(() {
-            mapController.move(
-              LatLng(
-                  _locationData?.latitude ?? 0, _locationData?.longitude ?? 0),
-              16,
-            );
-          });
-        }
-      });
-    }
+    // if (_isMapReady) {
+    //   // Ensure the map is ready before moving the controller
+    //   WidgetsBinding.instance.addPostFrameCallback((_) {
+    //     if (mounted) {
+    //       setState(() {
+    //         mapController.move(
+    //           LatLng(
+    //               _locationData?.latitude ?? 0, _locationData?.longitude ?? 0),
+    //           16,
+    //         );
+    //       });
+    //     }
+    //   });
+    // }
   }
 
   // File? _image; // Variable to store the selected image
@@ -247,7 +247,13 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Transaction'),
+        title: Text(
+          "YXE Driver",
+          style: GoogleFonts.poppins(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         centerTitle: true,
       ),
       body: ListView(
@@ -270,143 +276,70 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Placeholder for the Map
-                      Container(
-                        height: 460, // Height of the map container
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[600], // Placeholder color
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: FlutterMap(
-                          mapController: mapController,
-                          options: MapOptions(
-                            initialZoom: 5,
-                            onMapReady: () {
-                              WidgetsBinding.instance.addPostFrameCallback((_) {
-                                if (mounted) {
-                                  setState(() {
-                                    _isMapReady = true;
-                                  });
-                                }
-                              });
-                            },
-                          ),
-                          children: [
-                            TileLayer(
-                              urlTemplate:
-                                  'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                              userAgentPackageName:
-                                  'dev.fleaflet.flutter_map.example',
-                            ),
-                            MarkerLayer(
-                              markers: [
-                                Marker(
-                                  point: LatLng(
-                                    _locationData?.latitude ?? 0,
-                                    _locationData?.longitude ?? 0,
-                                  ),
-                                  width: 60,
-                                  height: 60,
-                                  alignment: Alignment.centerLeft,
-                                  child: const Icon(
-                                    Icons.location_pin,
-                                    size: 60,
-                                    color: Colors.red,
-                                  ),
-                                ),
-                                const Marker(
-                                  point: LatLng(10.304638, 123.9117856),
-                                  width: 60,
-                                  height: 60,
-                                  alignment: Alignment.centerLeft,
-                                  child: Icon(
-                                    Icons.location_pin,
-                                    size: 60,
-                                    color: Colors.green,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
+                    //   // Placeholder for the Map
+                    //   Container(
+                    //     height: 460, // Height of the map container
+                    //     width: double.infinity,
+                    //     decoration: BoxDecoration(
+                    //       color: Colors.grey[600], // Placeholder color
+                    //       borderRadius: BorderRadius.circular(10),
+                    //     ),
+                    //     child: FlutterMap(
+                    //       mapController: mapController,
+                    //       options: MapOptions(
+                    //         initialZoom: 5,
+                    //         onMapReady: () {
+                    //           WidgetsBinding.instance.addPostFrameCallback((_) {
+                    //             if (mounted) {
+                    //               setState(() {
+                    //                 _isMapReady = true;
+                    //               });
+                    //             }
+                    //           });
+                    //         },
+                    //       ),
+                    //       children: [
+                    //         TileLayer(
+                    //           urlTemplate:
+                    //               'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    //           userAgentPackageName:
+                    //               'dev.fleaflet.flutter_map.example',
+                    //         ),
+                    //         MarkerLayer(
+                    //           markers: [
+                    //             Marker(
+                    //               point: LatLng(
+                    //                 _locationData?.latitude ?? 10.3157,
+                    //                 _locationData?.longitude ?? 123.8854,
+                    //               ),
+                    //               width: 60,
+                    //               height: 60,
+                    //               alignment: Alignment.centerLeft,
+                    //               child: const Icon(
+                    //                 Icons.location_pin,
+                    //                 size: 60,
+                    //                 color: Colors.red,
+                    //               ),
+                    //             ),
+                    //             const Marker(
+                    //               point: LatLng(10.3157, 123.8854),
+                    //               width: 60,
+                    //               height: 60,
+                    //               alignment: Alignment.centerLeft,
+                    //               child: Icon(
+                    //                 Icons.location_pin,
+                    //                 size: 60,
+                    //                 color: Colors.green,
+                    //               ),
+                    //             ),
+                    //           ],
+                    //         ),
+                    //       ],
+                    //     ),
+                    //   ),
                       const SizedBox(
                           height: 10), // Space between the map and details
 
-                      // Signature Widget (Signature Canvas)
-                      const SizedBox(height: 20),
-                      Text(
-                        'Please provide your signature below:',
-                        style: GoogleFonts.poppins(fontSize: 16),
-                      ),
-                      Signature(
-                        controller: _controller,
-                        width: 300,
-                        height: 150,
-                        backgroundColor: Colors.grey[200]!,
-                      ),
-                      const SizedBox(height: 10),
-                      // Clear Button to clear the signature
-                      Visibility(
-                        visible: _controller
-                            .isNotEmpty, // Show only if the canvas has content
-                        child: Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            style: TextButton.styleFrom(
-                              backgroundColor: Colors.red,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 5),
-                            ),
-                            onPressed: () {
-                              _controller.clear(); // Clear the signature
-                              setState(
-                                  () {}); // Trigger a rebuild to update visibility
-                            },
-                            child: const Text(
-                              'Clear Signature',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      Text(
-                        'Upload an Image Below:',
-                        style: GoogleFonts.poppins(fontSize: 16),
-                      ),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: [
-                            ..._images
-                                .map((image) => _buildImageThumbnail(image!)),
-                            GestureDetector(
-                              onTap: _pickImage,
-                              child: Container(
-                                margin: const EdgeInsets.all(4),
-                                width: 70,
-                                height: 70,
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[200],
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.grey),
-                                ),
-                                child: const Icon(Icons.add,
-                                    size: 30, color: Colors.grey),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(
-                          height: 10), // Space between signature and details
-
-                      // Booking details below the map
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -414,7 +347,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 5, vertical: 0),
                               child: Text(
-                                transact.booking,
+                                transact.requestNumber.toString(),
                                 style: GoogleFonts.poppins(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 22,
@@ -423,13 +356,13 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                               )),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 36, vertical: 8),
+                                horizontal: 10, vertical: 8),
                             decoration: BoxDecoration(
-                              color: _getStatusColor(transact.status),
+                              color: _getStatusColor(transact.requestStatus.toString()),
                               borderRadius: BorderRadius.circular(5),
                             ),
                             child: Text(
-                              transact.status,
+                              transact.requestStatus.toString(),
                               style: GoogleFonts.poppins(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
@@ -438,62 +371,172 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                           ),
                         ],
                       ),
-                      // ... Rest of the booking details ...
+                      const SizedBox(height: 8),
                       Row(
                         children: [
-                          const Icon(Icons.location_on,
-                              color: Colors.blueAccent),
-                          const SizedBox(width: 5),
-                          Text(
-                            'Origin: ${transact.location}',
-                            style: const TextStyle(fontSize: 14),
+                          Flexible(
+                            child: Text(
+                              " ${transact.name}",
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
+                              ),
+                              softWrap: true, // Text will wrap if it's too long
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          const Text(
+                            "Pickup Address: ",
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.black,
+                            ),
+                            textAlign: TextAlign
+                                .center, // Ensure the text is centered
+                          ),
+                          Flexible(
+                            child: Text(
+                              " ${transact.destination}",
+                              
+                              softWrap: true, // Text will wrap if it's too long
+                            ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 5),
                       Row(
                         children: [
-                          const Icon(Icons.flag, color: Colors.green),
-                          const SizedBox(width: 5),
-                          Text(
-                            'Destination: ${transact.destination}',
-                            style: const TextStyle(fontSize: 14),
+                          const Text(
+                            "Delivery Addres: ",
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.black,
+                            ),
+                            textAlign: TextAlign
+                                .center, // Ensure the text is centered
+                          ),
+                          Flexible(
+                            child: Text(
+                              " ${transact.origin}",
+                              
+                              softWrap: true, // Text will wrap if it's too long
+                            ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 5),
-                      Row(
-                        children: [
-                          const Icon(Icons.timer, color: Colors.orange),
-                          const SizedBox(width: 5),
-                          Text(
-                            'ETA: ${transact.eta}',
-                            style: const TextStyle(fontSize: 14),
-                          ),
-                        ],
-                      ),
+                      // Row(
+                      //   children: [
+                      //     const Icon(Icons.timer, color: Colors.orange),
+                      //     const SizedBox(width: 5),
+                      //     Text(
+                      //       'ETA: ${transact.arrivalDate}',
+                      //       style: const TextStyle(fontSize: 14),
+                      //     ),
+                      //   ],
+                      // ),
+
+                      // Signature Widget (Signature Canvas)
+                      const SizedBox(height: 20),
+                      // Text(
+                      //   'Please provide your signature below:',
+                      //   style: GoogleFonts.poppins(fontSize: 16),
+                      // ),
+                      // Signature(
+                      //   controller: _controller,
+                      //   width: 300,
+                      //   height: 150,
+                      //   backgroundColor: Colors.grey[200]!,
+                      // ),
+                      // const SizedBox(height: 10),
+                      // // Clear Button to clear the signature
+                      // Visibility(
+                      //   visible: _controller
+                      //       .isNotEmpty, // Show only if the canvas has content
+                      //   child: Align(
+                      //     alignment: Alignment.centerRight,
+                      //     child: TextButton(
+                      //       style: TextButton.styleFrom(
+                      //         backgroundColor: Colors.red,
+                      //         padding: const EdgeInsets.symmetric(
+                      //             horizontal: 12, vertical: 5),
+                      //       ),
+                      //       onPressed: () {
+                      //         _controller.clear(); // Clear the signature
+                      //         setState(
+                      //             () {}); // Trigger a rebuild to update visibility
+                      //       },
+                      //       child: const Text(
+                      //         'Clear Signature',
+                      //         style: TextStyle(
+                      //           color: Colors.white,
+                      //           fontWeight: FontWeight.bold,
+                      //         ),
+                      //       ),
+                      //     ),
+                      //   ),
+                      // ),
+                      // Text(
+                      //   'Upload an Image Below:',
+                      //   style: GoogleFonts.poppins(fontSize: 16),
+                      // ),
+                      // SingleChildScrollView(
+                      //   scrollDirection: Axis.horizontal,
+                      //   child: Row(
+                      //     children: [
+                      //       ..._images
+                      //           .map((image) => _buildImageThumbnail(image!)),
+                      //       GestureDetector(
+                      //         onTap: _pickImage,
+                      //         child: Container(
+                      //           margin: const EdgeInsets.all(4),
+                      //           width: 70,
+                      //           height: 70,
+                      //           decoration: BoxDecoration(
+                      //             color: Colors.grey[200],
+                      //             borderRadius: BorderRadius.circular(8),
+                      //             border: Border.all(color: Colors.grey),
+                      //           ),
+                      //           child: const Icon(Icons.add,
+                      //               size: 30, color: Colors.grey),
+                      //         ),
+                      //       ),
+                      //     ],
+                      //   ),
+                      // ),
+
+                      const SizedBox(
+                          height: 10), // Space between signature and details
+
+                      // Booking details below the map
+                      
                       const SizedBox(height: 5),
-                      Row(
-                        children: [
-                          const Icon(Icons.public_rounded, color: Colors.green),
-                          const SizedBox(width: 5),
-                          Text(
-                            'Latitude : ${_locationData?.latitude}',
-                            style: const TextStyle(fontSize: 14),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 5),
-                      Row(
-                        children: [
-                          const Icon(Icons.public_rounded, color: Colors.red),
-                          const SizedBox(width: 5),
-                          Text(
-                            'Longitude : ${_locationData?.longitude}',
-                            style: const TextStyle(fontSize: 14),
-                          ),
-                        ],
-                      ),
+                      // Row(
+                      //   children: [
+                      //     const Icon(Icons.public_rounded, color: Colors.green),
+                      //     const SizedBox(width: 5),
+                      //     Text(
+                      //       'Latitude : ${_locationData?.latitude}',
+                      //       style: const TextStyle(fontSize: 14),
+                      //     ),
+                      //   ],
+                      // ),
+                      // const SizedBox(height: 5),
+                      // Row(
+                      //   children: [
+                      //     const Icon(Icons.public_rounded, color: Colors.red),
+                      //     const SizedBox(width: 5),
+                      //     Text(
+                      //       'Longitude : ${_locationData?.longitude}',
+                      //       style: const TextStyle(fontSize: 14),
+                      //     ),
+                      //   ],
+                      // ),
                       Align(
                         alignment: Alignment.centerLeft,
                         child: TextButton(

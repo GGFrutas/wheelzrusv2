@@ -185,40 +185,40 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ));
                 },
               ),
-              const SizedBox(height: 25.0),
-              RichText(
-                text: TextSpan(
-                  text: "Don't have an account? ",
-                  style: GoogleFonts.poppins(
-                    textStyle: const TextStyle(
-                      fontSize: 16,
-                      color: Colors.white,
-                    ),
-                  ),
-                  children: [
-                    TextSpan(
-                      text: 'Sign Up',
-                      style: GoogleFonts.poppins(
-                        textStyle: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          decoration: TextDecoration.underline,
-                          fontSize: 16,
-                          color: Color(0xFFFFC72C),
-                        ),
-                      ),
-                      recognizer: TapGestureRecognizer()
-                        ..onTap = () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const RegisterOptionsScreen(),
-                            ),
-                          );
-                        },
-                    ),
-                  ],
-                ),
-              ),
+              // const SizedBox(height: 25.0),
+              // RichText(
+              //   text: TextSpan(
+              //     text: "Don't have an account? ",
+              //     style: GoogleFonts.poppins(
+              //       textStyle: const TextStyle(
+              //         fontSize: 16,
+              //         color: Colors.white,
+              //       ),
+              //     ),
+              //     children: [
+              //       TextSpan(
+              //         text: 'Sign Up',
+              //         style: GoogleFonts.poppins(
+              //           textStyle: const TextStyle(
+              //             fontWeight: FontWeight.bold,
+              //             decoration: TextDecoration.underline,
+              //             fontSize: 16,
+              //             color: Color(0xFFFFC72C),
+              //           ),
+              //         ),
+              //         recognizer: TapGestureRecognizer()
+              //           ..onTap = () {
+              //             Navigator.push(
+              //               context,
+              //               MaterialPageRoute(
+              //                 builder: (context) => const RegisterOptionsScreen(),
+              //               ),
+              //             );
+              //           },
+              //       ),
+              //     ],
+              //   ),
+              // ),
             ],
           ),
         ),

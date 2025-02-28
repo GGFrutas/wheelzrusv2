@@ -24,4 +24,10 @@ Route::middleware([HandleCors::class])->group(function () {
     Route::post('login', [AuthenticationController::class, 'login']);
     Route::post('logout', [AuthenticationController::class, 'logout'])->middleware('auth:sanctum');
     Route::put('update', [AuthenticationController::class, 'updateProfile'])->middleware('auth:sanctum');
+    Route::get('/odoo/users', [AuthenticationController::class, 'getOdooUsers']);
+    Route::get('/odoo/booking', [TransactionController::class, 'getBooking']);
+    Route::get('/odoo/reason', [TransactionController::class, 'getRejectionReason']);
+    Route::post('/odoo/{transactionId}/status', [TransactionController::class, 'updateStatus']);
+
+
 });

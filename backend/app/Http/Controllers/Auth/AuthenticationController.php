@@ -16,9 +16,28 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Http\JsonResponse;
 use App\Http\Requests\LoginDriverRequest;
 use Illuminate\Support\Facades\Log;
+use PhpXmlRpc\PhpXmlRpcClient;
+use PhpXmlRpc\Client;
+use PhpXmlRpc\Value;
+use PhpXmlRpc\Request as XmlRpcRequest;
+use Ripcord\Ripcord; 
 
 class AuthenticationController extends Controller
 {
+
+    public function getOdooUsers()
+    {
+        // Fetch all users
+        $users = User::all();
+
+        // Optionally, filter specific users
+        $filteredUsers = User::where('active', '=', true)->get();
+
+        return response()->json([
+            'users' => $users,
+            'active_users' => $filteredUsers,
+        ]);
+    }
     public function register(RegisterRequest $request){
         $validatedData = $request->validated();
         if ($request->hasFile('picture')) {
@@ -48,21 +67,71 @@ class AuthenticationController extends Controller
             return response()->json(['error' => 'User registration failed.'], 500);
         }
     }
-    public function login(LoginRequest $request){
+    public function login(Request $request){
+      
         $credentials = $request->only('email', 'password');
+        
+        // Set up the XML-RPC client for Odoo
+        $url = 'http://GSQ-IBX-CBR:8068';  // Your local Odoo instance URL
+        $db = 'rda_rev_29';  // Replace with your Odoo database name
+        // dd($url);
 
-        $user = User::where('email', $credentials['email'])->first();
-
-        if (!$user || !Hash::check($credentials['password'], $user->password)) {
+        $username = $credentials['email'];  // Odoo login field
+        $password = $credentials['password']; // Odoo password
+        
+        // Set up the XML-RPC client for authentication
+        $client = new Client("$url/xmlrpc/2/common");
+    
+        // Wrap the parameters in `Value` classes correctly
+        $params = [
+            new Value($db),  // Database name
+            new Value($username),  // Username (email in your case)
+            new Value($password),  // Password
+            // new Value([]),       // Context (empty array)
+            new Value('')
+        ];
+    
+        // Create the authentication request
+        $request = new XmlRpcRequest('authenticate', $params);
+    
+        // Send the request and get the response
+        $response = $client->send($request);
+        // dd($response->faultCode(), $response->faultString(), $response->value());
+        // Check if authentication was successful
+        if ($response->faultCode()) {
             return response()->json(['message' => 'Invalid credentials'], 401);
         }
+    
+        // Get the UID from the response (successful authentication)
+        $uid = $response->value();
+        
+        // Retrieve the user from Odoo
+        $user = User::where('login', $username)->first();
+        $partner = $user->partner_id;
+        
 
+        $res = DB::table('res_partner')
+            ->where('id', $partner)
+            ->where('driver_access', true)
+            ->first();
+        
+
+        if (!$res) {
+            return response()->json(['message' => 'Access denied'], 403);
+        }
+        
+     
+        // If password matches, create the token
         $token = $user->createToken('wheelzrus')->plainTextToken;
-
+    
         return response()->json([
             'user' => $user,
             'token' => $token
         ], 200);
+        
+
+        // If authentication fails
+        return response()->json(['message' => 'Invalid credentials'], 401);  
     }
 
     public function logout(Request $request){

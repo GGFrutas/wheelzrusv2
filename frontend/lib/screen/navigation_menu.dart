@@ -27,14 +27,14 @@ class NavigationMenu extends ConsumerWidget {
           label: 'Home',
         ),
         NavigationDestination(
-          selectedIcon: Icon(Icons.person),
-          icon: Icon(Icons.person_outline),
-          label: 'Account',
-        ),
-        NavigationDestination(
           selectedIcon: Icon(Icons.history_edu),
           icon: Icon(Icons.history_edu_outlined),
           label: 'History',
+        ),
+        NavigationDestination(
+          selectedIcon: Icon(Icons.person),
+          icon: Icon(Icons.person_outline),
+          label: 'Account',
         ),
       ],
     );

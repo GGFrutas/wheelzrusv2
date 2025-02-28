@@ -74,6 +74,7 @@ class TransactionNotifier extends StateNotifier<TransactionSub> {
         content: Text('Transaction submitted successfully!'),
         backgroundColor: Colors.green,
       ));
+      Navigator.pop(context);
     } catch (e) {
       print("Error: $e");
       if (context.mounted) {

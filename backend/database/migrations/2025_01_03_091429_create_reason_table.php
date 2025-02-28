@@ -11,10 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('transactions', function (Blueprint $table) {
-            // $table->date('eta')->nullable();
-            $table->date('etd')->nullable();
-            //
+        Schema::create('reason', function (Blueprint $table) {
+            $table->id();
+            $table->timestamps();
         });
     }
 
@@ -23,9 +22,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('transactions', function (Blueprint $table) {
-            $table->dropColumn('etd');
-            //
-        });
+        Schema::dropIfExists('reason');
     }
 };
