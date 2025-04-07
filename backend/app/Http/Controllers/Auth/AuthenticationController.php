@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
 use App\Models\User;
+use App\Models\Partners;
 use Exception;
 use Illuminate\Container\Attributes\Auth;
 use Illuminate\Http\Request;
@@ -29,7 +30,6 @@ class AuthenticationController extends Controller
     {
         // Fetch all users
         $users = User::all();
-
         // Optionally, filter specific users
         $filteredUsers = User::where('active', '=', true)->get();
 
@@ -67,144 +67,426 @@ class AuthenticationController extends Controller
             return response()->json(['error' => 'User registration failed.'], 500);
         }
     }
-    public function login(Request $request){
+    // public function login(Request $request){
+    //     $credentials = $request->only('email', 'password');
+        
+    //     // Set up the XML-RPC client for Odoo
+    //     $url = 'https://jralejandria-beta-dev-yxe.odoo.com';  // Your local Odoo instance URL
+    //     $db = 'jralejandria-beta-dev-yxe-production-beta-19060481';  // Replace with your Odoo database name
+    
+
+    //     $username = $credentials['email'];  // Odoo login field
+    //     $password = $credentials['password']; // Odoo password
+        
+    //     // Set up the XML-RPC client for authentication
+    //     $client = new Client("$url/xmlrpc/2/common");
+    
+    //     // Wrap the parameters in `Value` classes correctly
+    //     $params = [
+    //         new Value($db),  // Database name
+    //         new Value($username),  // Username (email in your case)
+    //         new Value($password),  // Password
+    //         // new Value([]),       // Context (empty array)
+    //         new Value('')
+    //     ];
+    
+    //     // Create the authentication request
+    //     $request = new XmlRpcRequest('authenticate', $params);
+    
+    //     // Send the request and get the response
+    //     $response = $client->send($request);
+    //     // dd($response->faultCode(), $response->faultString(), $response->value());
+    //     // Check if authentication was successful
+    //     if ($response->faultCode()) {
+    //         return response()->json(['message' => 'Invalid credentials'], 401);
+    //     }
+    
+    //     // Get the UID from the response (successful authentication)
+    //     $uid = $response->value();
       
-        $credentials = $request->only('email', 'password');
         
-        // Set up the XML-RPC client for Odoo
-        $url = 'http://GSQ-IBX-CBR:8068';  // Your local Odoo instance URL
-        $db = 'rda_rev_29';  // Replace with your Odoo database name
-        // dd($url);
-
-        $username = $credentials['email'];  // Odoo login field
-        $password = $credentials['password']; // Odoo password
-        
-        // Set up the XML-RPC client for authentication
-        $client = new Client("$url/xmlrpc/2/common");
-    
-        // Wrap the parameters in `Value` classes correctly
-        $params = [
-            new Value($db),  // Database name
-            new Value($username),  // Username (email in your case)
-            new Value($password),  // Password
-            // new Value([]),       // Context (empty array)
-            new Value('')
-        ];
-    
-        // Create the authentication request
-        $request = new XmlRpcRequest('authenticate', $params);
-    
-        // Send the request and get the response
-        $response = $client->send($request);
-        // dd($response->faultCode(), $response->faultString(), $response->value());
-        // Check if authentication was successful
-        if ($response->faultCode()) {
-            return response()->json(['message' => 'Invalid credentials'], 401);
-        }
-    
-        // Get the UID from the response (successful authentication)
-        $uid = $response->value();
-        
-        // Retrieve the user from Odoo
-        $user = User::where('login', $username)->first();
-        $partner = $user->partner_id;
+    //     // Retrieve the user from Odoo
+    //     $user = User::where('login', $username)->first();
+    //     $partner = $user->partner_id;
         
 
-        $res = DB::table('res_partner')
-            ->where('id', $partner)
-            ->where('driver_access', true)
-            ->first();
-        
-
-        if (!$res) {
-            return response()->json(['message' => 'Access denied'], 403);
-        }
+    //     $res = Partners::where('id', $partner)
+    //         ->where('driver_access', true)
+    //         ->first();
+      
+       
+    //     if (!$res) {
+    //         return response()->json(['message' => 'Access denied'], 403);
+    //     }
         
      
-        // If password matches, create the token
-        $token = $user->createToken('wheelzrus')->plainTextToken;
+    //     // If password matches, create the token
+    //     $token = $user->createToken('wheelzrus')->plainTextToken;
     
-        return response()->json([
-            'user' => $user,
-            'token' => $token
-        ], 200);
+    //     return response()->json([
+    //         'user' => $user,
+    //         'token' => $token
+    //     ], 200);
         
 
-        // If authentication fails
-        return response()->json(['message' => 'Invalid credentials'], 401);  
-    }
+    //     // If authentication fails
+    //     return response()->json(['message' => 'Invalid credentials'], 401);  
+    // }
+    public function authenticateOdooUser($credentials)
+    {
+        $username = $credentials['email'];  // Odoo login field
+        $password = $credentials['password']; // Odoo password
+        $url = 'https://jralejandria-beta-dev-yxe.odoo.com';  
+        $db = 'jralejandria-beta-dev-yxe-production-beta-19060481';
+       
 
-    public function logout(Request $request){
-        if ($user = $request->user()) {
-            $user->currentAccessToken()->delete();
+        // Set up the XML-RPC client for authentication
+        $client = new Client("$url/xmlrpc/2/common");
 
-            return response()->json(['message' => 'Logged out successfully'], 200);
-        }
-
-        return response()->json(['message' => 'No authenticated user'], 401);
-    }
-
-    public function updateProfile(Request $request) {
-        $user = $request->user();
-        
-        // Validate the incoming request data
-        $validator = Validator::make($request->all(), [
-            'name' => 'sometimes|string|max:255',
-            'email' => 'sometimes|email|unique:users,email,' . $user->id,
-            'mobile' => 'sometimes|string|unique:users,mobile,' . $user->id,
-            'company_code' => 'nullable|string|min:6',
-            'password' => 'sometimes|string|min:8|confirmed',
-            'picture' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:6144',
+        //Prepare the authentication request
+        $xmlrpcrequest = new XmlRpcRequest('authenticate', [
+            new Value($db, "string"),
+            new Value($username, "string"),
+            new Value($password, "string"),
+            new Value([], "array")
         ]);
-        
-        if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
+
+        //Send request and get response
+        $response = $client->send($xmlrpcrequest);
+
+        //Check if authentication was successful
+        if ($response->faultCode()) {
+            return 0;
         }
-    
-        // Update other fields if present
-        if ($request->has('name')) {
-            $user->name = $request->input('name');
+
+        //Get UID from the response (successful authentication)
+        $uid = $response->value()->scalarval();
+       
+        if($uid == 0){
+            return 0;
         }
-    
-        if ($request->has('email')) {
-            $user->email = $request->input('email');
-        }
-    
-        if ($request->has('mobile')) {
-            $user->mobile = $request->input('mobile');
-        }
-    
-        if ($request->has('company_code')) {
-            $user->company_code = $request->input('company_code');
-        }
-    
-        if ($request->has('password')) {
-            $user->password = Hash::make($request->input('password'));
-        }
-    
-        // Check if a new picture was uploaded
-        if ($request->hasFile('picture')) {
-            // Delete the old picture if it exists
-            if ($user->picture) {
-                Storage::disk('public')->delete($user->picture);
-            }
-    
-            // Store the new picture and assign the path to the user
-            $path = $request->file('picture')->store('profile_pictures', 'public');
-            $user->picture = $path; // Save the new picture path
-        }
-    
-        // Save updated user data
-        try {
-            $user->save();
-            return response()->json([
-                'message' => 'Profile updated successfully',
-                'user' => $user
-            ], 200);
-        } catch (\Exception $e) {
-            Log::error('Profile update failed: ' . $e->getMessage());
-            return response()->json(['error' => 'Profile update failed.'], 500);
-        }
+       
+            
+        return $uid ?: 0;
     }
+
+    public function getUser($username,$uid, $odooPassword)
+    {
+        $url ="https://jralejandria-beta-dev-yxe.odoo.com/xmlrpc/2/object";
+        $db ='jralejandria-beta-dev-yxe-production-beta-19060481';
+        // $odooPassword = '4cfacd1f9d87c00abf403e036a3ef01edcae639d';
+       
+        $client = new Client($url);
+
+        Log::info("🔍 Searching for Odoo user with email: $username");
+        
+        Log::info("✅ Odoo Authentication UID:", ['uid' => $uid]);
+        if (!$uid || $uid <= 0) {
+            Log::error("🚨 Invalid UID received. Authentication failed.");
+            return null;
+        }
+
+        $checkAccessRequest = new XmlRpcRequest('execute_kw', [
+            new Value($db, "string"),
+            new Value($uid, "int"),
+            new Value($odooPassword, "string"),
+            new Value("res.users", "string"),
+            new Value("check_access_rights", "string"), 
+            new Value([new Value("read", "string")], "array"), // ✅ Corrected array wrapping
+            new Value(["raise_exception" => new Value(new Value(false, "boolean"), "boolean")], "struct") // ✅ Fix struct format
+                
+        ]);
+
+        
+        $searchResponse = $client->send($checkAccessRequest);
+        Log::info("🔍 Search Users Raw Response: ", ["response" => var_export($searchResponse->value(), true)]);
+        
+        if (empty($searchResponse->value())) {
+            Log::error("🚨 UID {$uid} still cannot read `res.users`. Permission issue?");
+            return response()->json(["error" => "Access Denied"], 403);
+        } else {
+            Log::info("✅ UID {$uid} can read `res.users`.");
+        }
+
+        Log::info("🔍 Sending Search Request: ", [
+            'db' => $db,
+            'uid' => $uid,
+            'username' => $username
+        ]);
+
+        $odooUrl = "https://jralejandria-beta-dev-yxe.odoo.com/jsonrpc";
+        $data = [
+            "jsonrpc" => "2.0",
+            "method" => "call",
+            "params" => [
+                "service" => "object",  // ✅ Add "service"
+                "method" => "execute_kw",
+                "args" => [
+                    $db,  // ✅ Ensure DB name is correct
+                    $uid, // ✅ Ensure UID is not empty
+                    $odooPassword, // ✅ Ensure password or API key is correct
+                    "res.users",  // ✅ Correct model name
+                    "search_read",  // ✅ Correct method
+                    [[["login", "=", $username]]],  // ✅ Ensure correct filtering
+                    ["fields" => ["id", "login", "partner_id"]] // ✅ Ensure correct fields
+                ]
+            ],
+            "id" => 1
+        ];
+        
+        $options = [
+            "http" => [
+                "header" => "Content-Type: application/json",
+                "method" => "POST",
+                "content" => json_encode($data),
+            ],
+        ];
+        
+        $context = stream_context_create($options);
+        $response = file_get_contents($odooUrl, false, $context);
+        $result = json_decode($response, true);
+        
+        if (!is_array($result) || !isset($result['result'])) {
+            Log::error("❌ Invalid Odoo response: ", ["response" => $result]);
+            return null;
+        }
+        
+        $userList = $result['result'];
+        
+        if (!is_array($userList)) {
+            Log::error("❌ Unexpected response type: ", ["response" => $userList]);
+            return null;
+        }
+        
+        foreach ($userList as $user) {
+            Log::info("✅ Found User: ", ["id" => $user['id'], "login" => $user['login']]);
+        }
+        if (!empty($userList)) {
+            $user = $userList[0]; // Assuming you only need the first user found
+            $partnerId = $user['partner_id'][0] ?? null; // Extract partner ID
+        
+            if ($partnerId) {
+                Log::info("✅ Partner ID found: $partnerId");
+        
+                // 🔍 Search res.partner to check if this partner has driver access
+                $partnerSearchData = [
+                    "jsonrpc" => "2.0",
+                    "method" => "call",
+                    "params" => [
+                        "service" => "object",
+                        "method" => "execute_kw",
+                        "args" => [
+                            $db,
+                            $uid,
+                            $odooPassword,
+                            "res.partner",
+                            "search_read",
+                            [[["id", "=", $partnerId]]], // 🔍 Search by Partner ID
+                            ["fields" => ["id", "name", "driver_access"]] // Include relevant fields
+                        ]
+                    ],
+                    "id" => 2
+                ];
+        
+                $options = [
+                    "http" => [
+                        "header" => "Content-Type: application/json",
+                        "method" => "POST",
+                        "content" => json_encode($partnerSearchData),
+                    ],
+                ];
+        
+                $context = stream_context_create($options);
+                $response = file_get_contents($odooUrl, false, $context);
+                $partnerResult = json_decode($response, true);
+        
+                if (isset($partnerResult['result']) && !empty($partnerResult['result'])) {
+                    $partner = $partnerResult['result'][0];
+                    $isDriver = $partner['driver_access'] ?? false; // Replace with actual driver field
+        
+                    if ($isDriver) {
+                        Log::info("✅ Partner {$partner['name']} is a driver.");
+                    } else {
+                        Log::warning("❌ Partner {$partner['name']} is NOT a driver.");
+                    }
+                } else {
+                    Log::error("❌ No partner record found for ID: $partnerId");
+                }
+            } else {
+                Log::error("❌ No Partner ID found for user.");
+            }
+        }
+        return $user;
+    }
+    
+
+    public function login(Request $request){
+        $credentials = $request->only('email', 'password');
+        $db = 'jralejandria-beta-dev-yxe-production-beta-19060481';
+        $odooPassword = $credentials['password'];
+        $odooUrl = "https://jralejandria-beta-dev-yxe.odoo.com/jsonrpc";
+        
+        //Check authentication
+        $uid = $this->authenticateOdooUser($credentials);
+       
+        if($uid == 0){
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid email or password credentials',
+            ], 401);
+        }
+        //Get user data
+        $user = $this->getUser($credentials['email'],$uid, $odooPassword);
+        if(!$user){
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        $partnerId = $user['partner_id'][0] ?? null;
+
+        if (!$partnerId) {
+            return response()->json(['message' => 'Partner ID not found'], 404);
+        }
+
+        // ✅ Fetch `driver_access` From `res.partner`
+        $partnerSearchData = [
+            "jsonrpc" => "2.0",
+            "method" => "call",
+            "params" => [
+                "service" => "object",
+                "method" => "execute_kw",
+                "args" => [
+                    $db,
+                    $uid,
+                    $odooPassword,
+                    "res.partner",
+                    "search_read",
+                    [[["id", "=", $partnerId]]],
+                    ["fields" => ["id", "name", "driver_access"]] // ✅ Fetch `driver_access`
+                ]
+            ],
+            "id" => 2
+        ];
+
+        $options = [
+            "http" => [
+                "header" => "Content-Type: application/json",
+                "method" => "POST",
+                "content" => json_encode($partnerSearchData),
+            ],
+        ];
+
+        $context = stream_context_create($options);
+        $response = file_get_contents($odooUrl, false, $context);
+        $partnerResult = json_decode($response, true);
+
+        // ✅ Debug: Check if `driver_access` exists in the response
+        // dd($partnerResult); // Stop execution and check output
+
+        if (isset($partnerResult['result']) && !empty($partnerResult['result'])) {
+            $partner = $partnerResult['result'][0];
+            $isDriver = $partner['driver_access'] ?? false;
+
+            // if ($isDriver) {
+            //     Log::info("✅ Partner {$partner['name']} is a driver.");
+            // } else {
+            //     Log::warning("❌ Partner {$partner['name']} is NOT a driver.");
+            // }
+        } else {
+            Log::error("❌ No partner record found for ID: $partnerId");
+            return response()->json(['message' => 'Partner record not found'], 404);
+        }
+
+        // ✅ Step 3: Block Non-Drivers
+        if (!$isDriver) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Access denied. Only drivers can log in.'
+            ], 403);
+        }
+       
+        
+        return response()->json([
+            'status' => 'success',
+            'message' => 'User authenticated successfully',
+            'user' => $user,
+            'uid' => $uid,
+            'password' => $odooPassword,
+        
+        ], 200);
+    }
+
+
+    // public function logout(Request $request){
+    //     if ($user = $request->user()) {
+    //         $user->currentAccessToken()->delete();
+
+    //         return response()->json(['message' => 'Logged out successfully'], 200);
+    //     }
+
+    //     return response()->json(['message' => 'No authenticated user'], 401);
+    // }
+
+    // public function updateProfile(Request $request) {
+    //     $user = $request->user();
+        
+    //     // Validate the incoming request data
+    //     $validator = Validator::make($request->all(), [
+    //         'name' => 'sometimes|string|max:255',
+    //         'email' => 'sometimes|email|unique:users,email,' . $user->id,
+    //         'mobile' => 'sometimes|string|unique:users,mobile,' . $user->id,
+    //         'company_code' => 'nullable|string|min:6',
+    //         'password' => 'sometimes|string|min:8|confirmed',
+    //         'picture' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:6144',
+    //     ]);
+        
+    //     if ($validator->fails()) {
+    //         return response()->json($validator->errors(), 422);
+    //     }
+    
+    //     // Update other fields if present
+    //     if ($request->has('name')) {
+    //         $user->name = $request->input('name');
+    //     }
+    
+    //     if ($request->has('email')) {
+    //         $user->email = $request->input('email');
+    //     }
+    
+    //     if ($request->has('mobile')) {
+    //         $user->mobile = $request->input('mobile');
+    //     }
+    
+    //     if ($request->has('company_code')) {
+    //         $user->company_code = $request->input('company_code');
+    //     }
+    
+    //     if ($request->has('password')) {
+    //         $user->password = Hash::make($request->input('password'));
+    //     }
+    
+    //     // Check if a new picture was uploaded
+    //     if ($request->hasFile('picture')) {
+    //         // Delete the old picture if it exists
+    //         if ($user->picture) {
+    //             Storage::disk('public')->delete($user->picture);
+    //         }
+    
+    //         // Store the new picture and assign the path to the user
+    //         $path = $request->file('picture')->store('profile_pictures', 'public');
+    //         $user->picture = $path; // Save the new picture path
+    //     }
+    
+    //     // Save updated user data
+    //     try {
+    //         $user->save();
+    //         return response()->json([
+    //             'message' => 'Profile updated successfully',
+    //             'user' => $user
+    //         ], 200);
+    //     } catch (\Exception $e) {
+    //         Log::error('Profile update failed: ' . $e->getMessage());
+    //         return response()->json(['error' => 'Profile update failed.'], 500);
+    //     }
+    // }
     
 }

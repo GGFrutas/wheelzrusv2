@@ -18,17 +18,28 @@ final authNotifierProvider = StateNotifierProvider<AuthNotifier, AuthState>(
 class AuthState {
   final bool isLoading;
   final bool isError;
+  final String? uid;
+  final String? password;
+  final String? partnerId;
 
   AuthState({
     required this.isLoading,
     required this.isError,
+    required this.uid,
+    required this.password,
+    required this.partnerId,
   });
 
+  
+
   // Helper method to copy the state with updated values
-  AuthState copyWith({bool? isLoading, bool? isError}) {
+  AuthState copyWith({bool? isLoading, bool? isError, String? uid,String? password}) {
     return AuthState(
       isLoading: isLoading ?? this.isLoading,
       isError: isError ?? this.isError,
+      uid: uid ?? this.uid,
+      password: password ?? this.password,
+      partnerId: partnerId ?? this.partnerId,
     );
   }
 }
@@ -37,58 +48,81 @@ class AuthNotifier extends StateNotifier<AuthState> {
   final AuthService _authService;
 
   AuthNotifier(this._authService)
-      : super(AuthState(isLoading: false, isError: false));
+      : super(AuthState(isLoading: false, isError: false, uid: null, password: null, partnerId: null)) {
+    // loadUid();  
+    _initialize(); // Load UID from SharedPreferences when the notifier is created
+  }
 
-  //Login
-  Future<void> login({
-    required String email,
-    required String password,
-    required BuildContext context,
-  }) async {
-    try {
-      // Set loading state
-      state = state.copyWith(isLoading: true, isError: false);
-
-      final response = await _authService.login(email, password);
-      final data =
-          response is String ? jsonDecode(response as String) : response;
-      final user = data['user'];
-      final token = data['token'];
-
-      // Save the token
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('token', token);
-      if (context.mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => HomePage(user: user),
-          ),
-        );
-      }
-      await Future.delayed(const Duration(seconds: 1));
-      state = state.copyWith(isLoading: false, isError: false);
-
-      // Set state back to not loading
-    } catch (e) {
-      print(e);
-      state = state.copyWith(isLoading: false, isError: true);
-      if (context.mounted) {
-        const snackBar = SnackBar(
-          elevation: 0,
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: Colors.transparent,
-          content: AwesomeSnackbarContent(
-            title: 'Bad Credentials!',
-            message: 'Invalid username or password. Please try again.',
-            contentType: ContentType.failure,
-          ),
-        );
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(snackBar);
-      }
+    Future<void> _initialize() async {
+      await loadUid();
     }
+
+
+
+    //Login
+    Future<void> login({
+      required String email,
+      required String password,
+      required BuildContext context,
+    }) async {
+      try {
+        state = state.copyWith(isLoading: true, isError: false);
+
+        final response = await _authService.login(email, password);
+        // print('Raw Response: $response'); // Debugging
+
+        final data = response is String ? jsonDecode(response as String) : response;
+        // print('Parsed Data: $data'); // Debugging
+
+        final user = data['user'];
+        final String uid = data['uid'].toString();
+        final String apiPassword = (data['password'] ?? '').toString();
+
+        if (user == null) {
+          throw Exception('User or uid is null');
+        }
+
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('uid', uid);
+        await prefs.setString('password', apiPassword);
+
+        if (context.mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => HomePage(user: user),
+            ),
+          );
+        }
+
+        state = state.copyWith(isLoading: false, isError: false, uid: uid, password: password);
+      } catch (e) {
+        // print('Login Error: $e');
+        state = state.copyWith(isLoading: false, isError: true);
+      }
+
+    }
+    
+  Future<void> loadUid() async {
+    final prefs = await SharedPreferences.getInstance();
+    final storedUid = prefs.getString('uid');
+    final storedPassword = prefs.getString('password');
+
+    if (storedUid != null && storedUid.isNotEmpty && storedPassword != null) {
+      // print('✅ Loaded UID: $storedUid');
+      // print('✅ Loaded Password: Exists (not printing for security)'); 
+
+      state = state.copyWith(uid: storedUid, password: storedPassword); // ✅ Store both
+    } else {
+      // print('❌ Missing UID or Password in storage.');
+    } 
+
+    // if (storedUid != null && storedUid.isNotEmpty) {
+    //   state = state.copyWith(uid: storedUid);
+    //   print('✅ Loaded UID from storage: $storedUid');
+    // } else {
+    //   print('❌ No stored UID found.');
+    // }
   }
 
   //Register
@@ -116,10 +150,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
           response is String ? jsonDecode(response as String) : response;
 
       final user = data['user'];
-      final token = data['token'];
+      final String uid = data['uid'].toString();
+      final String apiPassword = (data['password'] ?? '').toString();
 
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('token', token);
+      await prefs.setString('uid', uid);
+      await prefs.setString('password', apiPassword);
 
       if (context.mounted) {
         Navigator.pushReplacement(
@@ -133,7 +169,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       // Set state back to not loading
       state = state.copyWith(isLoading: false);
     } catch (e) {
-      print(e);
+      // print(e);
       state = state.copyWith(isLoading: false, isError: true);
       if (context.mounted) {
         const snackBar = SnackBar(
@@ -166,19 +202,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
     try {
       // Set loading state
       state = state.copyWith(isLoading: true, isError: false);
-      final response = await _authService.update(
-        name,
-        email,
-        mobile,
-        companyCode,
-        password,
-        picture,
-      );
-      final data =
-          response is String ? jsonDecode(response as String) : response;
-      print('Data returned');
-      print(data);
-      final user = data['user'];
+      // final response = await _authService.update(
+      //   name,
+      //   email,
+      //   mobile,
+      //   companyCode,
+      //   password,
+      //   picture,
+      // );
+      // final data =
+      //     response is String ? jsonDecode(response as String) : response;
+      // print('Data returned');
+      // print(data);
+      // final user = data['user'];
 
       if (context.mounted) {
         const snackBar = SnackBar(
@@ -199,7 +235,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       // Set state back to not loading
       state = state.copyWith(isLoading: false);
     } catch (e) {
-      print(e);
+      // print(e);
       state = state.copyWith(isLoading: false, isError: true);
       if (context.mounted) {
         const snackBar = SnackBar(

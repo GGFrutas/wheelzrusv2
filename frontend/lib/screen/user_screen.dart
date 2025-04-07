@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class UsersScreen extends StatelessWidget {
   final List<Map<String, dynamic>> users;
 
-  const UsersScreen({Key? key, required this.users}) : super(key: key);
+  const UsersScreen({super.key, required this.users});
 
   @override
   Widget build(BuildContext context) {

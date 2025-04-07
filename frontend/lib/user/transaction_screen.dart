@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print, use_build_context_synchronously
+
 import 'dart:io';
 import 'dart:math';
 import 'package:frontend/notifiers/transaction_notifier.dart';
@@ -8,13 +10,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/provider/accepted_transaction.dart';
 // import 'package:latlong2/latlong.dart';
 import 'package:location/location.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:signature/signature.dart'; // Import signature package
 import 'package:path_provider/path_provider.dart';
 import 'dart:typed_data';
 import 'package:image_picker/image_picker.dart';
 
+
 class TransactionScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic> user;
+  // final TransactionDetails transaction;
   const TransactionScreen({super.key, required this.user});
 
   @override
@@ -28,6 +33,9 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
     penColor: Colors.black,
     exportBackgroundColor: Colors.white,
   );
+  
+  bool _showWidget = true;
+
 
   @override
   void initState() {
@@ -246,16 +254,16 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
     final transaction = ref.watch(acceptedTransactionProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          "YXE Driver",
-          style: GoogleFonts.poppins(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        centerTitle: true,
-      ),
+      // appBar: AppBar(
+      //   title: Text(
+      //     "YXE Driver",
+      //     style: GoogleFonts.poppins(
+      //       fontSize: 24,
+      //       fontWeight: FontWeight.bold,
+      //     ),
+      //   ),
+      //   centerTitle: true,
+      // ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: transaction.map((transact) {
@@ -443,72 +451,72 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
 
                       // Signature Widget (Signature Canvas)
                       const SizedBox(height: 20),
-                      // Text(
-                      //   'Please provide your signature below:',
-                      //   style: GoogleFonts.poppins(fontSize: 16),
-                      // ),
-                      // Signature(
-                      //   controller: _controller,
-                      //   width: 300,
-                      //   height: 150,
-                      //   backgroundColor: Colors.grey[200]!,
-                      // ),
-                      // const SizedBox(height: 10),
-                      // // Clear Button to clear the signature
-                      // Visibility(
-                      //   visible: _controller
-                      //       .isNotEmpty, // Show only if the canvas has content
-                      //   child: Align(
-                      //     alignment: Alignment.centerRight,
-                      //     child: TextButton(
-                      //       style: TextButton.styleFrom(
-                      //         backgroundColor: Colors.red,
-                      //         padding: const EdgeInsets.symmetric(
-                      //             horizontal: 12, vertical: 5),
-                      //       ),
-                      //       onPressed: () {
-                      //         _controller.clear(); // Clear the signature
-                      //         setState(
-                      //             () {}); // Trigger a rebuild to update visibility
-                      //       },
-                      //       child: const Text(
-                      //         'Clear Signature',
-                      //         style: TextStyle(
-                      //           color: Colors.white,
-                      //           fontWeight: FontWeight.bold,
-                      //         ),
-                      //       ),
-                      //     ),
-                      //   ),
-                      // ),
-                      // Text(
-                      //   'Upload an Image Below:',
-                      //   style: GoogleFonts.poppins(fontSize: 16),
-                      // ),
-                      // SingleChildScrollView(
-                      //   scrollDirection: Axis.horizontal,
-                      //   child: Row(
-                      //     children: [
-                      //       ..._images
-                      //           .map((image) => _buildImageThumbnail(image!)),
-                      //       GestureDetector(
-                      //         onTap: _pickImage,
-                      //         child: Container(
-                      //           margin: const EdgeInsets.all(4),
-                      //           width: 70,
-                      //           height: 70,
-                      //           decoration: BoxDecoration(
-                      //             color: Colors.grey[200],
-                      //             borderRadius: BorderRadius.circular(8),
-                      //             border: Border.all(color: Colors.grey),
-                      //           ),
-                      //           child: const Icon(Icons.add,
-                      //               size: 30, color: Colors.grey),
-                      //         ),
-                      //       ),
-                      //     ],
-                      //   ),
-                      // ),
+                      Text(
+                        'Please provide your signature below:',
+                        style: GoogleFonts.poppins(fontSize: 16),
+                      ),
+                      Signature(
+                        controller: _controller,
+                        width: 300,
+                        height: 150,
+                        backgroundColor: Colors.grey[200]!,
+                      ),
+                      const SizedBox(height: 10),
+                      // Clear Button to clear the signature
+                      Visibility(
+                        visible: _controller
+                            .isNotEmpty, // Show only if the canvas has content
+                        child: Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            style: TextButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 5),
+                            ),
+                            onPressed: () {
+                              _controller.clear(); // Clear the signature
+                              setState(
+                                  () {}); // Trigger a rebuild to update visibility
+                            },
+                            child: const Text(
+                              'Clear Signature',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Text(
+                        'Upload an Image Below:',
+                        style: GoogleFonts.poppins(fontSize: 16),
+                      ),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            ..._images
+                                .map((image) => _buildImageThumbnail(image!)),
+                            GestureDetector(
+                              onTap: _pickImage,
+                              child: Container(
+                                margin: const EdgeInsets.all(4),
+                                width: 70,
+                                height: 70,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[200],
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.grey),
+                                ),
+                                child: const Icon(Icons.add,
+                                    size: 30, color: Colors.grey),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
 
                       const SizedBox(
                           height: 10), // Space between signature and details
@@ -539,22 +547,24 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                       // ),
                       Align(
                         alignment: Alignment.centerLeft,
-                        child: TextButton(
-                          onPressed: () {
-                            _success(transact, context);
-                          },
-                          style: TextButton.styleFrom(
-                            backgroundColor: Colors.blue,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 20, vertical: 10),
-                          ),
-                          child: const Text(
-                            'Done',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold),
-                          ),
-                        ),
+                        child: _showWidget
+                            ? TextButton(
+                                onPressed: () {
+                                  _success(transact, context);
+                                },
+                                style: TextButton.styleFrom(
+                                  backgroundColor: Colors.blue,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 20, vertical: 10),
+                                ),
+                                child: const Text(
+                                  'Done',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              )
+                            : const SizedBox.shrink(),
                       ),
                     ],
                   ),

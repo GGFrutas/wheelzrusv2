@@ -31,11 +31,11 @@ class NavigationMenu extends ConsumerWidget {
           icon: Icon(Icons.history_edu_outlined),
           label: 'History',
         ),
-        NavigationDestination(
-          selectedIcon: Icon(Icons.person),
-          icon: Icon(Icons.person_outline),
-          label: 'Account',
-        ),
+        // NavigationDestination(
+        //   selectedIcon: Icon(Icons.person),
+        //   icon: Icon(Icons.person_outline),
+        //   label: 'Account',
+        // ),
       ],
     );
   }

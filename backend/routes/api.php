@@ -28,6 +28,9 @@ Route::middleware([HandleCors::class])->group(function () {
     Route::get('/odoo/booking', [TransactionController::class, 'getBooking']);
     Route::get('/odoo/reason', [TransactionController::class, 'getRejectionReason']);
     Route::post('/odoo/{transactionId}/status', [TransactionController::class, 'updateStatus']);
+    Route::post('/odoo/reject-booking', [TransactionController::class, 'rejectBooking']);
+    Route::get('/odoo/reject_vendor', [TransactionController::class, 'rejectVendor']);
+    Route::post('/odoo/upload_pod', [TransactionController::class, 'uploadPOD']);
 
 
 });

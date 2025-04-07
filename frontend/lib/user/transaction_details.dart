@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/models/transaction_model.dart'; // Import your model file
+import 'package:frontend/user/proof_of_delivery_screen.dart';
 // import 'package:frontend/provider/accepted_transaction.dart';
 // import 'package:frontend/user/transaction_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -9,9 +10,10 @@ import 'package:google_fonts/google_fonts.dart';
 
 class TransactionDetails extends StatelessWidget {
   final Transaction? transaction; // Keep it nullable
+  final String uid; // Add a field for uid
 
   // Constructor to accept the nullable Transaction object
-  const TransactionDetails({Key? key, required this.transaction}) : super(key: key);
+  const TransactionDetails({super.key, required this.transaction, required int id, String? requestNumber, required this.uid});
 
   // Helper function to handle null values and provide fallback
   String getNullableValue(String? value, {String fallback = ''}) {
@@ -49,11 +51,20 @@ class TransactionDetails extends StatelessWidget {
           "YXE Driver",
           style: GoogleFonts.poppins(
             fontSize: 24,
+            color: Colors.white,
             fontWeight: FontWeight.bold,
           ),
         ),
+        backgroundColor: const Color(0xFF1d3c34),
         centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white), 
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
       ),
+      
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: ListView( // Use ListView to allow scrolling
@@ -75,6 +86,31 @@ class TransactionDetails extends StatelessWidget {
               child: Column( // Use a Column to arrange the widgets vertically
                 crossAxisAlignment: CrossAxisAlignment.start, // Align text to the left
                 children: [
+                  Row(
+                    children: [
+                      const Text(
+                        "Booking Reference No: ",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                        textAlign: TextAlign
+                            .center, // Ensure the text is centered
+                      ),
+                      Text(
+                        " ${(transaction?.bookingRefNo)}",
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.normal,
+                          color: Colors.black,
+                        ),
+                        textAlign: TextAlign
+                            .center, // Ensure the text is centered
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
                   Row(
                     children: [
                       const Text(
@@ -210,7 +246,7 @@ class TransactionDetails extends StatelessWidget {
                       ),
                       Flexible(
                         child: Text(
-                          " to be continued",
+                          " No data",
                           style: GoogleFonts.poppins(
                             fontWeight: FontWeight.w500,
                           ),
@@ -234,7 +270,7 @@ class TransactionDetails extends StatelessWidget {
                       ),
                       Flexible(
                         child: Text(
-                          " to be continued",
+                          " No data",
                           style: GoogleFonts.poppins(
                             fontWeight: FontWeight.w500,
                           ),
@@ -512,19 +548,21 @@ class TransactionDetails extends StatelessWidget {
                       
                       ElevatedButton(
                         onPressed: () {
+                          print("Transaction ID: ${transaction?.requestNumber}");
+                          print('UID: $uid');
                           if (transaction?.requestStatus == 'Accepted') {
-                            // Navigate to another screen or perform a different action for accepted transactions
-                            // Navigator.push(
-                            //   context,
-                            //   MaterialPageRoute(
-                            //     builder: (context) => TransactionScreen(user: user),
-                            //   ),
-                            // );
-                            print("SUCCESS");
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ProofOfDeliveryScreen(uid: uid, transaction: transaction),
+                              ),
+                            );
+                            // print("SUCCESS");
                           } else {
+                            print("Transaction ID: ${transaction?.dispatchType}");
                             // Perform the original action for non-accepted transactions
                             // ref.read(acceptedTransactionProvider.notifier).addProduct(transaction);
-                            print("FAILED");
+                            // print("FAILED");
                           }
                         },
                         style: ElevatedButton.styleFrom(
@@ -543,23 +581,23 @@ class TransactionDetails extends StatelessWidget {
                           ),
                         ),
                       ),
-                      if (transaction?.requestStatus != 'Accepted') // Conditional rendering for Reject button
-                        ElevatedButton(
-                          onPressed: () {
-                            // Handle Reject
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color.fromARGB(255, 255, 0, 0), // Set the button color to red
-                          ),
-                          child: Text(
-                            'Reject'.toUpperCase(),
-                            style: GoogleFonts.poppins(
-                              color: Colors.white, // White text color
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
+                      // if (transaction?.requestStatus != 'Accepted') // Conditional rendering for Reject button
+                      // ElevatedButton(
+                      //   onPressed: () {
+                      //     // Handle Reject
+                      //   },
+                      //   style: ElevatedButton.styleFrom(
+                      //     backgroundColor: const Color.fromARGB(255, 255, 0, 0), // Set the button color to red
+                      //   ),
+                      //   child: Text(
+                      //     'Reject'.toUpperCase(),
+                      //     style: GoogleFonts.poppins(
+                      //       color: Colors.white, // White text color
+                      //       fontSize: 14,
+                      //       fontWeight: FontWeight.bold,
+                      //     ),
+                      //   ),
+                      // ),
                     ],
                   ),
                 ],

@@ -1,5 +1,7 @@
 // Import for jsonEncode to convert Map to JSON if needed
 
+// ignore_for_file: avoid_print
+
 import 'dart:io';
 
 import 'package:dio/dio.dart';
@@ -13,7 +15,7 @@ final transactionServiceProvider =
 class TransactionService {
   final _dio = Dio(
     BaseOptions(
-      baseUrl: 'http://10.0.2.2:8000/api',
+      baseUrl: 'http://192.118.102:8000/api',
       headers: {
         'Accept': 'application/json',
       },

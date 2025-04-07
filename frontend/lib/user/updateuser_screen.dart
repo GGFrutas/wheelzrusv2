@@ -14,8 +14,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class UpdateUserScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic> user;
-  const UpdateUserScreen({super.key, required this.user});
+  final String uid;
+  const UpdateUserScreen({super.key, required this.user, required this.uid});
   @override
+  // ignore: library_private_types_in_public_api
   _UpdateUserScreenState createState() => _UpdateUserScreenState();
 }
 
@@ -35,14 +37,14 @@ class _UpdateUserScreenState extends ConsumerState<UpdateUserScreen> {
   @override
   void initState() {
     super.initState();
-    _nameController.text = widget.user['name'] ?? '';
-    _emailController.text = widget.user['email'] ?? '';
-    _mobileController.text = widget.user['mobile'] ?? '';
-    _companyCodeController.text = widget.user['company_code'] ?? '';
+    _nameController.text = widget.user['name'];
+    _emailController.text = widget.user['email'];
+    _mobileController.text = widget.user['mobile'];
+    _companyCodeController.text = widget.user['company_code'];
   }
 
   String _getProfileImageUrl(String picture) {
-    return 'http://10.0.2.2:8000/storage/$picture'; // Correct URL for the emulator
+    return 'http://192.168.118.102:8000/storage/$picture'; // Correct URL for the emulator
   }
 
   final GlobalKey<FormState> _formKey =

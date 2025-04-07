@@ -15,17 +15,22 @@ class Transaction {
   final String? freightForwarderName;
   final String? freightBookingNumber;
   final String? originContainerYard;
-  final int? requestNumber;
-  final int? deRequestNumber;
-  final int? plRequestNumber;
-  final int? dlRequestNumber;
-  final int? peRequestNumber;
+  final String? requestNumber;
+  final String? deRequestNumber;
+  final String? plRequestNumber;
+  final String? dlRequestNumber;
+  final String? peRequestNumber;
 
   final String? requestStatus;
   final String? deRequestStatus;
   final String? plRequestStatus;
   final String? dlRequestStatus;
   final String? peRequestStatus;
+  final String? deTruckDriverName;
+  final String? dlTruckDriverName;
+  final String? peTruckDriverName;
+  final String? plTruckDriverName;
+
 
   const Transaction({
     required this.id,
@@ -53,7 +58,11 @@ class Transaction {
     required this.plRequestStatus,
     required this.dlRequestStatus,
     required this.peRequestStatus,
-    this.isAccepted = false,
+    required this.deTruckDriverName,
+    required this.dlTruckDriverName,
+    required this.peTruckDriverName,
+    required this.plTruckDriverName,
+      this.isAccepted = false,
   });
 
   factory Transaction.fromJson(Map<String, dynamic> json) {
@@ -70,7 +79,8 @@ class Transaction {
       freightBlNumber: json['freight_bl_nummber'],
       sealNumber: json['seal_number'],
       bookingRefNo: json ['booking_reference_no'] ?? 'Unknown Booking Reference Number',
-      freightForwarderName: json ['freight_forwarder_name'],
+      freightForwarderName: json['origin_forwarder_name'] != null && json['origin_forwarder_name'].isNotEmpty
+                            ? _extractDriverName(json ['origin_forwarder_name']) : _extractDriverName(json ['destination_forwarder_name']),
       freightBookingNumber: json ['freight_booking_number'],
       originContainerYard: json['origin_container_location'],
       requestNumber: json['de_request_no'],
@@ -84,12 +94,25 @@ class Transaction {
       plRequestStatus: json['pl_request_status'],
       dlRequestStatus: json['dl_request_status'],
       peRequestStatus: json['pe_request_status'],
+      deTruckDriverName: _extractDriverName(json['de_truck_driver_name']),
+      dlTruckDriverName: _extractDriverName(json['dl_truck_driver_name']),
+      peTruckDriverName: _extractDriverName(json['ee_truck_driver_name']),
+      plTruckDriverName: _extractDriverName(json['pl_truck_driver_name']),
       isAccepted: false,  // set default or map from API
       
     );
   }
 
-  Transaction copyWith({String? name, String? destination,int? requestNumber,String? origin,String? requestStatus,status, bool? isAccepted}) {
+    static String? _extractDriverName(dynamic field) {
+    if (field is List && field.isNotEmpty) {
+      return field[1]; // Extract name (second item in list)
+    } else if (field is String) {
+      return field;
+    }
+    return null; // Return null if not available
+  }
+
+  Transaction copyWith({String? name, String? destination,String? requestNumber,String? origin,String? requestStatus,status, bool? isAccepted}) {
     return Transaction(
       id: id,
       name: name ?? this.name,
@@ -118,6 +141,10 @@ class Transaction {
       plRequestStatus:plRequestStatus,
       dlRequestStatus:dlRequestStatus,
       peRequestStatus:peRequestStatus,
+      deTruckDriverName: deTruckDriverName,
+      dlTruckDriverName: dlTruckDriverName,
+      peTruckDriverName: peTruckDriverName,
+      plTruckDriverName: plTruckDriverName,
     );
   }
   @override

@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'dart:convert';
 import 'dart:io';
 import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
@@ -67,6 +69,7 @@ class TransactionNotifier extends StateNotifier<TransactionSub> {
           signature,
           transactionImages);
 
+      // ignore: unused_local_variable
       final data =
           response is String ? jsonDecode(response as String) : response;
 

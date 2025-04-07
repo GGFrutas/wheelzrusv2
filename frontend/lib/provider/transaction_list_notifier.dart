@@ -38,3 +38,17 @@ final acceptedTransactionProvider = Provider((ref) {
       .where((transaction) => transaction.status == 'Ongoing')
       .toSet();
 });
+
+final rejectedTransactionProvider = Provider((ref) {
+  final allTransactions = ref.watch(transactionListProvider);
+  return allTransactions
+      .where((transaction) => transaction.status == 'Rejected')
+      .toSet();
+});
+
+final ongoingTransactionProvider = Provider((ref) {
+  final allTransactions = ref.watch(transactionListProvider);
+  return allTransactions
+      .where((transaction) => transaction.status == 'Ongoing')
+      .toSet();
+});

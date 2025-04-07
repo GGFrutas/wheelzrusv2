@@ -1,7 +1,10 @@
+// ignore_for_file: avoid_print
+
 import 'dart:convert';
 
 import 'package:frontend/models/transaction_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:frontend/notifiers/auth_notifier.dart';
 import 'package:frontend/provider/transaction_list_notifier.dart';
 import 'package:http/http.dart' as http;
 
@@ -31,9 +34,9 @@ class AcceptedTransactionNotifier extends StateNotifier<Set<Transaction>> {
     });
   }
 
-Future<void> updateStatus(String transactionId, String requestNumber, String newStatus) async {
+Future<void> updateStatus(String transactionId, String requestNumber, String newStatus,  WidgetRef ref) async {
   // Call the method to update the status in the database
-  await updateTransactionStatusInDatabase(transactionId, requestNumber, newStatus, http.Client());
+  await updateTransactionStatusInDatabase(transactionId, requestNumber, newStatus, http.Client(),ref);
 
   // Continue updating local state as shown earlier
   final updatedSet = state.map((transaction) {
@@ -48,8 +51,17 @@ Future<void> updateStatus(String transactionId, String requestNumber, String new
 }
 
 Future<void> updateTransactionStatusInDatabase(
-  String transactionId, String requestNumber, String newStatus, http.Client httpClient) async {
-  final url = Uri.parse('http://10.0.2.2:8000/api/odoo/$transactionId/status'); // Adjust URL as needed
+  String transactionId, String requestNumber, String newStatus, http.Client httpClient, WidgetRef ref) async {
+
+    final uid = ref.watch(authNotifierProvider).uid;
+    final password = ref.watch(authNotifierProvider).password ?? '';
+
+    if (uid == null || uid.isEmpty) {
+      // print('❌ UID not found or empty!');
+      throw Exception('UID is missing. Please log in.');
+    }
+    // print('✅ Retrieved UID: $uid'); // Debugging UID
+  final url = Uri.parse('http://192.168.118.102:8000/api/odoo/$transactionId/status?uid=$uid'); // Adjust URL as needed
 
   final payload = jsonEncode({
     'requestNumber': requestNumber,
@@ -60,7 +72,7 @@ Future<void> updateTransactionStatusInDatabase(
     final response = await httpClient.post(
       url,
       body: payload,
-      headers: {'Content-Type': 'application/json'},
+      headers: {'Content-Type': 'application/json','password': password},
     );
 
     if (response.statusCode == 200) {
@@ -92,12 +104,12 @@ final unacceptedTransactionsProvider = Provider<Set<Transaction>>((ref) {
       }).toSet();
 });
 
-Future<void> updateTransactionStatusInDatabase(
-  String transactionId, String newStatus, http.Client httpClient, dynamic json) async {
-  // Convert the transactionId to an integer for backend processing
-  await updateTransactionStatusInDatabase(
-  transactionId.toString(), // Pass the ID as a string
-  'Accepted', // Set status to 'Accepted'
-  http.Client(),
-  json,
-);}
+// Future<void> updateTransactionStatusInDatabase(
+//   String transactionId, String newStatus, http.Client httpClient, dynamic json) async {
+//   // Convert the transactionId to an integer for backend processing
+//   await updateTransactionStatusInDatabase(
+//   transactionId.toString(), // Pass the ID as a string
+//   'Accepted', // Set status to 'Accepted'
+//   http.Client(),
+//   json,
+// );}

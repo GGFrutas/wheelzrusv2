@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -8,7 +10,7 @@ final authServiceProvider = Provider<AuthService>((ref) => AuthService());
 class AuthService {
   final _dio = Dio(
     BaseOptions(
-      baseUrl: 'http://10.0.2.2:8000/api',
+      baseUrl: 'http://192.168.118.102:8000/api',
       headers: {
         'Accept': 'application/json',
       },
@@ -16,13 +18,64 @@ class AuthService {
   );
 
   Future<Map<String, dynamic>> login(String email, String password) async {
-    // bool isLoggedIn = false;
+//   try {
+//     final response = await _dio.post(
+//       '/login',
+//       data: {'email': email, 'password': password},
+//     );
 
-    final response =
-        await _dio.post('/login', data: {'email': email, 'password': password});
+//     print('Raw Response: ${response.data}'); 
 
-    print(response);
-    return response.data;
+//     if (response.statusCode == 200) {
+//       if (response.data is Map<String, dynamic>) {
+//         print('✅ Login Success: ${response.data}');
+//         return response.data;  
+//       } else {
+//         print('❌ Invalid response format: ${response.data}');
+//         return {'error': 'Invalid response format'};
+//       }
+//     } else {
+//       print('❌ Login failed with status: ${response.statusCode}');
+//       return {'error': 'Login failed'};
+//     }
+//   } on DioException catch (e) {
+//     if (e.response != null) {
+//       print('❌ Dio Error Response: ${e.response?.data}');
+//       print('Status Code: ${e.response?.statusCode}');
+//     } else {
+//       print('❌ Dio Error: ${e.message}');
+//     }
+//     return {'error': 'Login failed'};
+//   } catch (e) {
+//     print('❌ Unexpected Error: $e');
+//     return {'error': 'Unexpected error occurred'};
+//   }
+// }
+  // Future<Map<String, dynamic>> login(String email, String password) async {
+  //   // bool isLoggedIn = false;
+
+    try {
+      final response = await _dio.post(
+        '/login',
+        data: {'email': email, 'password': password},
+      );
+
+      print('Response: ${response.data}');
+      return response.data;
+    } on DioException catch (e) {
+      if (e.response != null) {
+        // Backend returned an error
+        print('Dio Error Response: ${e.response?.data}');
+        print('Status Code: ${e.response?.statusCode}');
+      } else {
+        // No response from server (network issue)
+        print('Dio Error: ${e.message}');
+      }
+      return {'error': 'Login failed'};
+    } catch (e) {
+      print('Unexpected Error: $e');
+      return {'error': 'Unexpected error occurred'};
+    }
   }
 
   Future<Map<String, dynamic>> register(
