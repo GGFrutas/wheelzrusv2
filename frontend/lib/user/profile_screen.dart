@@ -62,7 +62,7 @@ class _ProfileScreenPageState extends ConsumerState<ProfileScreen>{
   //       iconTheme: const IconThemeData(color: Colors.white),
   //       title: Text(
   //         'Profile',
-  //         style: GoogleFonts.poppins(
+  //         style: GoogleFonts.montserrat(
   //           fontSize: 24,
   //           color: Colors.white,
   //           fontWeight: FontWeight.bold,
@@ -103,7 +103,7 @@ class _ProfileScreenPageState extends ConsumerState<ProfileScreen>{
         iconTheme: const IconThemeData(color: Colors.white),
         title: Text(
           'Profile',
-          style: GoogleFonts.poppins(
+          style: GoogleFonts.montserrat(
             fontSize: 24,
             color: Colors.white,
             fontWeight: FontWeight.bold,

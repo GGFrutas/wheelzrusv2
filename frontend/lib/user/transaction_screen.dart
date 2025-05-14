@@ -1,4 +1,4 @@
-// ignore_for_file: avoid_print, use_build_context_synchronously
+// ignore_for_file: avoid_print, use_build_context_synchronously, unused_import
 
 import 'dart:io';
 import 'dart:math';
@@ -34,7 +34,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
     exportBackgroundColor: Colors.white,
   );
   
-  bool _showWidget = true;
+  final bool _showWidget = true;
 
 
   @override
@@ -257,7 +257,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
       // appBar: AppBar(
       //   title: Text(
       //     "YXE Driver",
-      //     style: GoogleFonts.poppins(
+      //     style: GoogleFonts.montserrat(
       //       fontSize: 24,
       //       fontWeight: FontWeight.bold,
       //     ),
@@ -356,7 +356,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                                   horizontal: 5, vertical: 0),
                               child: Text(
                                 transact.requestNumber.toString(),
-                                style: GoogleFonts.poppins(
+                                style: GoogleFonts.montserrat(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 22,
                                   letterSpacing: 0.9,
@@ -371,7 +371,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                             ),
                             child: Text(
                               transact.requestStatus.toString(),
-                              style: GoogleFonts.poppins(
+                              style: GoogleFonts.montserrat(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -453,7 +453,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                       const SizedBox(height: 20),
                       Text(
                         'Please provide your signature below:',
-                        style: GoogleFonts.poppins(fontSize: 16),
+                        style: GoogleFonts.montserrat(fontSize: 16),
                       ),
                       Signature(
                         controller: _controller,
@@ -491,7 +491,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                       ),
                       Text(
                         'Upload an Image Below:',
-                        style: GoogleFonts.poppins(fontSize: 16),
+                        style: GoogleFonts.montserrat(fontSize: 16),
                       ),
                       SingleChildScrollView(
                         scrollDirection: Axis.horizontal,

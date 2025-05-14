@@ -48,7 +48,7 @@ class RejectionDetails extends StatelessWidget {
       appBar: AppBar(
         title: Text(
           "YXE Driver",
-          style: GoogleFonts.poppins(
+          style: GoogleFonts.montserrat(
             fontSize: 24,
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -62,6 +62,14 @@ class RejectionDetails extends StatelessWidget {
             Navigator.pop(context);
           },
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications_none, color: Colors.white),
+            onPressed: () {
+              // Handle notification tap
+            },
+          ),
+        ],
       ),
       
       body: Padding(
@@ -73,7 +81,7 @@ class RejectionDetails extends StatelessWidget {
               padding: const EdgeInsets.all(8.0),
               child: Text(
                 " ${getNullableValue(transaction?.name)}", // Section Title
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.montserrat(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
@@ -150,7 +158,7 @@ class RejectionDetails extends StatelessWidget {
                       Flexible(
                         child: Text(
                           " $originPort",
-                          style: GoogleFonts.poppins(
+                          style: GoogleFonts.montserrat(
                             fontWeight: FontWeight.w500,
                           ),
                           softWrap: true, // Text will wrap if it's too long
@@ -173,8 +181,8 @@ class RejectionDetails extends StatelessWidget {
                       ),
                       Flexible(
                         child: Text(
-                          " ${getNullableValue(transaction?.freightForwarderName)}",
-                          style: GoogleFonts.poppins(
+                          " ${getNullableValue(transaction?.transportForwarderName)}",
+                          style: GoogleFonts.montserrat(
                             fontWeight: FontWeight.w500,
                           ),
                           softWrap: true, // Text will wrap if it's too long
@@ -198,7 +206,7 @@ class RejectionDetails extends StatelessWidget {
                       Flexible(
                         child: Text(
                           " ${(transaction?.destination)}",
-                          style: GoogleFonts.poppins(
+                          style: GoogleFonts.montserrat(
                             fontWeight: FontWeight.w500,
                           ),
                           softWrap: true, // Text will wrap if it's too long
@@ -222,7 +230,7 @@ class RejectionDetails extends StatelessWidget {
                       Flexible(
                         child: Text(
                           " ${(transaction?.origin)}",
-                          style: GoogleFonts.poppins(
+                          style: GoogleFonts.montserrat(
                             fontWeight: FontWeight.w500,
                           ),
                           softWrap: true, // Text will wrap if it's too long
@@ -246,7 +254,7 @@ class RejectionDetails extends StatelessWidget {
                       Flexible(
                         child: Text(
                           " No data",
-                          style: GoogleFonts.poppins(
+                          style: GoogleFonts.montserrat(
                             fontWeight: FontWeight.w500,
                           ),
                           softWrap: true, // Text will wrap if it's too long
@@ -270,7 +278,7 @@ class RejectionDetails extends StatelessWidget {
                       Flexible(
                         child: Text(
                           " No data",
-                          style: GoogleFonts.poppins(
+                          style: GoogleFonts.montserrat(
                             fontWeight: FontWeight.w500,
                           ),
                           softWrap: true, // Text will wrap if it's too long
@@ -287,7 +295,7 @@ class RejectionDetails extends StatelessWidget {
               padding: const EdgeInsets.all(8.0),
               child: Text(
                 "Freight and Container Info", // Section Title
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.montserrat(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
@@ -407,7 +415,7 @@ class RejectionDetails extends StatelessWidget {
               padding: const EdgeInsets.all(8.0),
               child: Text(
                 "Schedules", // Section Title
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.montserrat(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
@@ -477,7 +485,7 @@ class RejectionDetails extends StatelessWidget {
               padding: const EdgeInsets.all(8.0),
               child: Text(
                 "Milestones", // Section Title
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.montserrat(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),

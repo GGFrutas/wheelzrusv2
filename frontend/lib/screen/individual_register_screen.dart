@@ -1,3 +1,5 @@
+// ignore_for_file: library_private_types_in_public_api, use_build_context_synchronously
+
 import 'dart:io'; // Required for File
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -320,7 +322,7 @@ class _IndividualRegisterScreenState
         backgroundColor: const Color(0xFF1d3c34),
         title: Text(
           'Individual',
-          style: GoogleFonts.poppins(
+          style: GoogleFonts.montserrat(
             fontSize: 24,
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -369,7 +371,7 @@ class _IndividualRegisterScreenState
                   const SizedBox(height: 16.0),
                   Text(
                     'Create an Account',
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.montserrat(
                       color: Colors.white,
                       fontSize: 30,
                       fontWeight: FontWeight.bold,
@@ -456,14 +458,14 @@ class _IndividualRegisterScreenState
                         child: RichText(
                           text: TextSpan(
                             text: 'I agree with the ',
-                            style: GoogleFonts.poppins(
+                            style: GoogleFonts.montserrat(
                               fontSize: 14,
                               color: Colors.white,
                             ),
                             children: [
                               TextSpan(
                                 text: 'Terms of Service',
-                                style: GoogleFonts.poppins(
+                                style: GoogleFonts.montserrat(
                                   fontSize: 14,
                                   color: const Color(
                                       0xFFFFC72C), // Accent blue color
@@ -478,11 +480,11 @@ class _IndividualRegisterScreenState
                               ),
                               TextSpan(
                                   text: ' and ',
-                                  style: GoogleFonts.poppins(
+                                  style: GoogleFonts.montserrat(
                                       fontSize: 14, color: Colors.white)),
                               TextSpan(
                                 text: 'Privacy Policy.',
-                                style: GoogleFonts.poppins(
+                                style: GoogleFonts.montserrat(
                                   fontSize: 14,
                                   color: const Color(
                                       0xFFFFC72C), // Accent blue color
@@ -506,7 +508,7 @@ class _IndividualRegisterScreenState
                     builder: (context, ref, _) {
                       final authState = ref.watch(authNotifierProvider);
                       bool isLoading = authState.isLoading;
-                      bool isError = authState.isError;
+                      // bool isError = authState.isError;
                       return SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
@@ -538,7 +540,7 @@ class _IndividualRegisterScreenState
                                   )
                                 : Text(
                                     'Sign Up',
-                                    style: GoogleFonts.poppins(
+                                    style: GoogleFonts.montserrat(
                                       color: Colors.black,
                                       fontSize: 16, // Updated font size to 20
                                       fontWeight: FontWeight.bold,
@@ -553,7 +555,7 @@ class _IndividualRegisterScreenState
                   RichText(
                     text: TextSpan(
                       text: "Already have an account? ",
-                      style: GoogleFonts.poppins(
+                      style: GoogleFonts.montserrat(
                         textStyle: const TextStyle(
                           color: Colors.white,
                           fontSize: 16,
@@ -562,7 +564,7 @@ class _IndividualRegisterScreenState
                       children: [
                         TextSpan(
                           text: 'Sign In',
-                          style: GoogleFonts.poppins(
+                          style: GoogleFonts.montserrat(
                             textStyle: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,

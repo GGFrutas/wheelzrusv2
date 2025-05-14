@@ -1,4 +1,7 @@
+// ignore_for_file: library_private_types_in_public_api
+
 import 'package:flutter/material.dart';
+import 'package:frontend/theme/colors.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class InputWidget extends StatefulWidget {
@@ -49,11 +52,36 @@ class _InputWidgetState extends State<InputWidget> {
               widget.obscureText && !_showPassword, // Toggle obscure text
           decoration: InputDecoration(
             filled: true, // To enable the background color
-            // fillColor: widget.isError || _errorText != null
-            //     ? Colors.red
-            //     : Colors.white,
+            fillColor: widget.isError || _errorText != null
+                ? Colors.red.shade50
+                : Colors.grey.shade200, // Change background color based on error state
+            contentPadding: const EdgeInsets.symmetric(
+              vertical: 20.0,
+              horizontal: 20.0,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10.0),
+              borderSide: BorderSide(
+                color: Colors.grey.shade200,
+                width: 1.0,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10.0),
+              borderSide: BorderSide(
+                color: Colors.grey.shade200,
+                width: 1.0,
+              ),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10.0),
+              borderSide: BorderSide(
+                color: Colors.grey.shade200,
+                width: 1.0,
+              ),
+            ),
             labelText: widget.hintText,
-            labelStyle: GoogleFonts.poppins(
+            labelStyle: GoogleFonts.montserrat(
               fontSize: 16,
               // color: widget.isError || _errorText != null
               //     ? Colors.white
@@ -72,6 +100,7 @@ class _InputWidgetState extends State<InputWidget> {
                 ? IconButton(
                     icon: Icon(
                       _showPassword ? Icons.visibility : Icons.visibility_off,
+                      color: mainColor,
                     ),
                     onPressed: () {
                       setState(() {

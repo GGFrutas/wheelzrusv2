@@ -72,7 +72,7 @@ class AuthenticationController extends Controller
         
     //     // Set up the XML-RPC client for Odoo
     //     $url = 'https://jralejandria-beta-dev-yxe.odoo.com';  // Your local Odoo instance URL
-    //     $db = 'jralejandria-beta-dev-yxe-production-beta-19060481';  // Replace with your Odoo database name
+    //     $db = 'https://jralejandria-beta-dev-yxe-production-beta-20247511';  // Replace with your Odoo database name
     
 
     //     $username = $credentials['email'];  // Odoo login field
@@ -137,7 +137,7 @@ class AuthenticationController extends Controller
         $username = $credentials['email'];  // Odoo login field
         $password = $credentials['password']; // Odoo password
         $url = 'https://jralejandria-beta-dev-yxe.odoo.com';  
-        $db = 'jralejandria-beta-dev-yxe-production-beta-19060481';
+        $db = 'jralejandria-beta-dev-yxe-production-beta-20247511';
        
 
         // Set up the XML-RPC client for authentication
@@ -173,7 +173,7 @@ class AuthenticationController extends Controller
     public function getUser($username,$uid, $odooPassword)
     {
         $url ="https://jralejandria-beta-dev-yxe.odoo.com/xmlrpc/2/object";
-        $db ='jralejandria-beta-dev-yxe-production-beta-19060481';
+        $db ='jralejandria-beta-dev-yxe-production-beta-20247511';
         // $odooPassword = '4cfacd1f9d87c00abf403e036a3ef01edcae639d';
        
         $client = new Client($url);
@@ -322,7 +322,7 @@ class AuthenticationController extends Controller
 
     public function login(Request $request){
         $credentials = $request->only('email', 'password');
-        $db = 'jralejandria-beta-dev-yxe-production-beta-19060481';
+        $db = 'jralejandria-beta-dev-yxe-production-beta-20247511';
         $odooPassword = $credentials['password'];
         $odooUrl = "https://jralejandria-beta-dev-yxe.odoo.com/jsonrpc";
         

@@ -19,10 +19,10 @@ Future<List<RejectionReason>> fetchReasons(FutureProviderRef<List<RejectionReaso
     final password = ref.watch(authNotifierProvider).password ?? '';
 
     if (uid == null || uid.isEmpty) {
-      print('❌ UID not found or empty!');
+      // print('❌ UID not found or empty!');
       throw Exception('UID is missing. Please log in.');
     }
-    print('✅ Retrieved UID: $uid'); // Debugging UID
+    // print('✅ Retrieved UID: $uid'); // Debugging UID
     final response = await http.get(Uri.parse('http://192.168.118.102:8000/api/odoo/reason?uid=$uid'), 
       headers: {
         'Content-Type': 'application/json',

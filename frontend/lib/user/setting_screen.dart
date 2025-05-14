@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'package:animated_toggle_switch/animated_toggle_switch.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,7 +27,7 @@ class _SettingPageState extends ConsumerState<SettingScreen>{
         iconTheme: const IconThemeData(color: Colors.white),
         title: Text(
           'Settings',
-          style: GoogleFonts.poppins(
+          style: GoogleFonts.montserrat(
             fontSize: 24,
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -48,7 +50,7 @@ class _SettingPageState extends ConsumerState<SettingScreen>{
                     const SizedBox(width:10),
                     Text(
                       "Dark Mode",
-                      style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w500 ),
+                      style: GoogleFonts.montserrat(fontSize: 16, fontWeight: FontWeight.w500 ),
                     ),
                   ],
                 ),
@@ -119,7 +121,7 @@ class _SettingPageState extends ConsumerState<SettingScreen>{
                         const SizedBox(width:10),
                         Text(
                           "Profile",
-                          style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w500 ),
+                          style: GoogleFonts.montserrat(fontSize: 16, fontWeight: FontWeight.w500 ),
                         ),
                       ],
                     ),
@@ -137,7 +139,7 @@ class _SettingPageState extends ConsumerState<SettingScreen>{
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Text(
         title,
-        style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold),
+        style: GoogleFonts.montserrat(fontSize: 18, fontWeight: FontWeight.bold),
       )
     );
   }

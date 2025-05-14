@@ -1,0 +1,2 @@
+C:/Projects/wheelzrusv2/frontend/android/app/.cxx/Debug/yx6d01s5/x86/CMakeFiles/edit_cache.dir
+C:/Projects/wheelzrusv2/frontend/android/app/.cxx/Debug/yx6d01s5/x86/CMakeFiles/rebuild_cache.dir

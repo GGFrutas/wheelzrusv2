@@ -10,33 +10,43 @@ class NavigationMenu extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final index = ref.watch(navigationNotifierProvider);
 
-    return NavigationBar(
-      selectedIndex: index,
-      onDestinationSelected: (value) {
-        ref.read(navigationNotifierProvider.notifier).setSelectedIndex(value);
-      },
-      destinations: const [
-        NavigationDestination(
-          selectedIcon: Icon(Icons.paid),
-          icon: Icon(Icons.paid_outlined),
-          label: 'Transactions',
+    return Container (
+      decoration: const BoxDecoration(
+        border: Border(
+          top: BorderSide(
+            color: Colors.grey,
+            width: 1,
+          ),
         ),
-        NavigationDestination(
-          selectedIcon: Icon(Icons.home),
-          icon: Icon(Icons.home_outlined),
-          label: 'Home',
-        ),
-        NavigationDestination(
-          selectedIcon: Icon(Icons.history_edu),
-          icon: Icon(Icons.history_edu_outlined),
-          label: 'History',
-        ),
-        // NavigationDestination(
-        //   selectedIcon: Icon(Icons.person),
-        //   icon: Icon(Icons.person_outline),
-        //   label: 'Account',
-        // ),
-      ],
+      ),
+      child: NavigationBar(
+        selectedIndex: index,
+        onDestinationSelected: (value) {
+          ref.read(navigationNotifierProvider.notifier).setSelectedIndex(value);
+        },
+        destinations: const [
+          NavigationDestination(
+            selectedIcon: Icon(Icons.paid),
+            icon: Icon(Icons.attach_money_rounded),
+            label: '',
+          ),
+          NavigationDestination(
+            selectedIcon: Icon(Icons.home_outlined),
+            icon: Icon(Icons.home_outlined),
+            label: '',
+          ),
+          NavigationDestination(
+            selectedIcon: Icon(Icons.receipt),
+            icon: Icon(Icons.receipt_long_outlined),
+            label: '',
+          ),
+          // NavigationDestination(
+          //   selectedIcon: Icon(Icons.person),
+          //   icon: Icon(Icons.person_outline),
+          //   label: 'Account',
+          // ),
+        ],
+      ),
     );
   }
 }

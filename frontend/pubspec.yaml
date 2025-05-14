@@ -31,6 +31,8 @@ dependencies:
   flutter:
     sdk: flutter
   google_maps_flutter: ^2.1.1
+  intl: ^0.19.0
+
   # camera: ^0.11.0+2
   
 
@@ -64,6 +66,7 @@ dependencies:
   http_parser: ^4.0.2
   path_provider: ^2.1.5
   line_awesome_flutter: ^3.0.1
+  carousel_slider: ^5.0.0
   # camera: ^0.11.0+2
 
 dev_dependencies:
@@ -96,6 +99,13 @@ flutter:
     - assets/xlogo.png
     - assets/logowheelz2.png
     - assets/animation/Animation - 1726470320949.json
+    - assets/Yello X.png
+    - assets/hand-drawn-transportation-truck-with-delivery-man.png
+    - assets/illustrated-transport-truck-delivery-side-view-front-view-red-color-delivery-truck.png
+    - assets/box-truck-with-delivery-man-standing-it-vector-illustration.png
+    - assets/delivery-truck-boxes-with-isometric-style.png
+    - assets/Freight Forwarding.jpg
+    - assets/Yello X white.png
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see

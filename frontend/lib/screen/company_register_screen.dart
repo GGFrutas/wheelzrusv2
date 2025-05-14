@@ -14,6 +14,7 @@ class CompanyRegisterScreen extends ConsumerStatefulWidget {
   const CompanyRegisterScreen({super.key});
 
   @override
+  // ignore: library_private_types_in_public_api
   _CompanyRegisterScreenState createState() => _CompanyRegisterScreenState();
 }
 
@@ -109,7 +110,7 @@ class _CompanyRegisterScreenState extends ConsumerState<CompanyRegisterScreen> {
         backgroundColor: const Color(0xFF1d3c34),
         title: Text(
           'Company',
-          style: GoogleFonts.poppins(
+          style: GoogleFonts.montserrat(
             fontSize: 24,
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -158,7 +159,7 @@ class _CompanyRegisterScreenState extends ConsumerState<CompanyRegisterScreen> {
                   const SizedBox(height: 16.0),
                   Text(
                     'Create an Account',
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.montserrat(
                       color: Colors.white,
                       fontSize: 30,
                       fontWeight: FontWeight.bold,
@@ -256,14 +257,14 @@ class _CompanyRegisterScreenState extends ConsumerState<CompanyRegisterScreen> {
                         child: RichText(
                           text: TextSpan(
                             text: 'I agree with the ',
-                            style: GoogleFonts.poppins(
+                            style: GoogleFonts.montserrat(
                               fontSize: 14,
                               color: Colors.white,
                             ),
                             children: [
                               TextSpan(
                                 text: 'Terms of Service',
-                                style: GoogleFonts.poppins(
+                                style: GoogleFonts.montserrat(
                                   fontSize: 14,
                                   color: const Color(
                                       0xFFFFC72C), // Accent blue color
@@ -277,11 +278,11 @@ class _CompanyRegisterScreenState extends ConsumerState<CompanyRegisterScreen> {
                               ),
                               TextSpan(
                                   text: ' and ',
-                                  style: GoogleFonts.poppins(
+                                  style: GoogleFonts.montserrat(
                                       fontSize: 14, color: Colors.white)),
                               TextSpan(
                                 text: 'Privacy Policy.',
-                                style: GoogleFonts.poppins(
+                                style: GoogleFonts.montserrat(
                                   fontSize: 14,
                                   color: const Color(
                                       0xFFFFC72C), // Accent blue color
@@ -304,7 +305,7 @@ class _CompanyRegisterScreenState extends ConsumerState<CompanyRegisterScreen> {
                     builder: (context, ref, _) {
                       final authState = ref.watch(authNotifierProvider);
                       bool isLoading = authState.isLoading;
-                      bool isError = authState.isError;
+                      // bool isError = authState.isError;
                       return SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
@@ -336,7 +337,7 @@ class _CompanyRegisterScreenState extends ConsumerState<CompanyRegisterScreen> {
                                   )
                                 : Text(
                                     'Sign Up',
-                                    style: GoogleFonts.poppins(
+                                    style: GoogleFonts.montserrat(
                                       color: Colors.black,
                                       fontSize: 16, // Updated font size to 20
                                       fontWeight: FontWeight.bold,
@@ -351,7 +352,7 @@ class _CompanyRegisterScreenState extends ConsumerState<CompanyRegisterScreen> {
                   RichText(
                     text: TextSpan(
                       text: "Already have an account? ",
-                      style: GoogleFonts.poppins(
+                      style: GoogleFonts.montserrat(
                         textStyle: const TextStyle(
                           color: Colors.white,
                           fontSize: 16,
@@ -360,7 +361,7 @@ class _CompanyRegisterScreenState extends ConsumerState<CompanyRegisterScreen> {
                       children: [
                         TextSpan(
                           text: 'Sign In',
-                          style: GoogleFonts.poppins(
+                          style: GoogleFonts.montserrat(
                             textStyle: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,

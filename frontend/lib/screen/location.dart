@@ -8,7 +8,7 @@ class LocationScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final locationState = ref.watch(locationProvider);
-    final locationNotifier = ref.read(locationProvider.notifier);
+    // final locationNotifier = ref.read(locationProvider.notifier);
     final locationService = ref.read(locationServiceProvider);
 
     return Scaffold(

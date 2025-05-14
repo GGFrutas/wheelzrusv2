@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:form_validator/form_validator.dart';
 import 'package:frontend/notifiers/auth_notifier.dart';
+import 'package:frontend/theme/colors.dart';
 import 'package:frontend/widgets/input_widget.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,6 +18,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final GlobalKey<FormState> _form = GlobalKey<FormState>();
+  bool _rememberMe = false;
 
   @override
   void dispose() {
@@ -71,7 +73,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1d3c34),
+      backgroundColor: const Color.fromARGB(255, 254, 254, 254),
       body: Form(
         key: _form,
         child: Padding(
@@ -83,31 +85,50 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 SizedBox(height: MediaQuery.of(context).size.height * 0.2),
-                Container(
-                  decoration: const BoxDecoration(
-                    color: Colors.white, // Background color
-                    shape: BoxShape.circle, // Circular shape
-                  ),
-                  height: 240, // Adjust as needed
-                  width: 240, // Adjust as needed
-                  child: ClipOval(
-                    child: Image.asset(
-                      'assets/xlogo.png',
-                      height: 250, // Adjust as needed  
-                      width: 250, // Adjust as needed
-                      fit: BoxFit.cover, // Adjust if needed to fit the circle
-                    ),
+                SizedBox(
+                  width: 100, // Adjust size as needed
+                  height: 100,
+                  child: Stack(
+                    children: [
+                      // Background image with 0.5 opacity
+                      Opacity(
+                        opacity: 0.5,
+                        child: Image.asset(
+                          'assets/Freight Forwarding.jpg', // Replace with your background image
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      // Foreground image
+                      Center(
+                        child: Image.asset(
+                          'assets/Yello X white.png',
+                          width: 30, // Adjust size of the top image
+                          height: 30,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+
                 Text(
-                  'YXE Driver App',
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
+                  'Welcome Back',
+                  style: GoogleFonts.montserrat(
+                    color: mainColor,
                     fontSize: 34,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 12.0),
+                // const SizedBox(height: 8.0),
+                 Text(
+                  'Login to your account',
+                  style: GoogleFonts.montserrat(
+                    color: Colors.grey,
+                    fontSize:16,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+                const SizedBox(height: 20.0),
                 Column(
                   children: [
                     Consumer(
@@ -125,7 +146,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         obscureText: false,
                         prefixIcon: const Icon(
                           Icons.mail,
-                          color: Colors.black,
+                          color:  mainColor,
                         ),
                         validator:
                             ValidationBuilder().email().maxLength(50).build(),
@@ -150,7 +171,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         obscureText: true,
                         prefixIcon: const Icon(
                           Icons.lock,
-                          color: Colors.black,
+                          color: mainColor,
                         ),
                         validator:
                             ValidationBuilder().minLength(5).maxLength(50).build(),
@@ -160,7 +181,97 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       );
                     },
                   ),
-                  const SizedBox(height: 16.0),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Row(
+                      //   children:[
+                      //     Checkbox(
+                      //       value: _rememberMe,
+                      //       activeColor: mainColor,
+                      //       checkColor: Colors.white,
+                      //       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      //       visualDensity: VisualDensity.compact,
+                      //       onChanged: (value) {
+                      //         setState(() {
+                      //           _rememberMe = value!;
+                      //         });
+                      //       }, 
+                      //     ),
+                      //     // const SizedBox(width: 4.0),
+                      //     Text(
+                      //       'Remember Me',
+                      //       style: GoogleFonts.montserrat(
+                      //         color: mainColor,
+                      //         fontSize: 12,
+                      //         fontWeight: FontWeight.bold,
+                              
+                      //       ),
+                      //     ),
+                      //   ]
+                      // ),
+                      Row(
+                        children: [
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _rememberMe = !_rememberMe;
+                              });
+                            },
+                            child: Container(
+                              width: 20,
+                              height: 20,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: mainColor,
+                                  width: 2,
+                                ),
+                                color: _rememberMe
+                                    ? mainColor
+                                    : Colors.transparent,
+                              ),
+                              child: _rememberMe
+                                  ? const Center(
+                                      child: Icon(
+                                        Icons.check,
+                                        size: 10,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : null,
+                            ),
+                          ),
+                          const SizedBox(width: 8.0),
+                          Text(
+                            'Remember Me',
+                            style: GoogleFonts.montserrat(
+                              color: mainColor,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      TextButton(
+                        onPressed: () {
+                          //Forgot password action
+                        },
+                        child: Text(
+                          'Forgot Password?',
+                          style: GoogleFonts.montserrat(
+                            color: mainColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        )
+                      )
+                    ],  
+                  ),
+                  
+                  
+                  const SizedBox(height: 32.0),
                   Consumer(
                     builder: (context, ref, _) {
                       final authState = ref.watch(authNotifierProvider);
@@ -176,15 +287,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           onPressed: isLoading ? null : _validate,
                           // onPressed: null,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFFFC72C),
+                            backgroundColor: mainColor,
                             padding: const EdgeInsets.symmetric(
                               horizontal: 150,
                               vertical: 20,
                             ),
-                            disabledForegroundColor: const Color(0xFFFFC72C),
-                            disabledBackgroundColor: const Color(0xFFFFC72C),
+                            disabledForegroundColor: mainColor,
+                            disabledBackgroundColor: mainColor,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(30.0),
                             ),
                           ),
                           child: isLoading
@@ -194,15 +305,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   height:
                                       24, // Set the height for the CircularProgressIndicator
                                   child: CircularProgressIndicator(
-                                    color: Colors.black,
+                                    color: Colors.white,
                                     strokeWidth:
-                                        3, // Adjust the thickness of the spinner
+                                        2, // Adjust the thickness of the spinner
                                   ),
                                 )
                               : Text(
                                   'Sign In',
-                                  style: GoogleFonts.poppins(
-                                    color: Colors.black,
+                                  style: GoogleFonts.montserrat(
+                                    color: Colors.white,
                                     fontSize: 16, // Updated font size to 20
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -221,7 +332,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 // RichText(
                 //   text: TextSpan(
                 //     text: "Don't have an account? ",
-                //     style: GoogleFonts.poppins(
+                //     style: GoogleFonts.montserrat(
                 //       textStyle: const TextStyle(
                 //         fontSize: 16,
                 //         color: Colors.white,
@@ -230,7 +341,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 //     children: [
                 //       TextSpan(
                 //         text: 'Sign Up',
-                //         style: GoogleFonts.poppins(
+                //         style: GoogleFonts.montserrat(
                 //           textStyle: const TextStyle(
                 //             fontWeight: FontWeight.bold,
                 //             decoration: TextDecoration.underline,

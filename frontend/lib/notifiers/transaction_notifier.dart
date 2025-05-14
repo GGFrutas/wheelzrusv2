@@ -79,7 +79,7 @@ class TransactionNotifier extends StateNotifier<TransactionSub> {
       ));
       Navigator.pop(context);
     } catch (e) {
-      print("Error: $e");
+      // print("Error: $e");
       if (context.mounted) {
         const snackBar = SnackBar(
           elevation: 0,

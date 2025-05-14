@@ -173,7 +173,7 @@ class _HistoryPageState extends ConsumerState<HistoryScreen> {
                                   Flexible(
                                     child: Text(
                                       item.name,
-                                      style: GoogleFonts.poppins(
+                                      style: GoogleFonts.montserrat(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 14,
                                         letterSpacing: 0.9,
@@ -191,7 +191,7 @@ class _HistoryPageState extends ConsumerState<HistoryScreen> {
                                     ),
                                     child: Text(
                                       item.requestStatus.toString(),
-                                      style: GoogleFonts.poppins(
+                                      style: GoogleFonts.montserrat(
                                         color: Colors.black,
                                         fontWeight: FontWeight.bold,
                                       ),
@@ -206,14 +206,14 @@ class _HistoryPageState extends ConsumerState<HistoryScreen> {
                                     children: [
                                       Text(
                                         "Request Number: ",
-                                        style: GoogleFonts.poppins(
+                                        style: GoogleFonts.montserrat(
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
                                       Flexible(
                                         child: Text(
                                           (item.requestNumber?.toString() ?? 'No Request Number Available'),
-                                          style: GoogleFonts.poppins(
+                                          style: GoogleFonts.montserrat(
                                             fontWeight: FontWeight.w500,
                                           ),
                                           softWrap: true,
@@ -225,14 +225,14 @@ class _HistoryPageState extends ConsumerState<HistoryScreen> {
                                     children: [
                                       Text(
                                         "Pick-Up Address: ",
-                                        style: GoogleFonts.poppins(
+                                        style: GoogleFonts.montserrat(
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
                                       Flexible(
                                         child: Text(
                                           " ${item.destination}",
-                                          style: GoogleFonts.poppins(
+                                          style: GoogleFonts.montserrat(
                                             fontWeight: FontWeight.w500,
                                           ),
                                           softWrap: true,
@@ -244,14 +244,14 @@ class _HistoryPageState extends ConsumerState<HistoryScreen> {
                                     children: [
                                       Text(
                                         "Delivery Address: ",
-                                        style: GoogleFonts.poppins(
+                                        style: GoogleFonts.montserrat(
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
                                       Flexible(
                                         child: Text(
                                           " ${item.origin}",
-                                          style: GoogleFonts.poppins(
+                                          style: GoogleFonts.montserrat(
                                             fontWeight: FontWeight.w500,
                                           ),
                                           softWrap: true,
@@ -263,14 +263,14 @@ class _HistoryPageState extends ConsumerState<HistoryScreen> {
                                     children: [
                                       Text(
                                         "Delivery Schedule: ",
-                                        style: GoogleFonts.poppins(
+                                        style: GoogleFonts.montserrat(
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
                                       Flexible(
                                         child: Text(
                                           " ${item.deliveryDate}",
-                                          style: GoogleFonts.poppins(
+                                          style: GoogleFonts.montserrat(
                                             fontWeight: FontWeight.w500,
                                           ),
                                           softWrap: true,

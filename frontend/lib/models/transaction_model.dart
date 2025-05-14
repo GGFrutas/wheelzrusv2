@@ -12,7 +12,7 @@ class Transaction {
   final String? freightBlNumber;
   final String? sealNumber;
   final String? bookingRefNo;
-  final String? freightForwarderName;
+  final String? transportForwarderName;
   final String? freightBookingNumber;
   final String? originContainerYard;
   final String? requestNumber;
@@ -30,6 +30,20 @@ class Transaction {
   final String? dlTruckDriverName;
   final String? peTruckDriverName;
   final String? plTruckDriverName;
+  final String? freightForwarderName;
+  // final String? truckPlateNumber;
+  // final String? deTruckPlateNumber;
+  // final String? plTruckPlateNumber;
+  // final String? dlTruckPlateNumber;
+  // final String? peTruckPlateNumber;
+  final String? truckType;
+  final String? deTruckType;
+  final String? plTruckType;
+  final String? dlTruckType;
+  final String? peTruckType;
+  final String? contactPerson;
+
+  final String? contactNumber;
 
 
   const Transaction({
@@ -44,7 +58,7 @@ class Transaction {
     required this.containerNumber,
     required this.freightBlNumber,
     required this.sealNumber,
-    required this.freightForwarderName,
+    required this.transportForwarderName,
     required this.bookingRefNo,
     required this.freightBookingNumber,
     required this.originContainerYard,
@@ -62,6 +76,19 @@ class Transaction {
     required this.dlTruckDriverName,
     required this.peTruckDriverName,
     required this.plTruckDriverName,
+    required this.freightForwarderName,
+    required this.contactNumber,
+    // required this.truckPlateNumber,
+    // required this.deTruckPlateNumber,
+    // required this.plTruckPlateNumber,
+    // required this.dlTruckPlateNumber,
+    // required this.peTruckPlateNumber,
+    required this.deTruckType,
+    required this.plTruckType,
+    required this.dlTruckType,
+    required this.peTruckType,
+    required this.truckType,
+    required this.contactPerson,
       this.isAccepted = false,
   });
 
@@ -76,12 +103,32 @@ class Transaction {
       status: json['status'] ?? 'Unknown Status',  // Provide a default value
       dispatchType: json['dispatch_type'] ?? 'Unknown Dispatch Type',
       containerNumber: json['container_number'],
-      freightBlNumber: json['freight_bl_nummber'],
+      freightBlNumber: json['freight_bl_number'],
       sealNumber: json['seal_number'],
       bookingRefNo: json ['booking_reference_no'] ?? 'Unknown Booking Reference Number',
-      freightForwarderName: json['origin_forwarder_name'] != null && json['origin_forwarder_name'].isNotEmpty
-                            ? _extractDriverName(json ['origin_forwarder_name']) : _extractDriverName(json ['destination_forwarder_name']),
+      transportForwarderName: json['origin_forwarder_name'] != null && json['origin_forwarder_name'].isNotEmpty
+                            ? _extractName(json ['origin_forwarder_name']) : _extractName(json ['destination_forwarder_name']),
       freightBookingNumber: json ['freight_booking_number'],
+      freightForwarderName: json['freight_forwarder_name'] != null && json['freight_forwarder_name'].isNotEmpty
+                            ? _extractName(json['freight_forwarder_name'])
+                            : '',
+      contactNumber: json['dispatch_type'] == 'ot'
+                    ? (json['shipper_phone'] != null && json['shipper_phone'].toString().isNotEmpty
+                        ? json['shipper_phone']
+                        : '')
+                    : (json['consignee_phone'] != null && json['consignee_phone'].toString().isNotEmpty
+                        ? json['consignee_phone']
+                        : ''),
+
+      contactPerson: json['dispatch_type'] == 'ot'
+                    ? (json['shipper_contact_id'] != null && json['shipper_contact_id'].toString().isNotEmpty
+                        ? _extractName(json['shipper_contact_id'])
+                        : _extractName(json['shipper_id']))
+                    : (json['consignee_contact_id'] != null && json['consignee_contact_id'].toString().isNotEmpty
+                        ? _extractName(json['consignee_contact_id'])
+                        : _extractName(json['consignee_id'])),
+
+                 
       originContainerYard: json['origin_container_location'],
       requestNumber: json['de_request_no'],
       deRequestNumber: json['de_request_no'],
@@ -94,16 +141,28 @@ class Transaction {
       plRequestStatus: json['pl_request_status'],
       dlRequestStatus: json['dl_request_status'],
       peRequestStatus: json['pe_request_status'],
-      deTruckDriverName: _extractDriverName(json['de_truck_driver_name']),
-      dlTruckDriverName: _extractDriverName(json['dl_truck_driver_name']),
-      peTruckDriverName: _extractDriverName(json['ee_truck_driver_name']),
-      plTruckDriverName: _extractDriverName(json['pl_truck_driver_name']),
+      deTruckDriverName: _extractDriverId(json['de_truck_driver_name'])?.toString(),
+      dlTruckDriverName: _extractDriverId(json['dl_truck_driver_name'])?.toString(),
+      peTruckDriverName: _extractDriverId(json['pe_truck_driver_name'])?.toString(),
+      plTruckDriverName: _extractDriverId(json['pl_truck_driver_name'])?.toString(),
+      // truckPlateNumber: json['de_truck_plate_no'],
+      // deTruckPlateNumber: json['de_truck_plate_no'],
+      // plTruckPlateNumber: json['pl_truck_plate_no'],
+      // dlTruckPlateNumber: json['dl_truck_plate_no'],
+      // peTruckPlateNumber: json['pe_truck_plate_no'],
+      truckType: json['de_truck_type'],
+      deTruckType: json['de_truck_type'],
+      plTruckType: json['pl_truck_type'],
+      dlTruckType: json['dl_truck_type'],
+      peTruckType: json['pe_truck_type'],
+     
+
       isAccepted: false,  // set default or map from API
       
     );
   }
 
-    static String? _extractDriverName(dynamic field) {
+  static String? _extractName(dynamic field) {
     if (field is List && field.isNotEmpty) {
       return field[1]; // Extract name (second item in list)
     } else if (field is String) {
@@ -112,7 +171,15 @@ class Transaction {
     return null; // Return null if not available
   }
 
-  Transaction copyWith({String? name, String? destination,String? requestNumber,String? origin,String? requestStatus,status, bool? isAccepted}) {
+  static int? _extractDriverId(dynamic field) {
+  if (field is List && field.isNotEmpty) {
+    return field[0]; // ID is usually the first element
+  }
+  return null;
+}
+
+
+  Transaction copyWith({String? name, String? destination,String? requestNumber,String? origin,String? requestStatus,status, bool? isAccepted, String? truckPlateNumber}) {
     return Transaction(
       id: id,
       name: name ?? this.name,
@@ -128,7 +195,7 @@ class Transaction {
       freightBlNumber: freightBlNumber,
       sealNumber: sealNumber,
       bookingRefNo: bookingRefNo,
-      freightForwarderName: freightForwarderName,
+      transportForwarderName: transportForwarderName,
       freightBookingNumber:freightBookingNumber,
       originContainerYard:originContainerYard,
       requestNumber:requestNumber ?? this.requestNumber,
@@ -145,6 +212,19 @@ class Transaction {
       dlTruckDriverName: dlTruckDriverName,
       peTruckDriverName: peTruckDriverName,
       plTruckDriverName: plTruckDriverName,
+      freightForwarderName: freightForwarderName,
+      // truckPlateNumber: truckPlateNumber ?? truckPlateNumber,
+      // deTruckPlateNumber: deTruckPlateNumber,
+      // plTruckPlateNumber: plTruckPlateNumber,
+      // dlTruckPlateNumber: dlTruckPlateNumber,
+      // peTruckPlateNumber: peTruckPlateNumber,
+      truckType: truckType ?? truckType,
+      deTruckType: deTruckType,
+      plTruckType: plTruckType,
+      dlTruckType: dlTruckType,
+      peTruckType: peTruckType,
+      contactNumber: contactNumber,
+      contactPerson: contactPerson,
     );
   }
   @override

@@ -15,11 +15,16 @@ use Ripcord\Ripcord;
 
 class TransactionController extends Controller
 {
+    protected $url = "https://jralejandria-beta-dev-yxe.odoo.com";
+    protected $db = 'jralejandria-beta-dev-yxe-production-beta-20247511';
+    protected $odoo_url = "https://jralejandria-beta-dev-yxe.odoo.com/jsonrpc";
+   
+
     public function getBooking(Request $request)
     {
-        $url ="https://jralejandria-beta-dev-yxe.odoo.com";
-        $db ='jralejandria-beta-dev-yxe-production-beta-19060481';
-
+        $url = $this->url;
+        $db = $this->db;
+      
         $uid = $request->query('uid') ;
         $odooPassword = $request->header('password');
         Log::info("UID is {$uid}, Password is {$odooPassword}");
@@ -43,7 +48,6 @@ class TransactionController extends Controller
 
         
         $searchResponse = $client->send($checkAccessRequest);
-        // dd($searchResponse);
 
         Log::info("🔍 Search Users Raw Response: ", ["response" => var_export($searchResponse->value(), true)]);
         
@@ -54,7 +58,7 @@ class TransactionController extends Controller
             Log::info("✅ UID {$uid} can read 'dispatch.manager`.");
         }
         
-        $odooUrl = "https://jralejandria-beta-dev-yxe.odoo.com/jsonrpc";
+        $odooUrl = $this->odoo_url;
         $userData = [
             "jsonrpc" => "2.0",
             "method" => "call",
@@ -148,14 +152,14 @@ class TransactionController extends Controller
                     "dispatch.manager",
                     "search_read",
                     [[
-                        "&", // Ensure both conditions are met
-                        "|", "|", "|", "|", // Check if partner_id is in any driver field
+                        "&",
+                        "|", "|", "|", "|",
                         ["de_truck_driver_name", "=", $partnerId],
                         ["dl_truck_driver_name", "=", $partnerId],
                         ["pe_truck_driver_name", "=", $partnerId],
                         ["pl_truck_driver_name", "=", $partnerId],
-        
-                        "|", "|", "|", "|", "|", "|","|",// Check if any request status is "Pending"
+
+                        "|", "|", "|", "|", "|", "|", "|",
                         ["de_request_status", "=", "Pending"],
                         ["de_request_status", "=", "Accepted"],
                         ["pl_request_status", "=", "Pending"],
@@ -164,26 +168,30 @@ class TransactionController extends Controller
                         ["dl_request_status", "=", "Accepted"],
                         ["pe_request_status", "=", "Pending"],
                         ["pe_request_status", "=", "Accepted"],
-        
-                        ["dispatch_type", "!=", "ff"] // Exclude "ff"
-                    ]],
+
+                        ["dispatch_type", "!=", "ff"]
+                    ]], // <-- this was missing an extra ]
                     ["fields" => [
                         "id", "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
                         "dispatch_type", "de_truck_driver_name", "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name",
-                        "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no","origin","destination","arrival_date","delivery_date",
-                        "container_number","seal_number","booking_reference_no","origin_forwarder_name","destination_forwarder_name","freight_booking_number",
-                        "origin_container_location", "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature"
+                        "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", "origin", "destination", "arrival_date", "delivery_date",
+                        "container_number", "seal_number", "booking_reference_no", "origin_forwarder_name", "destination_forwarder_name", "freight_booking_number",
+                        "origin_container_location", "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
+                        "freight_forwarder_name", "shipper_phone", "consignee_phone", "dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", "pl_truck_plate_no",
+                        "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id"
                     ]]
                 ]
             ],
             "id" => 3
         ];
+
     
         $transactionResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
             "http" => [
                 "header" => "Content-Type: application/json",
                 "method" => "POST",
                 "content" => json_encode($transactionData),
+                "timeout" => 10, // seconds
             ],
         ])), true);
     
@@ -208,7 +216,8 @@ class TransactionController extends Controller
             foreach (["de_truck_driver_name", "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name", "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
             "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no","origin","destination","arrival_date","delivery_date",
             "container_number","seal_number","booking_reference_no","origin_forwarder_name","freight_booking_number", "origin_container_location", "freight_bl_number",
-            "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature"] as $field) {
+            "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature","freight_forwarder_name","shipper_phone", "consignee_phone",
+            "dl_truck_plate_no","pe_truck_plate_no","de_truck_plate_no","pl_truck_plate_no","de_truck_type","dl_truck_type","pe_truck_type","pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id"] as $field) {
                 if ($transaction[$field] === false || $transaction[$field] === null) {
                     $transaction[$field] = ""; 
                 }
@@ -224,104 +233,12 @@ class TransactionController extends Controller
                 "transactions" => array_values($filteredTransactions) // ✅ Ensure clean index
             ]
         ]);
-                // return response()->json(["success" => true, "data" => $result['result']]);
-
-        
-    }
-    public function create(Request $request)
-    {
-       
-        try {
-            // Log::info($request->all());
-            // Log::info($request->headers->all()); // Log all headers
-            // Log::info($request->allFiles());
-            // Log::info('transaction_image_path:', $request->file('transaction_image_path'));
-            // if ($request->hasFile('transaction_image_path')) {
-            //     // Store the image and get the file path
-            //     $path = $request->file('transactichcon_image_path')->store('transaction_images', 'public');
-            //     $validatedData['transaction_image_path'] = $path; // Save the path in validated data
-            // }
-            // Validate the request
-            $validated = $request->validate([
-                'user_id' => 'required|integer',
-                'amount' => 'required|numeric',
-                'transaction_date' => 'required|date',
-                'description' => 'required|string',
-                'transaction_id' => 'required|string',
-                'booking' => 'required|string',
-                'location' => 'required|string',
-                'destination' => 'required|string',
-                'eta' => 'required|date',
-                'etd' => 'required|date',
-                'status' => 'required|string',
-                'signature_path' => 'required|file|mimes:png,jpeg,jpg',
-            ]);
-            Log::info('Validation passed.', $validated);
-    
-            // Ensure the uploaded file exists and is valid
-            if ($request->hasFile('signature_path') && $request->file('signature_path')->isValid()) {
-                try {
-                    // Store the file using the correct field name
-                    $signaturePath = $request->file('signature_path')->store('signatures', 'public');
-                    Log::info('Signature file stored at: ' . $signaturePath);
-    
-                    // Save transaction data
-                    $transaction = new Transaction([
-                        'user_id' => $validated['user_id'],
-                        'amount' => $validated['amount'],
-                        'transaction_date' => $validated['transaction_date'],
-                        'description' => $validated['description'],
-                        'transaction_id' => $validated['transaction_id'],
-                        'booking' => $validated['booking'],
-                        'location' => $validated['location'],
-                        'destination' => $validated['destination'],
-                        'eta' => $validated['eta'],
-                        'etd' => $validated['etd'],
-                        'status' => $validated['status'],
-                        'signature_path' => $signaturePath, // Store the file path
-                    ]);
-                    $transaction->save();
-
-                    
-                    if ($request->hasFile('transaction_image_path')) {
-                        $photos = $request->file('transaction_image_path');
-                    
-                        // Ensure $photos is an array
-                        if (!is_array($photos)) {
-                            $photos = [$photos];
-                        }
-                    
-                        foreach ($photos as $file) {
-                            if ($file->isValid()) {
-                                $filePath = $file->store('transaction_images', 'public');
-                                TransactionImage::create([
-                                    'transaction_id' => $transaction->id,
-                                    'file_path' => $filePath,
-                                ]);
-                            }
-                        }
-                    }
-                    return response()->json(['message' => 'Transaction saved successfully']);
-                } catch (\Exception $e) {
-                    Log::error('Error saving transaction: ' . $e->getMessage());
-                    return response()->json(['error' => 'Error saving transaction'], 500);
-                }
-            } else {
-                return response()->json(['error' => 'Invalid signature file'], 400);
-            }
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json(['errors' => $e->errors()], 422);
-        } catch (\Exception $e) {
-            Log::error('Unexpected error: ' . $e->getMessage());
-            return response()->json(['error' => 'Unexpected error occurred'], 500);
-        }
     }
 
     public function getRejectionReason(Request $request)
     {
-        
-        $url ="https://jralejandria-beta-dev-yxe.odoo.com";
-        $db ='jralejandria-beta-dev-yxe-production-beta-19060481';
+        $url = $this->url;
+        $db = $this->db;
 
         $uid = $request->query('uid') ;
         $odooPassword = $request->header('password');
@@ -358,7 +275,7 @@ class TransactionController extends Controller
         }
 
         
-        $odooUrl = "$url/jsonrpc";
+        $odooUrl = $this->odoo_url;
         $rejectReasons = [
             "jsonrpc" => "2.0",
             "method" => "call",
@@ -407,8 +324,8 @@ class TransactionController extends Controller
             'requestStatus' => 'required|string',
         ]);
        
-        $url ="https://jralejandria-beta-dev-yxe.odoo.com";
-        $db ='jralejandria-beta-dev-yxe-production-beta-19060481';
+        $url = $this->url;
+        $db = $this->db;
 
         $uid = $request->query('uid') ;
         $odooPassword = $request->header('password');
@@ -418,7 +335,7 @@ class TransactionController extends Controller
         }
         
         
-        $odooUrl = "https://jralejandria-beta-dev-yxe.odoo.com/jsonrpc";
+        $odooUrl = $this->odoo_url;
         $updateStatus = [
             "jsonrpc" => "2.0",
             "method" => "call",
@@ -540,19 +457,8 @@ class TransactionController extends Controller
 
     public function rejectBooking(Request $request)
     {
-        
-        Log::info('📝 Reject Transaction Request:', [
-            'uid' => $request->uid,
-            'transaction_id' => $request->transaction_id,
-            'reason' => $request->reason,
-            'feedback' => $request->feedback,
-            'timestamp' => now(),
-            'ip' => $request->ip(),
-            'user_agent' => $request->header('User-Agent'),
-        ]);
-       
-        $url ="https://jralejandria-beta-dev-yxe.odoo.com";
-        $db ='jralejandria-beta-dev-yxe-production-beta-19060481';
+        $url = $this->url;
+        $db = $this->db;
 
         $uid = $request->uid ;
         $odooPassword = $request->header('password');
@@ -588,7 +494,7 @@ class TransactionController extends Controller
             Log::info("✅ UID {$uid} can read 'dispatch.reject.vendor`.");
         }
 
-        $odooUrl = "$url/jsonrpc";
+        $odooUrl = $this->odoo_url;
         $rejectVendor = [
             "jsonrpc" => "2.0",
             "method" => "call",
@@ -633,8 +539,8 @@ class TransactionController extends Controller
     public function rejectVendor(Request $request)
     {
         
-        $url ="https://jralejandria-beta-dev-yxe.odoo.com";
-        $db ='jralejandria-beta-dev-yxe-production-beta-19060481';
+        $url = $this->url;
+        $db = $this->db;
 
         $uid = $request->query('uid') ;
         $odooPassword = $request->header('password');
@@ -671,7 +577,7 @@ class TransactionController extends Controller
         }
 
         
-        $odooUrl = "$url/jsonrpc";
+        $odooUrl = $this->odoo_url;
         $rejectvendors = [
             "jsonrpc" => "2.0",
             "method" => "call",
@@ -712,6 +618,8 @@ class TransactionController extends Controller
 
     public function uploadPOD(Request $request)
     {
+        $url = $this->url;
+        $db = $this->db;
        
         $uid = $request->query('uid') ;
         $odooPassword = $request->header('password');
@@ -719,28 +627,24 @@ class TransactionController extends Controller
         $signature = $request->input('signature');
         $transactionId = (int)$request->input('id');
         $dispatchType = $request->input('dispatch_type');
-        $requestNumber = $request->input('requestNumber');
+        $requestNumber = $request->input('request_number');
 
         Log::info('Received file uplodad request', [
             'uid' => $uid,
             'id' => $transactionId,
             'dispatch_type' => $dispatchType,
-            // 'requestNumber' => $request->requestNumber,
+            'requestNumber' => $rrequestNumber,
             // 'images' => $request->input('images'),
             // 'signature' => $request->input('signature'),
         ]); 
 
-       
-
-
-        $url ="https://jralejandria-beta-dev-yxe.odoo.com";
-        $db ='jralejandria-beta-dev-yxe-production-beta-19060481';
+        
 
         if (!$uid) {
             return response()->json(['success' => false, 'message' => 'UID is required'], 400);
         }
 
-        $odooUrl = "https://jralejandria-beta-dev-yxe.odoo.com/jsonrpc";
+        $odooUrl = $this->odoo_url;
         $proof_attach = [
             "jsonrpc" => "2.0",
             "method" => "call",
@@ -791,7 +695,7 @@ class TransactionController extends Controller
        
         if($type['dispatch_type'] == "ot") {
             if ($requestNumber == $type['de_request_no']) {
-                if (empty($type['de_proof']) && empty($type['de_signature'])) {
+                if (empty($type['de_proof'])) {
                     Log::info("Deliver Empty POD Freight side");
                     $updateField = [
                         "pe_proof" => $images,
@@ -805,7 +709,7 @@ class TransactionController extends Controller
                     ];
                 }
             } elseif ($type['pl_request_no'] == $requestNumber) {
-                if (empty($type['pl_proof']) && empty($type['pl_signature'])) {
+                if (empty($type['pl_proof'])) {
                     Log::info("Pickup Laden POD shipper side");
                     $updateField = [
                         "pl_proof" => $images,
@@ -821,7 +725,7 @@ class TransactionController extends Controller
             }
         } elseif ($type['dispatch_type'] == "dt") {    
             if ($type['dl_request_no'] == $requestNumber) {
-                if (empty($type['pl_proof']) && empty($type['pl_signature'])) {
+                if (empty($type['pl_proof'])) {
                     Log::info("Deliver Laden POD freight side");
                     $updateField = [
                         "dl_proof" => $images,
@@ -835,7 +739,7 @@ class TransactionController extends Controller
                     ];
                 }
             } elseif ($type['pe_request_no'] == $requestNumber) {
-                if (empty($type['pe_proof']) && empty($type['pe_signature'])) {
+                if (empty($type['pe_proof'])) {
                     Log::info("Pickup Empty POD consignee side");
                     $updateField = [
                         "de_proof" => $images,
@@ -862,6 +766,7 @@ class TransactionController extends Controller
                 "pe_signature" => null,
             ];
         }
+        
     
 
         $updatePOD = [
@@ -878,9 +783,9 @@ class TransactionController extends Controller
                     "write",
                     [
                         [$transactionId],
-                        // [
-                            $updateField,
-                        // ]
+                       
+                        $updateField,
+                        
                     ]
                 ]
             ],

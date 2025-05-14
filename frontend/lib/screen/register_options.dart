@@ -37,7 +37,7 @@ class _RegisterOptionsScreenState extends State<RegisterOptionsScreen> {
             children: [
               Text(
                 'Choose your account type:',
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.montserrat(
                   color: Colors.white,
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -49,7 +49,7 @@ class _RegisterOptionsScreenState extends State<RegisterOptionsScreen> {
                 child: ElevatedButton.icon(
                   label: Text(
                     'Individual',
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.montserrat(
                       color: Colors.black,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -81,7 +81,7 @@ class _RegisterOptionsScreenState extends State<RegisterOptionsScreen> {
                 child: ElevatedButton.icon(
                   label: Text(
                     'Company',
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.montserrat(
                       color: Colors.black,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,

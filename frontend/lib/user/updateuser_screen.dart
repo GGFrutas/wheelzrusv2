@@ -44,7 +44,7 @@ class _UpdateUserScreenState extends ConsumerState<UpdateUserScreen> {
   }
 
   String _getProfileImageUrl(String picture) {
-    return 'http://192.168.118.102:8000/storage/$picture'; // Correct URL for the emulator
+    return 'http://192.168.18.53:8000/storage/$picture'; // Correct URL for the emulator
   }
 
   final GlobalKey<FormState> _formKey =
@@ -166,7 +166,7 @@ class _UpdateUserScreenState extends ConsumerState<UpdateUserScreen> {
       appBar: AppBar(
         title: Text(
           'Profile',
-          style: GoogleFonts.poppins(
+          style: GoogleFonts.montserrat(
             fontSize: 24,
             fontWeight: FontWeight.bold,
           ),
@@ -443,7 +443,7 @@ class _UpdateUserScreenState extends ConsumerState<UpdateUserScreen> {
                                   )
                                 : Text(
                                     'Update',
-                                    style: GoogleFonts.poppins(
+                                    style: GoogleFonts.montserrat(
                                       color: Theme.of(context)
                                           .colorScheme
                                           .onPrimary,
@@ -480,7 +480,7 @@ class _UpdateUserScreenState extends ConsumerState<UpdateUserScreen> {
                     ),
                     child: Text(
                       'Logout',
-                      style: GoogleFonts.poppins(
+                      style: GoogleFonts.montserrat(
                         color: Theme.of(context).colorScheme.onPrimary,
                         fontSize: 16,
                         fontWeight: FontWeight.bold,

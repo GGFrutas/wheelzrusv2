@@ -1,4 +1,6 @@
 // homepage_screen.dart
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/notifiers/auth_notifier.dart';
@@ -57,23 +59,27 @@ class HomePage extends ConsumerWidget {
       HistoryScreen(user: user),
       UpdateUserScreen(user: user, uid: uid,),
       SettingScreen(uid: uid),
-      ProofOfDeliveryScreen(uid: uid, transaction: null), // Replace with a valid transaction object
+      // ProofOfDeliveryScreen(uid: uid, transaction: null, base64Images: base64Image), // Replace with a valid transaction object
       ProfileScreen(uid: uid),
     ];
 
     return Scaffold(
       appBar: AppBar(
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: Text(
-          'YXE Driver',
-          style: GoogleFonts.poppins(
-            fontSize: 24,
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
+        iconTheme: const IconThemeData(color: Color.fromARGB(255, 39, 142, 78)),
+        title: Image.asset(
+          'assets/Yello X.png',
+          height: 40,
         ),
-        backgroundColor: const Color(0xFF1d3c34),
+        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications_none, color: Color.fromARGB(255, 46, 90, 83)),
+            onPressed: () {
+              // Handle notification tap
+            },
+          ),
+        ],
       ),
       drawer: Drawer(
         child: ListView(
@@ -82,7 +88,7 @@ class HomePage extends ConsumerWidget {
             UserAccountsDrawerHeader(
               accountName: Text(
                 user['name'] ?? 'Driver',
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.montserrat(
                   textStyle: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
@@ -91,7 +97,7 @@ class HomePage extends ConsumerWidget {
               ),
               accountEmail: Text(
                 user['login'] ?? 'No Email',
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.montserrat(
                   textStyle: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 12,

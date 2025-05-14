@@ -15,10 +15,13 @@ import 'package:frontend/provider/transaction_list_notifier.dart' as transaction
 import 'package:frontend/provider/transaction_list_notifier.dart';
 import 'package:frontend/provider/transaction_provider.dart';
 import 'package:frontend/provider/reject_provider.dart';
+import 'package:frontend/theme/colors.dart';
+import 'package:frontend/theme/text_styles.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:frontend/user/transaction_details.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'package:carousel_slider/carousel_slider.dart';
 
 
 class HomepageScreen extends ConsumerStatefulWidget {
@@ -30,27 +33,9 @@ class HomepageScreen extends ConsumerStatefulWidget {
   ConsumerState<ConsumerStatefulWidget> createState() => _HomepageScreenState();
 }
 
-// List of pastel colors
-final List<Color> pastelColors = [
-  const Color(0xFFFFD1DC), // Light Pink
-  const Color(0xFFFFF4E6), // Light Peach
-  const Color(0xFFE6E6FA), // Lavender
-  const Color(0xFFFFEBCD), // Blanched Almond
-  const Color(0xFFB4E1FF), // Light Blue
-  const Color(0xFFBFFCC6), // Mint Green
-  const Color(0xFFFFFACD), // Lemon Chiffon
-  const Color(0xFFF5D5A4), // Pastel Orange
-];
-
-// Function to get a random pastel color
-Color getRandomPastelColor() {
-  final random = Random();
-  return pastelColors[random.nextInt(pastelColors.length)];
-}
-
 class _HomepageScreenState extends ConsumerState<HomepageScreen> {
   String? uid;
-   final Map<String, bool> _loadingStates = {};
+  //  final Map<String, bool> _loadingStates = {};
    Future<void> _refreshTransaction() async {
     print("Refreshing transactions");
     try {
@@ -61,6 +46,34 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
       print('DID NOT REFRESHED!');
     }
    }
+
+   final List<Map<String, String>> carouselItems = [
+    {
+      "title": "Start Driving Smarter Today.",
+      "subtitle": "From Booking to Delivery — Seamless",
+      "image": "assets/hand-drawn-transportation-truck-with-delivery-man.png",
+      "color": "#1C7E7B"
+    },
+    {
+      "title": "More Cargo. More Miles.More Pay.",
+      "subtitle": "Book shipments. Accept jobs. Drive your way",
+      "image": "assets/illustrated-transport-truck-delivery-side-view-front-view-red-color-delivery-truck.png",
+      "color": "#2D906F"
+    },
+    {
+      "title": "Loads at your fingertips.",
+      "subtitle": "Browse, accept, and deliver — all in one app",
+      "image": "assets/box-truck-with-delivery-man-standing-it-vector-illustration.png",
+      "color": "#40CA9C"
+    },
+    {
+      "title": "All your Drivers need. In One App.",
+      "subtitle": "Booking, tracking, payments, and support.",
+      "image": "assets/delivery-truck-boxes-with-isometric-style.png",
+      "color": "#7DE4C2"
+    },
+  ];
+  
   
   
   @override
@@ -69,6 +82,7 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
     final transactionold = ref.watch(filteredItemsProvider);
     
     final acceptedTransaction = ref.watch(accepted_transaction.acceptedTransactionProvider);
+     final uid = ref.read(authNotifierProvider).uid;
 
     return RefreshIndicator(
       onRefresh: _refreshTransaction,
@@ -112,48 +126,61 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
           if (transaction.isEmpty) {
             return const Center(child: Text('No transactions available that have not been accepted.'));
           }
+          final authPartnerId = ref.watch(authNotifierProvider).partnerId;
+          final driverId = authPartnerId?.toString();
+
+          print("Driver: $authPartnerId");
 
           final expandedTransactions = transaction.expand((item) {
+            print("🆔 Current driverId: $driverId");
+            print("🟨 DE: ${item.deTruckDriverName}, PL: ${item.plTruckDriverName}, DL: ${item.dlTruckDriverName}, PE: ${item.peTruckDriverName}");
+           
             if (item.dispatchType == "ot") {
               return [
                 // First instance: Deliver to Shipper
-                if (item.deRequestStatus != "accepted" && item.deRequestStatus !="Rejected" && item.deTruckDriverName != null && item.deTruckDriverName!.isNotEmpty) // Filter out if accepted
-                  item.copyWith(
-                  name: "Deliver to Shipper",
-                  destination: item.destination,
-                  origin: item.origin,
-                  requestNumber: item.deRequestNumber,
-                  requestStatus: item.deRequestStatus,
-                ),
-                  // Second instance: Pickup from Shipper
-                if (item.plRequestStatus != "accepted" && item.plRequestStatus != "Rejected" && item.plTruckDriverName != null && item.plTruckDriverName!.isNotEmpty) // Filter out if accepted
-                  item.copyWith(
-                  name: "Pickup from Shipper",
-                  destination: item.origin,
-                  origin: item.destination,
-                  requestNumber: item.plRequestNumber,
-                  requestStatus: item.plRequestStatus,
+                if (item.deTruckDriverName == driverId) // Filter out if accepted
+                  // Check if the truck driver is the same as the authPartnerId
+                   item.copyWith(
+                    name: "Deliver to Shipper",
+                    destination: item.destination,
+                    origin: item.origin,
+                    requestNumber: item.deRequestNumber,
+                    requestStatus: item.deRequestStatus,
+                    // truckPlateNumber: item.deTruckPlateNumber,
                   ),
+                  // Second instance: Pickup from Shipper
+                if ( item.plTruckDriverName == driverId) // Filter out if accepted
+                  // if (item.plTruckDriverName == authPartnerId)
+                    item.copyWith(
+                    name: "Pickup from Shipper",
+                    destination: item.origin,
+                    origin: item.destination,
+                    requestNumber: item.plRequestNumber,
+                    requestStatus: item.plRequestStatus,
+                    // truckPlateNumber: item.plTruckPlateNumber,
+                    ),
               ];
             } else if (item.dispatchType == "dt") {
               return [
                 // First instance: Deliver to Consignee
-                if (item.dlRequestStatus != "accepted" && item.dlRequestStatus != "rejected" && item.dlTruckDriverName != null && item.dlTruckDriverName!.isNotEmpty) // Filter out if accepted
+                if (item.dlTruckDriverName == driverId) // Filter out if accepted
                   item.copyWith(
                     name: "Delivers to Consignee",
                     origin: item.destination,
                     destination: item.origin,
                     requestNumber: item.dlRequestNumber,
                     requestStatus: item.dlRequestStatus,
+                    // truckPlateNumber: item.dlTruckPlateNumber,
                   ),
                 // Second instance: Pickup from Consignee
-                if (item.peRequestStatus != "accepted"  && item.peRequestStatus != "rejected" && item.peTruckDriverName != null && item.peTruckDriverName!.isNotEmpty ) // Filter out if accepted
+                if (item.peTruckDriverName == driverId) // Filter out if accepted
                   item.copyWith(
                     name: "Pickup from Consignee",
                     requestNumber: item.peRequestNumber,
                     requestStatus: item.peRequestStatus,
+                    // truckPlateNumber: item.peTruckPlateNumber,
                   ),
-              ];
+              ]; 
             }
             // Return as-is if no match
             return [item];
@@ -164,488 +191,251 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
             DateTime dateB = DateTime.tryParse(b.deliveryDate) ?? DateTime(0);
             return dateB.compareTo(dateA);
           });
-                
+
+          final ongoingTransactions = expandedTransactions
+            .where((tx) => tx.requestStatus == 'Ongoing')
+            .toList();
 
           return Scaffold(
-            // appBar: AppBar(
-            //   title: Text(
-            //     'YXE Driver 1',
-            //     style: GoogleFonts.poppins(
-            //       fontSize: 24,
-            //       fontWeight: FontWeight.bold,
-            //     ),
-            //   ),
-            //   centerTitle: true,
-            // ),
-            body: Padding(
-              padding: const EdgeInsets.all(16),
-              // child: RefreshIndicator(
-              //   onRefresh: _refreshTransaction,
-                child: GridView.builder(
-                  itemCount: expandedTransactions.length,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 1,
-                    mainAxisExtent: 250,
-                    crossAxisSpacing: 20,
-                    mainAxisSpacing: 20,
-                  ),
-                  itemBuilder: (context, index) {
-                    final item = expandedTransactions[index];
-                    final isLoading = _loadingStates[item.requestNumber.toString()] ?? false;
-                    Color getStatusColor(String requestStatus) {
-                      switch (requestStatus) {
-                        case 'Completed':
-                          return Colors.green;
-                        case 'Ongoing':
-                          return const Color.fromARGB(255, 62, 243, 68);  // Completed status will have a green background
-                        case 'Accepted':
-                          return const Color.fromARGB(255, 239, 184, 44);  
-                        case 'Pending':
-                          return Colors.orange;
-                        case 'Rejected':
-                          return const Color.fromARGB(255, 233, 110, 34);
-                        case 'Cancelled':
-                          return Colors.red;
-                        default:
-                          return Colors.grey;  // Default color for unknown status
-                      }
-                    }
-
-                    return ConstrainedBox(
-                      constraints: const BoxConstraints(
-                        minHeight: 80.0,  // Minimum height for the box
-                        maxHeight: 150.0, // Maximum height for the box (adjust as needed)
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => TransactionDetails(transaction: item, id: item.id, uid: '',),
-                              ),
-                            );
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            color: getRandomPastelColor().withOpacity(0.75),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min, 
-                              children: [
-                                // Title Section
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Flexible(
-                                      child: Text(
-                                      item.name,
-                                      style: GoogleFonts.poppins(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
-                                        letterSpacing: 0.9,
-                                      ),
-                                      overflow: TextOverflow.ellipsis, // Prevent overflow
-                                      maxLines: 2, // Allow wrapping to next line
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8), // Space between the text and the container
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                                    decoration: BoxDecoration(
-                                      color: getStatusColor(item.requestStatus.toString()),
-                                      borderRadius: BorderRadius.circular(5),
-                                    ),
-                                    child: Text(
-                                      item.requestStatus.toString(),
-                                      style: GoogleFonts.poppins(
-                                        color: Colors.black,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              // Content Section
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
+            body: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: CustomScrollView(
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: Column(
+                        children: [
+                          // 🚚 Carousel
+                          CarouselSlider(
+                            items: carouselItems.map((item) {
+                              return Card(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                margin: const EdgeInsets.symmetric(horizontal: 8),
+                                color: Color(int.parse(item['color']!.replaceFirst('#', '0xff'))),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Row(
                                     children: [
-                                      Text(
-                                        "Request Number: ",
-                                        style: GoogleFonts.poppins(
-                                          fontWeight: FontWeight.bold,
+                                      // 📝 Text column — don't constrain title
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              item['title']!,
+                                              style: AppTextStyles.subtitle.copyWith(
+                                                color: Colors.white,
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 10),
+                                            Flexible(
+                                              child: Text(
+                                                item['subtitle']!,
+                                                style: AppTextStyles.caption.copyWith(
+                                                  color: Colors.white70,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                      Flexible(
-                                        child: Text(
-                                          (item.requestNumber?.toString() ?? 'No Request Number Available'),
-                                          style: GoogleFonts.poppins(
-                                            fontWeight: FontWeight.w500,
+                                      Container(
+                                        height: 50,
+                                        width: 100,
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(12),
+                                          image: DecorationImage(
+                                            image: AssetImage(item['image']!),
+                                            fit: BoxFit.cover,
                                           ),
-                                          softWrap: true, // Text will wrap if it's too long
                                         ),
                                       ),
                                     ],
                                   ),
-                                  // const SizedBox(height: 6),
-                                  Row(
-                                    children: [
-                                      Text(
-                                        "Pick-Up Address: ",
-                                        style: GoogleFonts.poppins(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      Flexible(
-                                        child: Text(
-                                          " ${item.destination}",
-                                          style: GoogleFonts.poppins(
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                          softWrap: true, // Text will wrap if it's too long
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  // const SizedBox(height: 6),
-                                  Row(
-                                    children: [
-                                      Text(
-                                        "Delivery Address: ",
-                                        style: GoogleFonts.poppins(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      Flexible(
-                                        child: Text(
-                                          " ${item.origin}",
-                                          style: GoogleFonts.poppins(
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                          softWrap: true, // Text will wrap if it's too long
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  // const SizedBox(height: 6),
-                                  Row(
-                                    children: [
-                                      Text(
-                                        "Delivery Schedule: ",
-                                        style: GoogleFonts.poppins(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      Flexible(
-                                        child: Text(
-                                          " ${item.deliveryDate}",
-                                          style: GoogleFonts.poppins(
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                          softWrap: true, // Text will wrap if it's too long
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 10),
-                                ],
-                              ),
-
-                              // Button Section
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                children: [
-                                  if (!(isLoading || item.requestStatus == "Accepted" || item.requestStatus == "Rejected" || ref.read(accepted_transaction.acceptedTransactionProvider.notifier).isAccepted(item.id, item.requestNumber.toString()))) 
-                                 
-                                  ElevatedButton(
-                                    onPressed: () async {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => TransactionDetails(transaction: item, id: item.id, uid: '',),
-                                        ),
-                                      );
-                                      // setState(() {
-                                      //   _loadingStates[item.requestNumber.toString()] = true;
-                                      // });
-
-                                      // await Future.delayed(const Duration(milliseconds: 1000));
-                                      // final selectedTransaction = expandedTransactions[index];
-                                      // final acceptedTransactionNotifier = ref.read(accepted_transaction.acceptedTransactionProvider.notifier);
-
-                                      // final isAccepted = acceptedTransactionNotifier.isAccepted(
-                                      //   selectedTransaction.id, 
-                                      //   selectedTransaction.requestNumber.toString(),
-                                      // );
-
-                                      // // If not accepted, update the status and add it to accepted transactions
-                                      // if (isAccepted) {
-                                      //   setState((){
-                                      //     _loadingStates[selectedTransaction.requestNumber.toString()] = false;
-                                      //   });
-                                        return;
-                                      // }
-                                      // acceptedTransactionNotifier.updateStatus(
-                                      //   selectedTransaction.id.toString(),
-                                      //   selectedTransaction.requestNumber.toString(),
-                                      //   'Accepted', ref// Pass both ID and RequestNumber
-                                      // );
-                                      //   acceptedTransactionNotifier.addProduct(selectedTransaction); // Add to accepted 
-                                        
-                                      //   Timer.periodic(const Duration(seconds: 2), (timer) async {
-                                      //     final updated = await fetchTransactionStatus(ref, selectedTransaction.id.toString());
-
-                                      //     if(updated.requestStatus == "Accepted") {
-                                      //       setState(() {
-                                      //         _loadingStates[selectedTransaction.requestNumber.toString()] = false;
-                                      //       });
-                                      //       timer.cancel();
-                                      //     }
-                                      //   });
-
-                                      //   setState(() {
-                                      //     expandedTransactions.removeWhere((t) => t.id == selectedTransaction.id);
-                                      //   });
-                                      //   // ref.read(filteredItemsProvider.notifier).removeTransaction(selectedTransaction);
-                                      //   // ref.refresh(acceptedTransactionProvider);
-                                      
-
-                                      // // Find and display the updated transaction
-                                      // final updatedState = ref.read(transaction_list.acceptedTransactionProvider);
-                                      // final updatedTransaction = updatedState.firstWhere(
-                                      //   (transaction) => transaction.id == selectedTransaction.id,
-                                      //   orElse: () => selectedTransaction, // Return the original if not found
-                                      // );
-
-                                      // // Print the updated status
-                                      // print('ID: ${selectedTransaction.id}');
-                                      // print('Request Number: ${updatedTransaction.requestNumber}');
-                                      // print('Updated Status: ${updatedTransaction.requestStatus}');
-
-                                      // // setState((){
-                                      // //   _loadingStates.remove(item.requestNumber.toString());
-                                      // // });
-                                        
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color.fromARGB(255, 244, 176, 74),
-                                    
-                                    ),
-                                    child: isLoading ? const CircularProgressIndicator(color: Colors.black)
-                                    :Text(
-                                      'Accept'.toUpperCase(),
-                                      style: GoogleFonts.poppins(
-                                        color: Colors.black, // White text color
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  if (!(item.requestStatus != "Rejected" || item.requestStatus != "Accepted" )) 
-                                  ElevatedButton(
-                                    onPressed: () {
-                                      _showModal(context, ref, expandedTransactions, index);
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color.fromARGB(255, 255, 0, 0), // Set the button color to orange
-                                    ),
-                                    child: Text(
-                                      'Directions'.toUpperCase(),
-                                      style: GoogleFonts.poppins(
-                                        color: Colors.white, // White text color
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              
-                            ],
+                                ),
+                              );
+                            }).toList(),
+                            options: CarouselOptions(
+                              height: 150,
+                              enlargeCenterPage: true,
+                              autoPlay: true,
+                              viewportFraction: 0.85,
+                              autoPlayInterval: const Duration(seconds: 4),
+                            ),
                           ),
-                        ),
+
+                          const SizedBox(height: 20),
+                        ],
                       ),
                     ),
-                  );
-                },
-              // )
-              
+                    SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final item = ongoingTransactions[index]; // filtered list
+
+                          return Padding(
+                            padding: const EdgeInsets.all(4),
+                            child: Card(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              color: Colors.green,
+                              child: Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      (item.requestNumber?.toString() ?? 'No Request Number Available'),
+                                      style: AppTextStyles.body.copyWith(
+                                        fontSize: 18,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Text(
+                                      'subtitle nalang.',
+                                      style: AppTextStyles.caption.copyWith(
+                                        fontSize: 14,
+                                        color: Colors.white70,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                        childCount: ongoingTransactions.length,
+                      ),
+                    ),
+
+                    // 📦 Grid wrapped in SliverList
+                    SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final item = expandedTransactions[index];
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 20),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => TransactionDetails(
+                                        transaction: item,
+                                        id: item.id,
+                                        uid: uid ?? '',
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(15),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: mainColor,
+                                          spreadRadius: 2,
+                                          offset: Offset(0, 3),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          crossAxisAlignment: CrossAxisAlignment.center,
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text (
+                                                    item.name,
+                                                    style: AppTextStyles.body.copyWith(
+                                                      fontSize: 14,
+                                                      fontWeight: FontWeight.bold,
+                                                      letterSpacing: 0.9,
+                                                      color: Colors.white,
+                                                    ),
+                                                    overflow: TextOverflow.ellipsis,
+                                                    maxLines: 2,
+                                                  ),
+                                                  const SizedBox(height: 8),
+                                                  Row(
+                                                    children: [
+                                                      Text(
+                                                        "Request Number: ",
+                                                        style: AppTextStyles.caption.copyWith(
+                                                          fontWeight: FontWeight.bold,
+                                                          fontSize: 12,
+                                                          color: Colors.white,
+                                                        ),
+                                                      ),
+                                                      Flexible(
+                                                        child: Text(
+                                                          (item.requestNumber?.toString() ?? 'No Request Number Available'),
+                                                          style: AppTextStyles.caption.copyWith(
+                                                            color: Colors.white
+                                                          ),
+                                                          softWrap: true, // Text will wrap if it's too long
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                           
+                                            const SizedBox(width: 8),
+                                            const Icon(
+                                              Icons.chevron_right,
+                                              color: Color.fromARGB(255, 255, 255, 255),
+                                              size: 40,
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                )
+                              ),
+                            ),
+                          );
+                        },
+                        childCount: expandedTransactions.length,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           );
+
         },
-        loading: () => const Center(child: CircularProgressIndicator()),  // Show loading spinner while fetching data
+       loading: () => const Center(child: CircularProgressIndicator()),  // Show loading spinner while fetching data
         error: (e, stack) => Center(child: Text('Error: $e')),  // Display error message if an error occurs
       ),
     );
     
   }
 
-  void _showModal(BuildContext context, WidgetRef ref, List<dynamic> expandedTransactions, int index) {
-    TextEditingController controller = TextEditingController();
-    // String? selectedValue;
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Reject This Booking'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                const Text('Tell us why you are refusing this booking request, this will help us improve our services.'),
-                Consumer(
-                  builder: (context, ref, child) {
-                    final rejectionReasonsAsync = ref.watch(rejectionReasonsProvider);
-                    final selectedValue = ref.watch(selectedReasonsProvider);
-
-                    return rejectionReasonsAsync.when(
-                      data: (reasons) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                          child: Expanded(
-                            child: DropdownButton<String>(
-                              isExpanded: true, 
-                              value: selectedValue,
-                              hint: const Text('Select a reason'),
-                              onChanged: (String? newValue) {
-                                ref.read(selectedReasonsProvider.notifier).state = newValue;
-                              },
-                              items: reasons.map<DropdownMenuItem<String>>((RejectionReason reason) {
-                                return DropdownMenuItem<String>(
-                                  value: reason.id.toString(),
-                                child: Text(reason.name, overflow: TextOverflow.ellipsis),
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                        );
-                      },
-                        loading: () => const CircularProgressIndicator(),
-                      error: (e, stackTrace) => Text('Error: $e'),
-                    );
-                  },
-                ),
-
-                const SizedBox(height: 10),
-
-                // Text Area for feedback
-                SingleChildScrollView(
-                  child: TextField(
-                    controller: controller,
-                    maxLines: 3,  // Multi-line text area
-                    decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
-                      hintText: 'Your feedback...',
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          actions: <Widget>[
-            ElevatedButton(
-              onPressed: () async {
-                final uid = ref.read(authNotifierProvider).uid;
-                final transactionId = expandedTransactions[index];
-
-                // Handle Reject Action here (using _selectedValue and controller.text)
-                final selectedReason = ref.read(selectedReasonsProvider);
-                final feedback = controller.text;
-
-                if(selectedReason == null || selectedReason.isEmpty){
-                  print('Please select a reason');
-                  return;
-                }
-
-                //Clear selection//
-                ref.read(selectedReasonsProvider.notifier).state = null;
-                controller.clear();
-
-                print('🟥 Rejecting Transaction');
-                print('🔹 UID: $uid');
-                print('🔹 Transaction ID: ${transactionId.id}');
-                print('🔹 Reason: $selectedReason');
-                print('🔹 Feedback: $feedback');
-
-                try{
-                  final password = ref.watch(authNotifierProvider).password ?? '';
-                  final response = await http.post(
-                    Uri.parse('http://192.168.118.102:8000/api/odoo/reject-booking'),
-                    headers:{
-                      'Content-Type': 'application/json',
-                      'Accept': 'application/json',
-                      'password': password,
-                    },
-                    body: jsonEncode({
-                      'uid': uid,
-                      'transaction_id': transactionId.id,
-                      'reason': selectedReason,
-                      'feedback': feedback
-                    }),
-                  );
-                  if (response.statusCode == 200) {
-                      final rejectedTransactionNotifier = ref.read(accepted_transaction.acceptedTransactionProvider.notifier);
-                      rejectedTransactionNotifier.updateStatus(transactionId.id.toString(), transactionId.requestNumber.toString(),'Rejected',ref);
-
-                      final updated = await fetchTransactionStatus(ref, transactionId.id.toString());
-                      print('Updated Status: ${updated.requestStatus}');
-
-                      if(updated.requestStatus == "Rejected") {
-                        print('Rejection Successful');
-                      } else {
-                        print('Rejection Failed');
-                      }
-                      Navigator.of(context).pop();
-                    } else {
-                      print('Button Rejection Failed');
-                    }
-                }catch (e){
-                  print('Error: $e');
-                  Navigator.of(context).pop();
-                }
-
-                
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color.fromARGB(255, 255, 0, 0), // Set button color to red
-              ),
-              child: Text(
-                'X Reject'.toUpperCase(),
-                style: GoogleFonts.poppins(
-                  color: Colors.white, // White text color
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                // Handle Cancel Action
-                Navigator.of(context).pop();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color.fromARGB(255, 230, 178, 20), // Set button color to yellow
-              ),
-              child: Text(
-                'Cancel'.toUpperCase(),
-                style: GoogleFonts.poppins(
-                  color: Colors.black, // Black text color
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
+  
 }
 
 
