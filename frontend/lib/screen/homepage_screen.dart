@@ -1,5 +1,4 @@
 // homepage_screen.dart
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,7 +10,6 @@ import 'package:frontend/screen/navigation_menu.dart';
 import 'package:frontend/user/history_screen.dart';
 import 'package:frontend/user/homepage_screen.dart';
 import 'package:frontend/user/profile_screen.dart';
-import 'package:frontend/user/proof_of_delivery_screen.dart';
 import 'package:frontend/user/setting_screen.dart';
 import 'package:frontend/user/transaction_screen.dart';
 import 'package:frontend/user/updateuser_screen.dart';
@@ -43,7 +41,7 @@ class HomePage extends ConsumerWidget {
   }
 
   String _getProfileImageUrl(String picture) {
-    return 'http://192.168.118.102:8000/storage/$picture'; // Correct URL for the emulator
+    return 'http://192.168.18.53:8000/storage/$picture'; // Correct URL for the emulator
   }
 
   @override

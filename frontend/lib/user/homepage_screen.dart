@@ -193,7 +193,7 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
           });
 
           final ongoingTransactions = expandedTransactions
-            .where((tx) => tx.requestStatus == 'Ongoing')
+            .where((tx) => tx.requestStatus == "Pending")
             .toList();
 
           return Scaffold(
@@ -276,53 +276,12 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                         ],
                       ),
                     ),
-                    SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final item = ongoingTransactions[index]; // filtered list
-
-                          return Padding(
-                            padding: const EdgeInsets.all(4),
-                            child: Card(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              color: Colors.green,
-                              child: Padding(
-                                padding: const EdgeInsets.all(16.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      (item.requestNumber?.toString() ?? 'No Request Number Available'),
-                                      style: AppTextStyles.body.copyWith(
-                                        fontSize: 18,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 10),
-                                    Text(
-                                      'subtitle nalang.',
-                                      style: AppTextStyles.caption.copyWith(
-                                        fontSize: 14,
-                                        color: Colors.white70,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                        childCount: ongoingTransactions.length,
-                      ),
-                    ),
-
+                   
                     // 📦 Grid wrapped in SliverList
                     SliverList(
                       delegate: SliverChildBuilderDelegate(
                         (context, index) {
-                          final item = expandedTransactions[index];
+                          final item = ongoingTransactions[index];
                           return Container(
                             margin: const EdgeInsets.only(bottom: 20),
                             child: Material(
@@ -418,7 +377,7 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                             ),
                           );
                         },
-                        childCount: expandedTransactions.length,
+                        childCount: ongoingTransactions.length,
                       ),
                     ),
                   ],

@@ -2,11 +2,16 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:frontend/notifiers/auth_notifier.dart';
+import 'package:frontend/provider/accepted_transaction.dart' as accepted_transaction;
 import 'package:frontend/provider/reject_provider.dart';
 import 'package:frontend/provider/transaction_provider.dart';
+import 'package:frontend/theme/colors.dart';
+import 'package:frontend/theme/text_styles.dart';
 import 'package:frontend/user/rejection_details.dart';
 import 'package:frontend/user/transaction_details.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 
 class HistoryScreen extends ConsumerStatefulWidget{
   const HistoryScreen({super.key, required Map<String, dynamic> user});
@@ -17,283 +22,301 @@ class HistoryScreen extends ConsumerStatefulWidget{
 }
 
 class _HistoryPageState extends ConsumerState<HistoryScreen> {
-// Tracks loading states for each request
-// final Map<String, bool> _loadingStates = {};
+  String? uid;
+  //  final Map<String, bool> _loadingStates = {};
    Future<void> _refreshTransaction() async {
     print("Refreshing transactions");
     try {
-      // final uid = ref.watch(authNotifierProvider).uid;
-      ref.invalidate(rejectionReasonsProvider);
+      
+      ref.invalidate(bookingProvider);
       print("REFRESHED!");
     }catch (e){
       print('DID NOT REFRESHED!');
     }
    }
 
+   String formatDateTime(String? dateString) {
+    if (dateString == null || dateString.isEmpty) return "N/A"; // Handle null values
+    
+    try {
+      DateTime dateTime = DateTime.parse(dateString); // Convert string to DateTime
+       return DateFormat('MMMM d, yyyy - h:mm a').format(dateTime); // Format date-time
+    } catch (e) {
+      return "Invalid Date"; // Handle errors gracefully
+    }
+  } 
+
+  
+  
   @override
   Widget build(BuildContext context) {
-    final transactionold = ref.watch(filteredRejected);
-    final rejectedTransactions = ref.watch(rejectedTransactionProvider);
+     
+    final transactionold = ref.watch(filteredItemsProvider);
+    
+    final acceptedTransaction = ref.watch(accepted_transaction.acceptedTransactionProvider);
 
-    return transactionold.when(
-      data: (transactionList) {
-        
-        final validTransactionList = transactionList;
-
-        // If there are no transactions, show a message
-        if (validTransactionList.isEmpty) {
-          return const Center(child: Text('No history available.'));
-        }
-
-        // If rejectedTransactions is a list, convert it to a Set of IDs for faster lookup
-        final rejectedTransactionsIds = rejectedTransactions;
-
-        // Filtered list excluding transactions with IDs in rejectedTransactions
-        final transaction = validTransactionList.where((t) {
-          final key = "${t.id}-${t.requestNumber}";
-          return !rejectedTransactionsIds.contains(key);
-        }).toList();
-
-        // If no filtered transactions, show a message
-        if (transaction.isEmpty) {
-          return const Center(child: Text('No transactions available that have not been accepted.'));
-        }
-
-        final expandedTransactions = transaction.expand((item) {
-          if (item.dispatchType == "ot") {
-            return [
-              if (item.deRequestStatus == "accepted" && item.deRequestStatus != "rejected" && item.deTruckDriverName!.isNotEmpty)
-                item.copyWith(
-                  name: "Deliver to Shipper",
-                  destination: item.destination,
-                  origin: item.origin,
-                  requestNumber: item.deRequestNumber,
-                  requestStatus: item.deRequestStatus,
-                ),
-              if (item.plRequestStatus != "rejected" && item.plTruckDriverName!.isNotEmpty)
-                item.copyWith(
-                  name: "Pickup from Shipper",
-                  destination: item.origin,
-                  origin: item.destination,
-                  requestNumber: item.plRequestNumber,
-                  requestStatus: item.plRequestStatus,
-                ),
-            ];
-          } else if (item.dispatchType == "dt") {
-            return [
-              if (item.dlRequestStatus != "rejected" && item.dlTruckDriverName!.isNotEmpty)
-                item.copyWith(
-                  name: "Delivers to Consignee",
-                  origin: item.destination,
-                  destination: item.origin,
-                  requestNumber: item.dlRequestNumber,
-                  requestStatus: item.dlRequestStatus,
-                ),
-              if (item.peRequestStatus != "rejected" && item.peTruckDriverName!.isNotEmpty)
-                item.copyWith(
-                  name: "Pickup from Consignee",
-                  requestNumber: item.peRequestNumber,
-                  requestStatus: item.peRequestStatus,
-                ),
-            ];
+    return RefreshIndicator(
+      onRefresh: _refreshTransaction,
+      child: transactionold.when(
+        data: (transactionList) {
+          // If transactionList is null, we ensure it's an empty list to prevent errors
+          if (transactionList.isNotEmpty) {
+            for (var transaction in transactionList) {
+              print("Booking ID: ${transaction.id}");
+            }
+          } else {
+            print("No transactions found.");
           }
-          return [item];
-        }).toList();
+          final validTransactionList = transactionList;
 
-        expandedTransactions.sort((a, b) {
-          DateTime dateA = DateTime.tryParse(a.deliveryDate) ?? DateTime(0);
-          DateTime dateB = DateTime.tryParse(b.deliveryDate) ?? DateTime(0);
-          return dateB.compareTo(dateA);
-        });
+          // If acceptedTransaction is a list, convert it to a Set of IDs for faster lookup
+          final acceptedTransactionIds = acceptedTransaction;
 
-        return Scaffold(
-          body: Padding(
-            padding: const EdgeInsets.all(16),
-            child: RefreshIndicator(
-              onRefresh: _refreshTransaction,
-              child: GridView.builder(
-                itemCount: expandedTransactions.length,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 1,
-                  mainAxisExtent: 250,
-                  crossAxisSpacing: 20,
-                  mainAxisSpacing: 20,
-                ),
-                itemBuilder: (context, index) {
-                  final item = expandedTransactions[index];
-                  // final isLoading = _loadingStates[item.requestNumber.toString()] ?? false;
-                  Color getStatusColor(String requestStatus) {
-                    switch (requestStatus) {
-                      case 'Completed':
-                        return Colors.green;
-                      case 'Ongoing':
-                        return const Color.fromARGB(255, 62, 243, 68);
-                      case 'Accepted':
-                        return const Color.fromARGB(255, 239, 184, 44);
-                      case 'Pending':
-                        return Colors.orange;
-                      case 'Rejected':
-                        return const Color.fromARGB(255, 233, 110, 34);
-                      case 'Cancelled':
-                        return Colors.red;
-                      default:
-                        return Colors.grey;
-                    }
-                  }
+          // Filtered list excluding transactions with IDs in acceptedTransaction
+          final transaction = validTransactionList.where((t) {
+            final key = "${t.id}-${t.requestNumber}";
+              return !acceptedTransactionIds.contains(key);
+          }).toList();
 
-                  return ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      minHeight: 80.0,
-                      maxHeight: 150.0,
+         
+          final authPartnerId = ref.watch(authNotifierProvider).partnerId;
+          final driverId = authPartnerId?.toString();
+
+          print("Driver: $authPartnerId");
+
+          final expandedTransactions = transaction.expand((item) {
+            print("🆔 Current driverId: $driverId");
+            print("🟨 DE: ${item.deTruckDriverName}, PL: ${item.plTruckDriverName}, DL: ${item.dlTruckDriverName}, PE: ${item.peTruckDriverName}");
+           
+            if (item.dispatchType == "ot") {
+              return [
+                // First instance: Deliver to Shipper
+                if (item.deTruckDriverName == driverId) // Filter out if accepted
+                  // Check if the truck driver is the same as the authPartnerId
+                   item.copyWith(
+                    name: "Deliver to Shipper",
+                    destination: item.destination,
+                    origin: item.origin,
+                    requestNumber: item.deRequestNumber,
+                    requestStatus: item.deRequestStatus,
+                    truckPlateNumber: item.deTruckPlateNumber,
+                  ),
+                  // Second instance: Pickup from Shipper
+                if ( item.plTruckDriverName == driverId) // Filter out if accepted
+                  // if (item.plTruckDriverName == authPartnerId)
+                    item.copyWith(
+                    name: "Pickup from Shipper",
+                    destination: item.origin,
+                    origin: item.destination,
+                    requestNumber: item.plRequestNumber,
+                    requestStatus: item.plRequestStatus,
+                    truckPlateNumber: item.plTruckPlateNumber,
                     ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => RejectionDetails(
-                                transaction: item,
-                                id: item.id,
-                                uid: '',
-                              ),
+              ];
+            } else if (item.dispatchType == "dt") {
+              return [
+                // First instance: Deliver to Consignee
+                if (item.dlTruckDriverName == driverId) // Filter out if accepted
+                  item.copyWith(
+                    name: "Delivers to Consignee",
+                    origin: item.destination,
+                    destination: item.origin,
+                    requestNumber: item.dlRequestNumber,
+                    requestStatus: item.dlRequestStatus,
+                    truckPlateNumber: item.dlTruckPlateNumber,
+                  ),
+                // Second instance: Pickup from Consignee
+                if (item.peTruckDriverName == driverId) // Filter out if accepted
+                  item.copyWith(
+                    name: "Pickup from Consignee",
+                    requestNumber: item.peRequestNumber,
+                    requestStatus: item.peRequestStatus,
+                    truckPlateNumber: item.peTruckPlateNumber,
+                  ),
+              ]; 
+            }
+            // Return as-is if no match
+            return [item];
+          }).toList();
+
+          expandedTransactions.sort((a,b){
+            DateTime dateA = DateTime.tryParse(a.deliveryDate) ?? DateTime(0);
+            DateTime dateB = DateTime.tryParse(b.deliveryDate) ?? DateTime(0);
+            return dateB.compareTo(dateA);
+          });
+
+          final ongoingTransactions = expandedTransactions
+            .where((tx) => tx.requestStatus == 'Rejected' || tx.requestStatus == "Completed")
+            .toList();
+
+          if (ongoingTransactions.isEmpty){
+            return Center(
+              child: Text(
+                'No history yet.',
+                style: AppTextStyles.subtitle,
+              ),
+            );
+          }
+
+          return Scaffold(
+             body: Padding(
+              padding: const EdgeInsets.all(16),
+              child: ListView.builder(
+                itemCount: ongoingTransactions.length,
+                itemBuilder: (context, index) {
+                  final item = ongoingTransactions[index];
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 20),
+                    decoration: BoxDecoration(
+                      color: bgColor,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: darkerBgColor,
+                          blurRadius: 6,
+                          offset: Offset(0, 3)
+                        )
+                      ]
+                    ),
+                      
+                    child: InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => TransactionDetails(
+                              transaction: item,
+                              id: item.id,
+                              uid: uid ?? '',
                             ),
-                          );
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Flexible(
-                                    child: Text(
-                                      item.name,
-                                      style: GoogleFonts.montserrat(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
-                                        letterSpacing: 0.9,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                      maxLines: 2,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                                    decoration: BoxDecoration(
-                                      color: getStatusColor(item.requestStatus.toString()),
-                                      borderRadius: BorderRadius.circular(5),
-                                    ),
-                                    child: Text(
-                                      item.requestStatus.toString(),
-                                      style: GoogleFonts.montserrat(
-                                        color: Colors.black,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Text(
-                                        "Request Number: ",
-                                        style: GoogleFonts.montserrat(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      Flexible(
-                                        child: Text(
-                                          (item.requestNumber?.toString() ?? 'No Request Number Available'),
-                                          style: GoogleFonts.montserrat(
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                          softWrap: true,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  Row(
-                                    children: [
-                                      Text(
-                                        "Pick-Up Address: ",
-                                        style: GoogleFonts.montserrat(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      Flexible(
-                                        child: Text(
-                                          " ${item.destination}",
-                                          style: GoogleFonts.montserrat(
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                          softWrap: true,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  Row(
-                                    children: [
-                                      Text(
-                                        "Delivery Address: ",
-                                        style: GoogleFonts.montserrat(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      Flexible(
-                                        child: Text(
-                                          " ${item.origin}",
-                                          style: GoogleFonts.montserrat(
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                          softWrap: true,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  Row(
-                                    children: [
-                                      Text(
-                                        "Delivery Schedule: ",
-                                        style: GoogleFonts.montserrat(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      Flexible(
-                                        child: Text(
-                                          " ${item.deliveryDate}",
-                                          style: GoogleFonts.montserrat(
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                          softWrap: true,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ],
                           ),
-                        ),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const SizedBox(width: 20),
+                                Expanded(
+                                  child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Space between label and value
+                                    Text(
+                                      '${item.origin} — ${item.destination}',
+                                      style: AppTextStyles.body.copyWith(
+                                        color: mainColor,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Text(
+                                      formatDateTime(item.arrivalDate),
+                                      style: AppTextStyles.caption.copyWith(
+                                        color: darkerBgColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                ) // Space between icon and text
+                                
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+                            Row(
+                              children: [
+                                const SizedBox(width: 20), // Space between icon and text
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Space between label and value
+                                    Text(
+                                      "Request Number",
+                                      style: AppTextStyles.caption.copyWith(
+                                        color: darkerBgColor,
+                                      ),
+                                    ),
+                                    Text(
+                                      (item.requestNumber?.toString() ?? 'No Request Number Available'),
+                                      style: AppTextStyles.body.copyWith(
+                                        color: mainColor,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+                            Row(
+                              children: [
+                                const SizedBox(width: 20), // Space between icon and text
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      // Space between label and value
+                                      Text(
+                                        "Truck Number",
+                                        style: AppTextStyles.caption.copyWith(
+                                          color: darkerBgColor,
+                                        ),
+                                      ),
+                                      Text(
+                                        (item.truckPlateNumber?.isNotEmpty ?? false)
+                                          ? item.truckPlateNumber! : '—',
+                                        style: AppTextStyles.body.copyWith(
+                                          color: mainColor,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  constraints: const BoxConstraints(
+                                    minWidth: 150,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(20),
+                                    gradient: const LinearGradient(
+                                      colors: [Color.fromARGB(255, 253, 246, 20), Colors.grey],
+                                      stops: [0.5, 0.5],
+                                    ),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  child: Text(
+                                    'Ongoing',
+                                    style: AppTextStyles.caption.copyWith(
+                                      color: Colors.black,
+                                      fontWeight: FontWeight.bold
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ],
+                            ),
+                           
+                         ],
                       ),
                     ),
-                  );
-                },
-              ),
+                  ),
+                );
+                    
+              },
+             
             ),
           ),
         );
+
       },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, stack) => Center(child: Text('Error: $e')),
+      loading: () => const Center(child: CircularProgressIndicator()),  // Show loading spinner while fetching data
+      error: (e, stack) => Center(child: Text('Error: $e')),  // Display error message if an error occurs
+      ),
     );
+    
   }
+
 }

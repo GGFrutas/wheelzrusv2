@@ -31,11 +31,11 @@ class Transaction {
   final String? peTruckDriverName;
   final String? plTruckDriverName;
   final String? freightForwarderName;
-  // final String? truckPlateNumber;
-  // final String? deTruckPlateNumber;
-  // final String? plTruckPlateNumber;
-  // final String? dlTruckPlateNumber;
-  // final String? peTruckPlateNumber;
+  final String? truckPlateNumber;
+  final String? deTruckPlateNumber;
+  final String? plTruckPlateNumber;
+  final String? dlTruckPlateNumber;
+  final String? peTruckPlateNumber;
   final String? truckType;
   final String? deTruckType;
   final String? plTruckType;
@@ -78,11 +78,11 @@ class Transaction {
     required this.plTruckDriverName,
     required this.freightForwarderName,
     required this.contactNumber,
-    // required this.truckPlateNumber,
-    // required this.deTruckPlateNumber,
-    // required this.plTruckPlateNumber,
-    // required this.dlTruckPlateNumber,
-    // required this.peTruckPlateNumber,
+    required this.truckPlateNumber,
+    required this.deTruckPlateNumber,
+    required this.plTruckPlateNumber,
+    required this.dlTruckPlateNumber,
+    required this.peTruckPlateNumber,
     required this.deTruckType,
     required this.plTruckType,
     required this.dlTruckType,
@@ -145,11 +145,11 @@ class Transaction {
       dlTruckDriverName: _extractDriverId(json['dl_truck_driver_name'])?.toString(),
       peTruckDriverName: _extractDriverId(json['pe_truck_driver_name'])?.toString(),
       plTruckDriverName: _extractDriverId(json['pl_truck_driver_name'])?.toString(),
-      // truckPlateNumber: json['de_truck_plate_no'],
-      // deTruckPlateNumber: json['de_truck_plate_no'],
-      // plTruckPlateNumber: json['pl_truck_plate_no'],
-      // dlTruckPlateNumber: json['dl_truck_plate_no'],
-      // peTruckPlateNumber: json['pe_truck_plate_no'],
+      truckPlateNumber: _extractName(json['de_truck_plate_no'])?.toString(),
+      deTruckPlateNumber: _extractName(json['de_truck_plate_no'])?.toString(),
+      plTruckPlateNumber: _extractName(json['pl_truck_plate_no'])?.toString(),
+      dlTruckPlateNumber: _extractName(json['dl_truck_plate_no'])?.toString(),
+      peTruckPlateNumber: _extractName(json['pe_truck_plate_no'])?.toString(),
       truckType: json['de_truck_type'],
       deTruckType: json['de_truck_type'],
       plTruckType: json['pl_truck_type'],
@@ -164,7 +164,7 @@ class Transaction {
 
   static String? _extractName(dynamic field) {
     if (field is List && field.isNotEmpty) {
-      return field[1]; // Extract name (second item in list)
+      return field[1]?.toString(); // Extract name (second item in list)
     } else if (field is String) {
       return field;
     }
@@ -213,11 +213,11 @@ class Transaction {
       peTruckDriverName: peTruckDriverName,
       plTruckDriverName: plTruckDriverName,
       freightForwarderName: freightForwarderName,
-      // truckPlateNumber: truckPlateNumber ?? truckPlateNumber,
-      // deTruckPlateNumber: deTruckPlateNumber,
-      // plTruckPlateNumber: plTruckPlateNumber,
-      // dlTruckPlateNumber: dlTruckPlateNumber,
-      // peTruckPlateNumber: peTruckPlateNumber,
+      truckPlateNumber: truckPlateNumber ?? truckPlateNumber,
+      deTruckPlateNumber: deTruckPlateNumber,
+      plTruckPlateNumber: plTruckPlateNumber,
+      dlTruckPlateNumber: dlTruckPlateNumber,
+      peTruckPlateNumber: peTruckPlateNumber,
       truckType: truckType ?? truckType,
       deTruckType: deTruckType,
       plTruckType: plTruckType,

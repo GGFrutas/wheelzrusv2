@@ -190,7 +190,7 @@ class TransactionController extends Controller
             "http" => [
                 "header" => "Content-Type: application/json",
                 "method" => "POST",
-                "content" => json_encode($transactionData),
+                "content" => json_encode($transactionData, JSON_UNESCAPED_SLASHES),
                 "timeout" => 10, // seconds
             ],
         ])), true);
@@ -633,7 +633,7 @@ class TransactionController extends Controller
             'uid' => $uid,
             'id' => $transactionId,
             'dispatch_type' => $dispatchType,
-            'requestNumber' => $rrequestNumber,
+            'requestNumber' => $request->requestNumber,
             // 'images' => $request->input('images'),
             // 'signature' => $request->input('signature'),
         ]); 

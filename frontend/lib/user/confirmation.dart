@@ -260,30 +260,65 @@ class _ConfirmationState extends ConsumerState<ConfirmationScreen> {
         onPressed:() async {
           if (_images.isEmpty) {
             showDialog(
-              context: context, 
-              builder: (BuildContext context) {
+              context: context,
+              builder: (context) {
                 return AlertDialog(
                   title: Text(
-                    "No Image Selected",
-                    style: AppTextStyles.body,
+                    'Upload Error!', 
+                    style: AppTextStyles.subtitle.copyWith(
+                      fontWeight: FontWeight.bold
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                  content: Text(
-                    "Please select at least one image.",
-                    style: AppTextStyles.caption,
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Please select at least one image.',
+                        style: AppTextStyles.body.copyWith(
+                          color: Colors.black87
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      const Icon (
+                        Icons.image_outlined,
+                        color: bgColor,
+                        size: 100
+                      )
+                    ],
                   ),
                   actions: [
-                      TextButton(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                      },
-                      child: Text(
-                        "OK",
-                        style: AppTextStyles.body
-                      ),
-                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12.0),
+                      child: Center(
+                        child: SizedBox(
+                          width: 200,
+                          child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                          }, 
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(25),
+                            ),
+                          ),
+                          child: Text(
+                            "Try Again",
+                            style: AppTextStyles.body.copyWith(
+                              color: Colors.white,
+                            )
+                          )
+                        ),
+                        )
+                      )
+                    )
                   ],
                 );
-              },
+              }
             );
           } else {
             final validImages = _images.whereType<File>().toList();

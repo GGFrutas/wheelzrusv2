@@ -139,7 +139,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
        // If transaction is not null, display its details
         return Scaffold(
           appBar: AppBar(
-            
+            iconTheme: const IconThemeData(color: mainColor),
           ),
           
           body: Padding(
@@ -396,10 +396,8 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
               width: double.infinity, // Make the button full width
               child: ElevatedButton(
               onPressed: () async {
-                if (widget.transaction?.requestStatus == 'Accepted') {
-                  print('TRANSACTION TYPE: ${widget.transaction?.dispatchType}');
-print('shipperContact: ${widget.transaction?.contactPerson}');
-print('uid: ${widget.uid}');
+                if (widget.transaction?.requestStatus == 'Ongoing' || widget.transaction?.requestStatus == "Accepted") {
+                  
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -424,7 +422,7 @@ print('uid: ${widget.uid}');
                   acceptedTransactionNotifier.updateStatus(
                     widget.transaction!.id.toString(),
                     widget.transaction!.requestNumber.toString(),
-                    'Accepted', ref// Pass both ID and RequestNumber
+                    'Accepted', ref, context// Pass both ID and RequestNumber
                   );
                     acceptedTransactionNotifier.addProduct(widget.transaction!); //Add to accepted 
                       // transaction?.removeWhere((t) => t.id == transaction?.id);
@@ -458,7 +456,7 @@ print('uid: ${widget.uid}');
                 ),
               ),
               child: Text(
-                widget.transaction?.requestStatus == 'Accepted'
+                widget.transaction?.requestStatus == 'Accepted' || widget.transaction?.requestStatus == 'Ongoing'
                               ? 'View Booking' // New label for accepted transactions
                               : 'Accept Booking', 
                 style: AppTextStyles.body.copyWith(

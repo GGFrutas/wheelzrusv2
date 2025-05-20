@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:form_validator/form_validator.dart';
 import 'package:frontend/notifiers/auth_notifier.dart';
 import 'package:frontend/theme/colors.dart';
+import 'package:frontend/theme/text_styles.dart';
 import 'package:frontend/widgets/input_widget.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -54,15 +55,60 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if(mounted) {
         showDialog(builder: (context) {
           return AlertDialog(
-            title: const Text(' ⚠ Login Failed!', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-            content: const Text('Invalid email or password. Please try again.',style: TextStyle(color: Colors.black87),),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: const Text('OK',style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+            title: Text(
+              'Login Failed!', 
+              style: AppTextStyles.subtitle.copyWith(
+                color: Colors.red, 
+                fontWeight: FontWeight.bold
               ),
+              textAlign: TextAlign.center,
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
+                  'Invalid email or password. Please try again.',
+                  style: AppTextStyles.body.copyWith(
+                    color: Colors.black87
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                const Icon (
+                  Icons.warning_rounded,
+                  color: Colors.red,
+                  size: 100
+                )
+              ],
+            ),
+            actions: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12.0),
+                child: Center(
+                  child: SizedBox(
+                    width: 200,
+                    child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    }, 
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(25),
+                      ),
+                    ),
+                    child: Text(
+                      "Try Again",
+                      style: AppTextStyles.body.copyWith(
+                        color: Colors.white,
+                      )
+                    )
+                  ),
+                  )
+                )
+              )
             ],
           );
         }, context: context);
@@ -289,7 +335,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: mainColor,
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 150,
                               vertical: 20,
                             ),
                             disabledForegroundColor: mainColor,
@@ -317,8 +362,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     fontSize: 16, // Updated font size to 20
                                     fontWeight: FontWeight.bold,
                                   ),
-                                  textAlign: TextAlign
-                                      .center, // Ensure the text is centered
+                                  textAlign: TextAlign.center, // Ensure the text is centered
                                 ),
                           ));
                     },
