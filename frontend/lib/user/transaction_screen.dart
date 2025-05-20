@@ -2,12 +2,20 @@
 
 import 'dart:io';
 import 'dart:math';
+import 'package:carousel_slider/carousel_slider.dart';
+import 'package:frontend/notifiers/auth_notifier.dart';
 import 'package:frontend/notifiers/transaction_notifier.dart';
+import 'package:frontend/provider/accepted_transaction.dart' as accepted_transaction;
+import 'package:frontend/provider/transaction_provider.dart';
+import 'package:frontend/theme/colors.dart';
+import 'package:frontend/theme/text_styles.dart';
+import 'package:frontend/user/transaction_details.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/provider/accepted_transaction.dart';
+import 'package:intl/intl.dart';
 // import 'package:latlong2/latlong.dart';
 import 'package:location/location.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -28,565 +36,332 @@ class TransactionScreen extends ConsumerStatefulWidget {
 }
 
 class _TransactionScreenState extends ConsumerState<TransactionScreen> {
-  final SignatureController _controller = SignatureController(
-    penStrokeWidth: 5,
-    penColor: Colors.black,
-    exportBackgroundColor: Colors.white,
-  );
+  String? uid;
+  //  final Map<String, bool> _loadingStates = {};
+   Future<void> _refreshTransaction() async {
+    print("Refreshing transactions");
+    try {
+      
+      ref.invalidate(bookingProvider);
+      print("REFRESHED!");
+    }catch (e){
+      print('DID NOT REFRESHED!');
+    }
+   }
+
+   String formatDateTime(String? dateString) {
+    if (dateString == null || dateString.isEmpty) return "N/A"; // Handle null values
+    
+    try {
+      DateTime dateTime = DateTime.parse(dateString); // Convert string to DateTime
+       return DateFormat('MMMM d, yyyy - h:mm a').format(dateTime); // Format date-time
+    } catch (e) {
+      return "Invalid Date"; // Handle errors gracefully
+    }
+  } 
+
+  Color getStatusColor(String status) {
+    switch (status) {
+      case 'Accepted':
+        return Colors.orange;
+      case 'Ongoing':
+        return const Color.fromARGB(255, 253, 246, 20);
+      case 'Completed':
+      return Colors.green;
+      default:
+      return Colors.grey;
+    }
+  }
+
+  double getStatusProgress(String status){
+    switch (status) {
+      case 'Accepted':
+        return 0.33;
+      case 'Ongoing':
+        return 0.66;
+      case 'Completed':
+      return 1.0;
+      default:
+      return 0.0;
+    }
+  }
+
+
   
-  final bool _showWidget = true;
-
-
-  @override
-  void initState() {
-    initLocation();
-    super.initState();
-    _controller.addListener(() {
-      if (mounted) {  
-        setState(() {}); // Update the UI whenever the signature content changes
-      }
-      setState(() {}); // Rebuild to update the visibility of the Clear button
-    });
-  }
-
-  MapController mapController = MapController();
-  Location location = Location();
-  bool _serviceEnabled = false;
-  PermissionStatus? _permissionGranted;
-  // LocationData? _locationData;
-  // bool _isMapReady = false; // Flag to check if the map is ready
-
-  initLocation() async {
-    _serviceEnabled = await location.serviceEnabled();
-    if (!_serviceEnabled) {
-      _serviceEnabled = await location.requestService();
-      if (!_serviceEnabled) {
-        return;
-      }
-    }
-
-    _permissionGranted = await location.hasPermission();
-    if (_permissionGranted == PermissionStatus.denied) {
-      _permissionGranted = await location.requestPermission();
-      if (_permissionGranted != PermissionStatus.granted) {
-        return;
-      }
-    }
-
-    // _locationData = await location.getLocation();
-
-    // if (_isMapReady) {
-    //   // Ensure the map is ready before moving the controller
-    //   WidgetsBinding.instance.addPostFrameCallback((_) {
-    //     if (mounted) {
-    //       setState(() {
-    //         mapController.move(
-    //           LatLng(
-    //               _locationData?.latitude ?? 0, _locationData?.longitude ?? 0),
-    //           16,
-    //         );
-    //       });
-    //     }
-    //   });
-    // }
-  }
-
-  // File? _image; // Variable to store the selected image
-
-  final List<File?> _images = [];
-
-  Future<void> _pickImage() async {
-    final ImagePicker picker = ImagePicker();
-    showModalBottomSheet(
-      context: context,
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              ListTile(
-                leading: const Icon(Icons.photo_library),
-                title: const Text('Gallery'),
-                onTap: () async {
-                  final XFile? pickedFile =
-                      await picker.pickImage(source: ImageSource.gallery);
-                  if (pickedFile != null) {
-                    setState(() {
-                      _images
-                          .add(File(pickedFile.path)); // Add image to the list
-                    });
-                  }
-                  Navigator.of(context).pop();
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.camera_alt),
-                title: const Text('Camera'),
-                onTap: () async {
-                  final XFile? pickedFile =
-                      await picker.pickImage(source: ImageSource.camera);
-                  if (pickedFile != null) {
-                    setState(() {
-                      _images
-                          .add(File(pickedFile.path)); // Add image to the list
-                    });
-                  }
-                  Navigator.of(context).pop();
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildImageThumbnail(File image) {
-    return Stack(
-      children: [
-        Container(
-          margin: const EdgeInsets.all(4),
-          width: 70,
-          height: 70,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            image: DecorationImage(
-              image: FileImage(image),
-              fit: BoxFit.cover,
-            ),
-          ),
-        ),
-        Positioned(
-          top: 0,
-          right: 0,
-          child: GestureDetector(
-            onTap: () {
-              setState(() {
-                _images.remove(image); // Remove the selected image
-              });
-            },
-            child: const Icon(
-              Icons.cancel,
-              color: Colors.red,
-              size: 20,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Future<void> saveSignature(Uint8List signatureBytes) async {
-    final directory = await getApplicationDocumentsDirectory();
-    final filePath = '${directory.path}/signature.png';
-    final file = File(filePath);
-    await file.writeAsBytes(signatureBytes);
-    print('Signature saved to $filePath');
-  }
-
-  void _success(transaction, context) async {
-    // Export the signature as a PNG byte array
-    final signatureBytes =
-        await _controller.toPngBytes(height: 1000, width: 1000);
-    if (signatureBytes == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          key: Key('snackbarNoImage'),
-          content: Text('Failed to generate signature image'),
-        ),
-      );
-      return;
-    }
-    await saveSignature(signatureBytes);
-
-    // List<Uint8List> transactionImages =
-    //     _images.map((file) => file.readAsBytesSync()).toList();
-
-    final random = Random();
-    final transactionId = random.nextInt(1000000);
-    // Pass the signature bytes to the submitTransaction function
-    ref.read(transactionNotifierProvider.notifier).submitTransaction(
-          userId: 1,
-          amount: transaction.amount,
-          transactionDate: DateTime.now(),
-          description: transaction.booking,
-          transactionId:
-              transactionId.toString(), // Use your actual transaction ID
-          booking: transaction.booking,
-          location: transaction.location,
-          destination: transaction.destination,
-          eta: DateTime.now(),
-          etd: DateTime.now(),
-          status: transaction.status,
-          signature: signatureBytes, // Pass the signature bytes here
-          transactionImages: _images,
-          context: context,
-        );
-
-    if (mounted) {
-      await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => Scaffold(
-            appBar: AppBar(
-              title: const Text('PNG Image'),
-            ),
-            body: Center(
-              child: Container(
-                color: Colors.grey[300],
-                child: Image.memory(signatureBytes),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
+  
   @override
   Widget build(BuildContext context) {
-    final transaction = ref.watch(acceptedTransactionProvider);
+     
+    final transactionold = ref.watch(filteredItemsProvider);
+    
+    final acceptedTransaction = ref.watch(accepted_transaction.acceptedTransactionProvider);
 
-    return Scaffold(
-      // appBar: AppBar(
-      //   title: Text(
-      //     "YXE Driver",
-      //     style: GoogleFonts.montserrat(
-      //       fontSize: 24,
-      //       fontWeight: FontWeight.bold,
-      //     ),
-      //   ),
-      //   centerTitle: true,
-      // ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: transaction.map((transact) {
-          return Card(
-            elevation: 4, // Elevation to give the card a floating effect
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(15), // Rounded corners
-            ),
-            child: Column(
-              children: [
-                // Map and Booking Details Combined in One Card
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(15),
-                    color: Colors.white,
+    return RefreshIndicator(
+      onRefresh: _refreshTransaction,
+      child: transactionold.when(
+        data: (transactionList) {
+          // If transactionList is null, we ensure it's an empty list to prevent errors
+          if (transactionList.isNotEmpty) {
+            for (var transaction in transactionList) {
+              print("Booking ID: ${transaction.id}");
+            }
+          } else {
+            print("No transactions found.");
+          }
+          final validTransactionList = transactionList;
+
+          // If acceptedTransaction is a list, convert it to a Set of IDs for faster lookup
+          final acceptedTransactionIds = acceptedTransaction;
+
+          // Filtered list excluding transactions with IDs in acceptedTransaction
+          final transaction = validTransactionList.where((t) {
+            final key = "${t.id}-${t.requestNumber}";
+              return !acceptedTransactionIds.contains(key);
+          }).toList();
+
+          final authPartnerId = ref.watch(authNotifierProvider).partnerId;
+          final driverId = authPartnerId?.toString();
+
+
+          final expandedTransactions = transaction.expand((item) {
+           
+            if (item.dispatchType == "ot") {
+              return [
+                // First instance: Deliver to Shipper
+                if (item.deTruckDriverName == driverId) // Filter out if accepted
+                  // Check if the truck driver is the same as the authPartnerId
+                   item.copyWith(
+                    name: "Deliver to Shipper",
+                    destination: item.destination,
+                    origin: item.origin,
+                    requestNumber: item.deRequestNumber,
+                    requestStatus: item.deRequestStatus,
+                    truckPlateNumber: item.deTruckPlateNumber,
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                    //   // Placeholder for the Map
-                    //   Container(
-                    //     height: 460, // Height of the map container
-                    //     width: double.infinity,
-                    //     decoration: BoxDecoration(
-                    //       color: Colors.grey[600], // Placeholder color
-                    //       borderRadius: BorderRadius.circular(10),
-                    //     ),
-                    //     child: FlutterMap(
-                    //       mapController: mapController,
-                    //       options: MapOptions(
-                    //         initialZoom: 5,
-                    //         onMapReady: () {
-                    //           WidgetsBinding.instance.addPostFrameCallback((_) {
-                    //             if (mounted) {
-                    //               setState(() {
-                    //                 _isMapReady = true;
-                    //               });
-                    //             }
-                    //           });
-                    //         },
-                    //       ),
-                    //       children: [
-                    //         TileLayer(
-                    //           urlTemplate:
-                    //               'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    //           userAgentPackageName:
-                    //               'dev.fleaflet.flutter_map.example',
-                    //         ),
-                    //         MarkerLayer(
-                    //           markers: [
-                    //             Marker(
-                    //               point: LatLng(
-                    //                 _locationData?.latitude ?? 10.3157,
-                    //                 _locationData?.longitude ?? 123.8854,
-                    //               ),
-                    //               width: 60,
-                    //               height: 60,
-                    //               alignment: Alignment.centerLeft,
-                    //               child: const Icon(
-                    //                 Icons.location_pin,
-                    //                 size: 60,
-                    //                 color: Colors.red,
-                    //               ),
-                    //             ),
-                    //             const Marker(
-                    //               point: LatLng(10.3157, 123.8854),
-                    //               width: 60,
-                    //               height: 60,
-                    //               alignment: Alignment.centerLeft,
-                    //               child: Icon(
-                    //                 Icons.location_pin,
-                    //                 size: 60,
-                    //                 color: Colors.green,
-                    //               ),
-                    //             ),
-                    //           ],
-                    //         ),
-                    //       ],
-                    //     ),
-                    //   ),
-                      const SizedBox(
-                          height: 10), // Space between the map and details
+                  // Second instance: Pickup from Shipper
+                if ( item.plTruckDriverName == driverId) // Filter out if accepted
+                  // if (item.plTruckDriverName == authPartnerId)
+                    item.copyWith(
+                    name: "Pickup from Shipper",
+                    destination: item.origin,
+                    origin: item.destination,
+                    requestNumber: item.plRequestNumber,
+                    requestStatus: item.plRequestStatus,
+                    truckPlateNumber: item.plTruckPlateNumber,
+                    ),
+              ];
+            } else if (item.dispatchType == "dt") {
+              return [
+                // First instance: Deliver to Consignee
+                if (item.dlTruckDriverName == driverId) // Filter out if accepted
+                  item.copyWith(
+                    name: "Delivers to Consignee",
+                    origin: item.destination,
+                    destination: item.origin,
+                    requestNumber: item.dlRequestNumber,
+                    requestStatus: item.dlRequestStatus,
+                    truckPlateNumber: item.dlTruckPlateNumber,
+                  ),
+                // Second instance: Pickup from Consignee
+                if (item.peTruckDriverName == driverId) // Filter out if accepted
+                  item.copyWith(
+                    name: "Pickup from Consignee",
+                    requestNumber: item.peRequestNumber,
+                    requestStatus: item.peRequestStatus,
+                    truckPlateNumber: item.peTruckPlateNumber,
+                  ),
+              ]; 
+            }
+            // Return as-is if no match
+            return [item];
+          }).toList();
 
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 5, vertical: 0),
-                              child: Text(
-                                transact.requestNumber.toString(),
-                                style: GoogleFonts.montserrat(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 22,
-                                  letterSpacing: 0.9,
-                                ),
-                              )),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: _getStatusColor(transact.requestStatus.toString()),
-                              borderRadius: BorderRadius.circular(5),
-                            ),
-                            child: Text(
-                              transact.requestStatus.toString(),
-                              style: GoogleFonts.montserrat(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              " ${transact.name}",
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black,
-                              ),
-                              softWrap: true, // Text will wrap if it's too long
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          const Text(
-                            "Pickup Address: ",
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.black,
-                            ),
-                            textAlign: TextAlign
-                                .center, // Ensure the text is centered
-                          ),
-                          Flexible(
-                            child: Text(
-                              " ${transact.destination}",
-                              
-                              softWrap: true, // Text will wrap if it's too long
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 5),
-                      Row(
-                        children: [
-                          const Text(
-                            "Delivery Addres: ",
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.black,
-                            ),
-                            textAlign: TextAlign
-                                .center, // Ensure the text is centered
-                          ),
-                          Flexible(
-                            child: Text(
-                              " ${transact.origin}",
-                              
-                              softWrap: true, // Text will wrap if it's too long
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 5),
-                      // Row(
-                      //   children: [
-                      //     const Icon(Icons.timer, color: Colors.orange),
-                      //     const SizedBox(width: 5),
-                      //     Text(
-                      //       'ETA: ${transact.arrivalDate}',
-                      //       style: const TextStyle(fontSize: 14),
-                      //     ),
-                      //   ],
-                      // ),
+          expandedTransactions.sort((a,b){
+            DateTime dateA = DateTime.tryParse(a.deliveryDate) ?? DateTime(0);
+            DateTime dateB = DateTime.tryParse(b.deliveryDate) ?? DateTime(0);
+            return dateB.compareTo(dateA);
+          });
 
-                      // Signature Widget (Signature Canvas)
-                      const SizedBox(height: 20),
-                      Text(
-                        'Please provide your signature below:',
-                        style: GoogleFonts.montserrat(fontSize: 16),
-                      ),
-                      Signature(
-                        controller: _controller,
-                        width: 300,
-                        height: 150,
-                        backgroundColor: Colors.grey[200]!,
-                      ),
-                      const SizedBox(height: 10),
-                      // Clear Button to clear the signature
-                      Visibility(
-                        visible: _controller
-                            .isNotEmpty, // Show only if the canvas has content
-                        child: Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            style: TextButton.styleFrom(
-                              backgroundColor: Colors.red,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 5),
-                            ),
-                            onPressed: () {
-                              _controller.clear(); // Clear the signature
-                              setState(
-                                  () {}); // Trigger a rebuild to update visibility
-                            },
-                            child: const Text(
-                              'Clear Signature',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      Text(
-                        'Upload an Image Below:',
-                        style: GoogleFonts.montserrat(fontSize: 16),
-                      ),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: [
-                            ..._images
-                                .map((image) => _buildImageThumbnail(image!)),
-                            GestureDetector(
-                              onTap: _pickImage,
-                              child: Container(
-                                margin: const EdgeInsets.all(4),
-                                width: 70,
-                                height: 70,
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[200],
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.grey),
-                                ),
-                                child: const Icon(Icons.add,
-                                    size: 30, color: Colors.grey),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+          final ongoingTransactions = expandedTransactions
+            .where((tx) => tx.requestStatus == 'Ongoing' || tx.requestStatus == "Accepted")
+            .toList();
 
-                      const SizedBox(
-                          height: 10), // Space between signature and details
+          if (ongoingTransactions.isEmpty){
+            return Center(
+              child: Text(
+                'No transactions yet.',
+                style: AppTextStyles.subtitle,
+              ),
+            );
+          }
 
-                      // Booking details below the map
+          return Scaffold(
+             body: Padding(
+              padding: const EdgeInsets.all(16),
+              child: ListView.builder(
+                itemCount: ongoingTransactions.length,
+                itemBuilder: (context, index) {
+                  final item = ongoingTransactions[index];
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 20),
+                    decoration: BoxDecoration(
+                      color: bgColor,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: darkerBgColor,
+                          blurRadius: 6,
+                          offset: Offset(0, 3)
+                        )
+                      ]
+                    ),
                       
-                      const SizedBox(height: 5),
-                      // Row(
-                      //   children: [
-                      //     const Icon(Icons.public_rounded, color: Colors.green),
-                      //     const SizedBox(width: 5),
-                      //     Text(
-                      //       'Latitude : ${_locationData?.latitude}',
-                      //       style: const TextStyle(fontSize: 14),
-                      //     ),
-                      //   ],
-                      // ),
-                      // const SizedBox(height: 5),
-                      // Row(
-                      //   children: [
-                      //     const Icon(Icons.public_rounded, color: Colors.red),
-                      //     const SizedBox(width: 5),
-                      //     Text(
-                      //       'Longitude : ${_locationData?.longitude}',
-                      //       style: const TextStyle(fontSize: 14),
-                      //     ),
-                      //   ],
-                      // ),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: _showWidget
-                            ? TextButton(
-                                onPressed: () {
-                                  _success(transact, context);
-                                },
-                                style: TextButton.styleFrom(
-                                  backgroundColor: Colors.blue,
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 20, vertical: 10),
+                    child: InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => TransactionDetails(
+                              transaction: item,
+                              id: item.id,
+                              uid: uid ?? '',
+                            ),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const SizedBox(width: 20),
+                                Expanded(
+                                  child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Space between label and value
+                                    Text(
+                                      '${item.origin} — ${item.destination}',
+                                      style: AppTextStyles.body.copyWith(
+                                        color: mainColor,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Text(
+                                      formatDateTime(item.arrivalDate),
+                                      style: AppTextStyles.caption.copyWith(
+                                        color: darkerBgColor,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                child: const Text(
-                                  'Done',
-                                  style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold),
+                                ) // Space between icon and text
+                                
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+                            Row(
+                              children: [
+                                const SizedBox(width: 20), // Space between icon and text
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Space between label and value
+                                    Text(
+                                      "Request Number",
+                                      style: AppTextStyles.caption.copyWith(
+                                        color: darkerBgColor,
+                                      ),
+                                    ),
+                                    Text(
+                                      (item.requestNumber?.toString() ?? 'No Request Number Available'),
+                                      style: AppTextStyles.body.copyWith(
+                                        color: mainColor,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              )
-                            : const SizedBox.shrink(),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+                            Row(
+                              children: [
+                                const SizedBox(width: 20), // Space between icon and text
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      // Space between label and value
+                                      Text(
+                                        "Truck Number",
+                                        style: AppTextStyles.caption.copyWith(
+                                          color: darkerBgColor,
+                                        ),
+                                      ),
+                                      Text(
+                                        (item.truckPlateNumber?.isNotEmpty ?? false)
+                                          ? item.truckPlateNumber! : '—',
+                                        style: AppTextStyles.body.copyWith(
+                                          color: mainColor,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  constraints: const BoxConstraints(
+                                    minWidth: 150,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(20),
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        getStatusColor(item.requestStatus ?? ''),
+                                        Colors.grey,
+                                      ],
+                                      stops: [
+                                        getStatusProgress(item.requestStatus ?? ''),
+                                        getStatusProgress(item.requestNumber ?? '')
+                                      ],
+                                    ),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  child: Text(
+                                    item.requestStatus ?? '',
+                                    style: AppTextStyles.caption.copyWith(
+                                      color: Colors.black,
+                                      fontWeight: FontWeight.bold
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ],
+                            ),
+                           
+                         ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              ],
+                );
+                    
+              },
+             
             ),
-          );
-        }).toList(),
+          ),
+        );
+
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),  // Show loading spinner while fetching data
+      error: (e, stack) => Center(child: Text('Error: $e')),  // Display error message if an error occurs
       ),
     );
+    
   }
 
-  // Helper method to get the color based on the status
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'Success':
-        return Colors.green;
-      case 'Ongoing':
-        return Colors.orange;
-      case 'Pending':
-      default:
-        return Colors.deepOrangeAccent;
-    }
-  }
+ 
+
 }

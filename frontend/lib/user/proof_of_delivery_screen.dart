@@ -52,17 +52,8 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
     Uint8List? signatureImage = await _controller.toPngBytes();
     String? base64Signature = signatureImage != null ? base64Encode(signatureImage) : null;
 
-    var url = Uri.parse('http://192.168.118.102:8000/api/odoo/upload_pod?uid=$uid');
+    var url = Uri.parse('http://192.168.18.53:8000/api/odoo/upload_pod?uid=$uid');
 
-    // List<String?> base64Images =[];
-    // for (var image in _images) {
-    //   if (image != null) {
-    //     File file = File(image.path);
-    //     List<int> imageBytes = await file.readAsBytes();
-    //     String base64Image = base64Encode(imageBytes);
-    //     base64Images.add(base64Image);
-    //   }
-    // }
 
     if(_controller.isNotEmpty){
       Uint8List? signatureImage = await _controller.toPngBytes();
@@ -95,18 +86,29 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
 
     if (response.statusCode == 200) {
       print("Files uploaded successfully!");
-      print("Signature (base64): $base64Signature");
-      print("Image (base64): ${widget.base64Images}");
-      
-
-      // final ongoingTransactionNotifier = ref.read(accepted_transaction.acceptedTransactionProvider.notifier);
-      // ongoingTransactionNotifier.updateStatus(widget.transaction?.id.toString() ?? '', widget.transaction?.requestNumber.toString() ?? '', 'Ongoing', ref);
-
-      // final updated = await fetchTransactionStatus(ref, widget.transaction?.id.toString() ?? '');
-      // print('Updated Status: ${updated.requestStatus}');
       showSuccessDialog(context, "Proof of delivery has been successfully uploaded!");
+      final ongoingTransactionNotifier = ref.read(accepted_transaction.acceptedTransactionProvider.notifier);
+      await ongoingTransactionNotifier.updateStatus(
+        widget.transaction!.id.toString(),
+        widget.transaction!.requestNumber.toString(),
+        "Ongoing", 
+        ref,
+        context
+      );
+     
+      final updatedTransaction = ref
+        .read(ongoingTransactionProvider)
+        .firstWhere(
+          (t) =>
+              t.id.toString() == widget.transaction!.id.toString() &&
+              t.requestNumber == widget.transaction!.requestNumber.toString(),
+          orElse: () => widget.transaction!,
+        );
+
+      print('Updated to Ongoing: ${updatedTransaction.requestStatus}');
+      
     } else {
-      showSuccessDialog(context, "Failed to upload files :()");
+      showSuccessDialog(context, "Failed to upload files!");
       print("Failed to upload files: ${response.statusCode}");
     }
 
@@ -198,30 +200,65 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
           onPressed:() async {
           if (_controller.isEmpty) {
             showDialog(
-              context: context, 
-              builder: (BuildContext context) {
+              context: context,
+              builder: (context) {
                 return AlertDialog(
                   title: Text(
-                    "No Signature Provided",
-                    style: AppTextStyles.body,
+                    'Submission Error!', 
+                    style: AppTextStyles.subtitle.copyWith(
+                      fontWeight: FontWeight.bold
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                  content: Text(
-                    "Please provide signature.",
-                    style: AppTextStyles.caption,
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Please provide signature.',
+                        style: AppTextStyles.body.copyWith(
+                          color: Colors.black87
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      const Icon (
+                        Icons.edit,
+                        color: bgColor,
+                        size: 100
+                      )
+                    ],
                   ),
                   actions: [
-                      TextButton(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                      },
-                      child: Text(
-                        "OK",
-                        style: AppTextStyles.body
-                      ),
-                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12.0),
+                      child: Center(
+                        child: SizedBox(
+                          width: 200,
+                          child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                          }, 
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(25),
+                            ),
+                          ),
+                          child: Text(
+                            "Try Again",
+                            style: AppTextStyles.body.copyWith(
+                              color: Colors.white,
+                            )
+                          )
+                        ),
+                        )
+                      )
+                    )
                   ],
                 );
-              },
+              }
             );
           } else {
             print("UID: ${widget.uid}");
@@ -268,7 +305,7 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
                 height: 70,
                 decoration: const BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.green,
+                  color: mainColor,
                 ),
                 child: const Icon(
                   Icons.check,
@@ -288,7 +325,7 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
               const SizedBox(height: 20),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
+                  backgroundColor: mainColor,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
