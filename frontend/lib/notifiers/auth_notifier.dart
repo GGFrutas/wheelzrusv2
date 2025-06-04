@@ -21,6 +21,7 @@ class AuthState {
   final String? uid;
   final String? password;
   final String? partnerId;
+  final String? partnerName;
 
   AuthState({
     required this.isLoading,
@@ -28,18 +29,20 @@ class AuthState {
     required this.uid,
     required this.password,
     required this.partnerId,
+    this.partnerName,
   });
 
   
 
   // Helper method to copy the state with updated values
-  AuthState copyWith({bool? isLoading, bool? isError, String? uid,String? password, String? partnerId}) {
+  AuthState copyWith({bool? isLoading, bool? isError, String? uid, String? password, String? partnerId, String? partnerName}) {
     return AuthState(
       isLoading: isLoading ?? this.isLoading,
       isError: isError ?? this.isError,
       uid: uid ?? this.uid,
       password: password ?? this.password,
       partnerId: partnerId ?? this.partnerId,
+      partnerName: partnerName ?? this.partnerName,
     );
   }
 }
@@ -79,6 +82,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         final String apiPassword = (data['password'] ?? '').toString();
         final List<dynamic> partnerData = data['user']['partner_id'];
         final String partnerId = partnerData[0].toString(); // 👈 this gets just the ID (e.g., "238")
+        final String partnerName = partnerData[1].toString(); // 👈 this gets just the ID (e.g., "238")
 
 
         if (user == null) {
@@ -89,6 +93,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         await prefs.setString('uid', uid);
         await prefs.setString('password', apiPassword);
         await prefs.setString('partner_id', partnerId);
+        await prefs.setString('name', partnerName);
 
         if (context.mounted) {
           Navigator.pushReplacement(
@@ -112,12 +117,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
     final storedUid = prefs.getString('uid');
     final storedPassword = prefs.getString('password');
     final storedPartnerId = prefs.getString('partnerId');
+    final storedPartnerName = prefs.getString('name');
 
     if (storedUid != null && storedUid.isNotEmpty && storedPassword != null) {
       print('✅ Loaded UID: $storedUid');
       print('✅ Loaded Partner ID: $storedPartnerId'); 
 
-      state = state.copyWith(uid: storedUid, password: storedPassword, partnerId:storedPartnerId); // ✅ Store both
+      state = state.copyWith(uid: storedUid, password: storedPassword, partnerId:storedPartnerId, partnerName: storedPartnerName); // ✅ Store both
     } else {
       // print('❌ Missing UID or Password in storage.');
     } 

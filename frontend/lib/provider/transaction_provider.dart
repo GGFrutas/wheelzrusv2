@@ -26,7 +26,7 @@ Future<List<Transaction>> fetchTransactions(FutureProviderRef<List<Transaction>>
     // print('✅ Retrieved UID: $uid'); // Debugging UID
 
     final response = await http.get(
-      Uri.parse('http://192.168.18.53:8000/api/odoo/booking?uid=$uid'),
+      Uri.parse('http://192.168.118.102:8000/api/odoo/booking?uid=$uid'),
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -86,7 +86,7 @@ Future<Transaction> fetchTransactionStatus(WidgetRef ref, String transactionId) 
     }
 
     final response = await http.get(
-      Uri.parse('http://192.168.18.53:8000/api/odoo/booking?uid=$uid&transaction_id=$transactionId'),
+      Uri.parse('http://192.168.118.102:8000/api/odoo/booking?uid=$uid&transaction_id=$transactionId'),
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',

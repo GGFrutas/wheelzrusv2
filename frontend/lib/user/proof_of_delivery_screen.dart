@@ -19,6 +19,7 @@ import 'package:frontend/user/schedule.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:signature/signature.dart';
 
 class ProofOfDeliveryScreen extends ConsumerStatefulWidget{
@@ -51,8 +52,8 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
    
     Uint8List? signatureImage = await _controller.toPngBytes();
     String? base64Signature = signatureImage != null ? base64Encode(signatureImage) : null;
-
-    var url = Uri.parse('http://192.168.18.53:8000/api/odoo/upload_pod?uid=$uid');
+    final now = DateTime.now();
+    final timestamp = DateFormat("yyyy-MM-dd HH:mm:ss").format(now);
 
 
     if(_controller.isNotEmpty){
@@ -69,6 +70,25 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
       print("Images ${i + 1} (base64, truncated): ${widget.base64Images[i].substring(1, 100)}");
     }
 
+    final currentStatus = widget.transaction!.requestStatus;
+    print("Current Status: $currentStatus");
+    Uri url;
+  
+    String nextStatus;
+    if (currentStatus == "Accepted" || currentStatus == "Pending") {
+      nextStatus = "Ongoing";
+     url = Uri.parse('http://192.168.118.102:8000/api/odoo/pod-accepted-to-ongoing?uid=$uid');
+      nextStatus = "Ongoing";
+      
+
+    } else if (currentStatus == "Ongoing") {
+      nextStatus = "Completed";
+     url = Uri.parse('http://192.168.118.102:8000/api/odoo/pod-ongoing-to-complete?uid=$uid');
+    } else {
+      showSuccessDialog(context, "Invalid transaction!");
+      return;
+    }
+
     var response = await http.post(url,
       headers: {
         'Content-Type': 'application/json',
@@ -81,20 +101,33 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
         'images': imageToUpload,
         'dispatch_type': widget.transaction?.dispatchType,
         'request_number': widget.transaction?.requestNumber,
+        'timestamp': timestamp,
       }),
     );
-
+    print('Posting to: $url for status update to $nextStatus');
     if (response.statusCode == 200) {
       print("Files uploaded successfully!");
       showSuccessDialog(context, "Proof of delivery has been successfully uploaded!");
       final ongoingTransactionNotifier = ref.read(accepted_transaction.acceptedTransactionProvider.notifier);
-      await ongoingTransactionNotifier.updateStatus(
-        widget.transaction!.id.toString(),
-        widget.transaction!.requestNumber.toString(),
-        "Ongoing", 
-        ref,
-        context
-      );
+
+      if (currentStatus == "Accepted") {
+        await ongoingTransactionNotifier.updateStatus(
+          widget.transaction!.id.toString(),
+          widget.transaction!.requestNumber.toString(),
+          "Ongoing", 
+          ref,
+          context
+        );
+      } else if (currentStatus == "Ongoing") {
+        await ongoingTransactionNotifier.updateStatus(
+          widget.transaction!.id.toString(),
+          widget.transaction!.requestNumber.toString(),
+          "Completed", 
+          ref,
+          context
+        );
+      }
+      
      
       final updatedTransaction = ref
         .read(ongoingTransactionProvider)
@@ -263,6 +296,7 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
           } else {
             print("UID: ${widget.uid}");
             print("Request Number: ${widget.transaction?.requestNumber}");
+            print("Request Number: ${widget.transaction?.requestStatus}");
               _printFilenames();
           }
         },
@@ -317,10 +351,9 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
               Text(
                 message,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: AppTextStyles.body.copyWith(
+                    color: Colors.black87
+                  ),
               ),
               const SizedBox(height: 20),
               ElevatedButton(
@@ -333,7 +366,7 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
                 onPressed: () {
                   Navigator.of(context).popUntil((route) => route.isFirst);
                 },
-                child: const Text("OK", style: TextStyle(color: Colors.white)),
+                child: Text("OK", style: AppTextStyles.body.copyWith(color: Colors.white)),
               ),
             ],
           ),
