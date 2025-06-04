@@ -17,7 +17,7 @@ class TransactionController extends Controller
 {
     protected $url = "https://jralejandria-beta-dev-yxe.odoo.com";
     protected $db = 'jralejandria-beta-dev-yxe-production-beta-20247511';
-    protected $odoo_url = "https://jralejandria-beta-dev-yxe.odoo.com/jsonrpc";
+    protected $odoo_url = "http://192.168.76.86:8080/odoo/jsonrpc";
    
 
     public function getBooking(Request $request)
@@ -33,32 +33,81 @@ class TransactionController extends Controller
             return response()->json(['success' => false, 'message' => 'UID is required'], 400);
         }
         
-        $client = new Client("$url/xmlrpc/2/object");
+        // $client = new Client("$url/xmlrpc/2/object");
 
-        $checkAccessRequest = new XmlRpcRequest('execute_kw', [
-            new Value($db, "string"),
-            new Value($uid, "int"),
-            new Value($odooPassword, "string"),
-            new Value("dispatch.manager", "string"),
-            new Value("check_access_rights", "string"), 
-            new Value([new Value("read", "string")], "array"), // ✅ Corrected array wrapping
-            new Value(["raise_exception" => new Value(false, "boolean")], "struct") // ✅ Fixed boolean format
+        // $checkAccessRequest = new XmlRpcRequest('execute_kw', [
+        //     new Value($db, "string"),
+        //     new Value($uid, "int"),
+        //     new Value($odooPassword, "string"),
+        //     new Value("dispatch.manager", "string"),
+        //     new Value("check_access_rights", "string"), 
+        //     new Value([new Value("read", "string")], "array"), // ✅ Corrected array wrapping
+        //     new Value(["raise_exception" => new Value(false, "boolean")], "struct") // ✅ Fixed boolean format
                 
-        ]);
+        // ]);
 
         
-        $searchResponse = $client->send($checkAccessRequest);
+        // $searchResponse = $client->send($checkAccessRequest);
 
-        Log::info("🔍 Search Users Raw Response: ", ["response" => var_export($searchResponse->value(), true)]);
+        // Log::info("🔍 Search Users Raw Response: ", ["response" => var_export($searchResponse->value(), true)]);
         
-        if (empty($searchResponse->value())) {
+        // if (empty($searchResponse->value())) {
+        //     Log::error("🚨 UID {$uid} cannot read `dispatch.manager`.");
+        //     return response()->json(["error" => "Access Denied"], 403);
+        // } else {
+        //     Log::info("✅ UID {$uid} can read 'dispatch.manager`.");
+        // }
+        
+        $odooUrl = $this->odoo_url;
+
+        $jsonRequest = [
+            "jsonrpc" => "2.0",
+            "method" => "call",
+            "params" => [
+                "service" => "object",
+                "method" => "execute_kw",
+                "args" => [
+                    $db, 
+                    $uid, 
+                    $odooPassword, 
+                    "dispatch.manager", 
+                    "check_access_rights",
+                    ["read"],  // Search by UID
+                    ["raise_exception" => false] // Don't raise exception if access is denied]
+                ]
+            ],
+            "id" => 1
+        ];
+
+        $option = [
+            "http" => [
+                "header" => "Content-Type: application/json",
+                "method" => "POST",
+                "content" => json_encode($jsonRequest),
+                "ignore_errors" => true,
+            ],
+        ];
+
+        $context = stream_context_create($option);
+        $jsonresponse = file_get_contents($odooUrl, false, $context);
+
+        if($jsonresponse === false) {
+            Log::error("❌ Failed to connect to Odoo API", ["response" => $jsonresponse]);
+            return response()->json(['error' => 'Access Denied'], 403);
+        }
+
+        $jsonResult = json_decode($jsonresponse, true);
+
+        Log::info("JSON Raw response: ", ["response" => $jsonresponse]);
+
+        if(!isset($jsonResult['result']) || $jsonResult['result'] === false) {
             Log::error("🚨 UID {$uid} cannot read `dispatch.manager`.");
             return response()->json(["error" => "Access Denied"], 403);
         } else {
             Log::info("✅ UID {$uid} can read 'dispatch.manager`.");
         }
+
         
-        $odooUrl = $this->odoo_url;
         $userData = [
             "jsonrpc" => "2.0",
             "method" => "call",

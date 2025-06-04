@@ -41,7 +41,7 @@ class HomePage extends ConsumerWidget {
   }
 
   String _getProfileImageUrl(String picture) {
-    return 'http://192.168.18.53:8000/storage/$picture'; // Correct URL for the emulator
+    return 'http://192.168.76.86:8080/storage/$picture'; // Correct URL for the emulator
   }
 
   @override

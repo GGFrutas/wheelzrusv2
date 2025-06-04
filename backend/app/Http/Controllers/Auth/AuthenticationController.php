@@ -25,6 +25,9 @@ use Ripcord\Ripcord;
 
 class AuthenticationController extends Controller
 {
+    protected $db = 'jralejandria-beta-dev-yxe-production-beta-20247511';
+    // protected $url = "https://jralejandria-beta-dev-yxe.odoo.com/jsonrpc";
+    protected $url = "http://192.168.76.86:8080/odoo/jsonrpc";
 
     public function getOdooUsers()
     {
@@ -67,116 +70,61 @@ class AuthenticationController extends Controller
             return response()->json(['error' => 'User registration failed.'], 500);
         }
     }
-    // public function login(Request $request){
-    //     $credentials = $request->only('email', 'password');
-        
-    //     // Set up the XML-RPC client for Odoo
-    //     $url = 'https://jralejandria-beta-dev-yxe.odoo.com';  // Your local Odoo instance URL
-    //     $db = 'https://jralejandria-beta-dev-yxe-production-beta-20247511';  // Replace with your Odoo database name
     
-
-    //     $username = $credentials['email'];  // Odoo login field
-    //     $password = $credentials['password']; // Odoo password
-        
-    //     // Set up the XML-RPC client for authentication
-    //     $client = new Client("$url/xmlrpc/2/common");
-    
-    //     // Wrap the parameters in `Value` classes correctly
-    //     $params = [
-    //         new Value($db),  // Database name
-    //         new Value($username),  // Username (email in your case)
-    //         new Value($password),  // Password
-    //         // new Value([]),       // Context (empty array)
-    //         new Value('')
-    //     ];
-    
-    //     // Create the authentication request
-    //     $request = new XmlRpcRequest('authenticate', $params);
-    
-    //     // Send the request and get the response
-    //     $response = $client->send($request);
-    //     // dd($response->faultCode(), $response->faultString(), $response->value());
-    //     // Check if authentication was successful
-    //     if ($response->faultCode()) {
-    //         return response()->json(['message' => 'Invalid credentials'], 401);
-    //     }
-    
-    //     // Get the UID from the response (successful authentication)
-    //     $uid = $response->value();
-      
-        
-    //     // Retrieve the user from Odoo
-    //     $user = User::where('login', $username)->first();
-    //     $partner = $user->partner_id;
-        
-
-    //     $res = Partners::where('id', $partner)
-    //         ->where('driver_access', true)
-    //         ->first();
-      
-       
-    //     if (!$res) {
-    //         return response()->json(['message' => 'Access denied'], 403);
-    //     }
-        
-     
-    //     // If password matches, create the token
-    //     $token = $user->createToken('wheelzrus')->plainTextToken;
-    
-    //     return response()->json([
-    //         'user' => $user,
-    //         'token' => $token
-    //     ], 200);
-        
-
-    //     // If authentication fails
-    //     return response()->json(['message' => 'Invalid credentials'], 401);  
-    // }
     public function authenticateOdooUser($credentials)
     {
         $username = $credentials['email'];  // Odoo login field
         $password = $credentials['password']; // Odoo password
-        $url = 'https://jralejandria-beta-dev-yxe.odoo.com';  
-        $db = 'jralejandria-beta-dev-yxe-production-beta-20247511';
        
 
-        // Set up the XML-RPC client for authentication
-        $client = new Client("$url/xmlrpc/2/common");
+        $url = $this->url;
+        $db = $this->db;
+       
+        
+        $jsonrequest = [
+            "jsonrpc" => "2.0",
+            "method" => "call",
+            "params" => [
+                "service" => "common",
+                "method" => "authenticate",
+                "args" => [
+                    $db,
+                    $username,
+                    $password,
+                    []
+                ]
+            ],
+            "id" => 1
+        ];
 
-        //Prepare the authentication request
-        $xmlrpcrequest = new XmlRpcRequest('authenticate', [
-            new Value($db, "string"),
-            new Value($username, "string"),
-            new Value($password, "string"),
-            new Value([], "array")
-        ]);
+        $options = [
+            "http" => [
+                "header" => "Content-Type: application/json",
+                "method" => "POST",
+                "content" => json_encode($jsonrequest),
+                "ignore_errors" => true,
+            ],
+        ];
 
-        //Send request and get response
-        $response = $client->send($xmlrpcrequest);
+        $context = stream_context_create($options);
+        $response = file_get_contents($url, false, $context);
 
-        //Check if authentication was successful
-        if ($response->faultCode()) {
+        if($response === false) {
+            Log::error("🚨 Authentication failed: No response from Odoo server.");
             return 0;
         }
+       
+       
 
-        //Get UID from the response (successful authentication)
-        $uid = $response->value()->scalarval();
+        $result = json_decode($response, true);
+       return $result['result'] ?? 0; // Return UID or 0 if not found
        
-        if($uid == 0){
-            return 0;
-        }
-       
-            
-        return $uid ?: 0;
     }
 
     public function getUser($username,$uid, $odooPassword)
     {
-        $url ="https://jralejandria-beta-dev-yxe.odoo.com/xmlrpc/2/object";
-        $db ='jralejandria-beta-dev-yxe-production-beta-20247511';
-        // $odooPassword = '4cfacd1f9d87c00abf403e036a3ef01edcae639d';
-       
-        $client = new Client($url);
+        $url = $this->url;
+        $db = $this->db;
 
         Log::info("🔍 Searching for Odoo user with email: $username");
         
@@ -185,36 +133,55 @@ class AuthenticationController extends Controller
             Log::error("🚨 Invalid UID received. Authentication failed.");
             return null;
         }
+       
+        $jsonrequest = [
+            "jsonrpc" => "2.0",
+            "method" => "call",
+            "params" => [
+                "service" => "object",
+                "method" => "execute_kw",
+                "args" => [
+                    $db,
+                    $uid,
+                    $odooPassword,
+                    "res.users",
+                    "check_access_rights",
+                    ["read"],
+                    ["raise_exception" => false]
+                ]
+            ],
+            "id" => 1
+        ];
 
-        $checkAccessRequest = new XmlRpcRequest('execute_kw', [
-            new Value($db, "string"),
-            new Value($uid, "int"),
-            new Value($odooPassword, "string"),
-            new Value("res.users", "string"),
-            new Value("check_access_rights", "string"), 
-            new Value([new Value("read", "string")], "array"), // ✅ Corrected array wrapping
-            new Value(["raise_exception" => new Value(new Value(false, "boolean"), "boolean")], "struct") // ✅ Fix struct format
-                
-        ]);
+        $options = [
+            "http" => [
+                "header" => "Content-Type: application/json",
+                "method" => "POST",
+                "content" => json_encode($jsonrequest),
+                "ignore_errors" => true,
+            ],
+        ];
+        $jsoncontext = stream_context_create($options);
+        $jsonresponse = file_get_contents($url, false, $jsoncontext);
 
-        
-        $searchResponse = $client->send($checkAccessRequest);
-        Log::info("🔍 Search Users Raw Response: ", ["response" => var_export($searchResponse->value(), true)]);
-        
-        if (empty($searchResponse->value())) {
+        if($jsonresponse === false) {
+            Log::error("🚨 Authentication failed: No response from Odoo server.");
+            return response()->json(['error' => 'Access Denied'], 403);
+        }
+        Log::debug("🪵 Raw JSON response: " . $jsonresponse);
+
+        $jsonresult = json_decode($jsonresponse, true);
+
+        Log::info("🔍JSON Raw Response: ", ["response" => $jsonresult]);
+
+        if(!isset($jsonresult['result']) || $jsonresult['result'] === false) {
             Log::error("🚨 UID {$uid} still cannot read `res.users`. Permission issue?");
             return response()->json(["error" => "Access Denied"], 403);
         } else {
             Log::info("✅ UID {$uid} can read `res.users`.");
         }
 
-        Log::info("🔍 Sending Search Request: ", [
-            'db' => $db,
-            'uid' => $uid,
-            'username' => $username
-        ]);
-
-        $odooUrl = "https://jralejandria-beta-dev-yxe.odoo.com/jsonrpc";
+        
         $data = [
             "jsonrpc" => "2.0",
             "method" => "call",
@@ -243,7 +210,7 @@ class AuthenticationController extends Controller
         ];
         
         $context = stream_context_create($options);
-        $response = file_get_contents($odooUrl, false, $context);
+        $response = file_get_contents($url, false, $context);
         $result = json_decode($response, true);
         
         if (!is_array($result) || !isset($result['result'])) {
@@ -297,7 +264,7 @@ class AuthenticationController extends Controller
                 ];
         
                 $context = stream_context_create($options);
-                $response = file_get_contents($odooUrl, false, $context);
+                $response = file_get_contents($url, false, $context);
                 $partnerResult = json_decode($response, true);
         
                 if (isset($partnerResult['result']) && !empty($partnerResult['result'])) {
@@ -322,9 +289,9 @@ class AuthenticationController extends Controller
 
     public function login(Request $request){
         $credentials = $request->only('email', 'password');
-        $db = 'jralejandria-beta-dev-yxe-production-beta-20247511';
         $odooPassword = $credentials['password'];
-        $odooUrl = "https://jralejandria-beta-dev-yxe.odoo.com/jsonrpc";
+        $url = $this->url;
+        $db = $this->db;
         
         //Check authentication
         $uid = $this->authenticateOdooUser($credentials);
@@ -376,7 +343,7 @@ class AuthenticationController extends Controller
         ];
 
         $context = stream_context_create($options);
-        $response = file_get_contents($odooUrl, false, $context);
+        $response = file_get_contents($url, false, $context);
         $partnerResult = json_decode($response, true);
 
         // ✅ Debug: Check if `driver_access` exists in the response

@@ -52,7 +52,7 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
     Uint8List? signatureImage = await _controller.toPngBytes();
     String? base64Signature = signatureImage != null ? base64Encode(signatureImage) : null;
 
-    var url = Uri.parse('http://192.168.18.53:8000/api/odoo/upload_pod?uid=$uid');
+    var url = Uri.parse('http://192.168.76.86:8080/api/odoo/upload_pod?uid=$uid');
 
 
     if(_controller.isNotEmpty){

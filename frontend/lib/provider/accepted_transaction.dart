@@ -71,7 +71,7 @@ Future<void> updateTransactionStatusInDatabase(
       throw Exception('UID is missing. Please log in.');
     }
     // print('✅ Retrieved UID: $uid'); // Debugging UID
-  final url = Uri.parse('http://192.168.18.53:8000/api/odoo/$transactionId/status?uid=$uid'); // Adjust URL as needed
+  final url = Uri.parse('http://192.168.76.86:8080/api/odoo/$transactionId/status?uid=$uid'); // Adjust URL as needed
 
   final payload = jsonEncode({
     'requestNumber': requestNumber,

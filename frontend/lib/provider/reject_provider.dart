@@ -23,7 +23,7 @@ Future<List<RejectionReason>> fetchReasons(FutureProviderRef<List<RejectionReaso
       throw Exception('UID is missing. Please log in.');
     }
     // print('✅ Retrieved UID: $uid'); // Debugging UID
-    final response = await http.get(Uri.parse('http://192.168.18.53:8000/api/odoo/reason?uid=$uid'), 
+    final response = await http.get(Uri.parse('http://192.168.76.86:8080/api/odoo/reason?uid=$uid'), 
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -71,7 +71,7 @@ Future<List<Transaction>> fetchReject(FutureProviderRef<List<Transaction>> ref, 
     // print('✅ Retrieved UID: $uid'); // Debugging UID
 
     final response = await http.get(
-      Uri.parse('http://192.168.18.53:8000/api/odoo/booking?uid=$uid'),
+      Uri.parse('http://192.168.76.86:8080/api/odoo/booking?uid=$uid'),
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
