@@ -175,12 +175,55 @@ class AuthenticationController extends Controller
         Log::info("🔍JSON Raw Response: ", ["response" => $jsonresult]);
 
         if(!isset($jsonresult['result']) || $jsonresult['result'] === false) {
+       
+        $jsonrequest = [
+            "jsonrpc" => "2.0",
+            "method" => "call",
+            "params" => [
+                "service" => "object",
+                "method" => "execute_kw",
+                "args" => [
+                    $db,
+                    $uid,
+                    $odooPassword,
+                    "res.users",
+                    "check_access_rights",
+                    ["read"],
+                    ["raise_exception" => false]
+                ]
+            ],
+            "id" => 1
+        ];
+
+        $options = [
+            "http" => [
+                "header" => "Content-Type: application/json",
+                "method" => "POST",
+                "content" => json_encode($jsonrequest),
+                "ignore_errors" => true,
+            ],
+        ];
+        $jsoncontext = stream_context_create($options);
+        $jsonresponse = file_get_contents($url, false, $jsoncontext);
+
+        if($jsonresponse === false) {
+            Log::error("🚨 Authentication failed: No response from Odoo server.");
+            return response()->json(['error' => 'Access Denied'], 403);
+        }
+        Log::debug("🪵 Raw JSON response: " . $jsonresponse);
+
+        $jsonresult = json_decode($jsonresponse, true);
+
+        Log::info("🔍JSON Raw Response: ", ["response" => $jsonresult]);
+
+        if(!isset($jsonresult['result']) || $jsonresult['result'] === false) {
             Log::error("🚨 UID {$uid} still cannot read `res.users`. Permission issue?");
             return response()->json(["error" => "Access Denied"], 403);
         } else {
             Log::info("✅ UID {$uid} can read `res.users`.");
         }
 
+        
         
         $data = [
             "jsonrpc" => "2.0",
@@ -210,6 +253,7 @@ class AuthenticationController extends Controller
         ];
         
         $context = stream_context_create($options);
+        $response = file_get_contents($url, false, $context);
         $response = file_get_contents($url, false, $context);
         $result = json_decode($response, true);
         
@@ -265,6 +309,7 @@ class AuthenticationController extends Controller
         
                 $context = stream_context_create($options);
                 $response = file_get_contents($url, false, $context);
+                $response = file_get_contents($url, false, $context);
                 $partnerResult = json_decode($response, true);
         
                 if (isset($partnerResult['result']) && !empty($partnerResult['result'])) {
@@ -286,7 +331,7 @@ class AuthenticationController extends Controller
         return $user;
     }
     
-
+    
     public function login(Request $request){
         $credentials = $request->only('email', 'password');
         $odooPassword = $credentials['password'];
@@ -343,6 +388,7 @@ class AuthenticationController extends Controller
         ];
 
         $context = stream_context_create($options);
+        $response = file_get_contents($url, false, $context);
         $response = file_get_contents($url, false, $context);
         $partnerResult = json_decode($response, true);
 

@@ -52,3 +52,11 @@ final ongoingTransactionProvider = Provider((ref) {
       .where((transaction) => transaction.status == 'Ongoing')
       .toSet();
 });
+
+final completedTransactionProvider = Provider((ref) {
+  final allTransactions = ref.watch(transactionListProvider);
+  return allTransactions
+      .where((transaction) => transaction.status == 'Completed')
+      .toSet();
+});
+

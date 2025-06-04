@@ -1,4 +1,4 @@
-// ignore_for_file: avoid_print
+// ignore_for_file: avoid_print, unused_import, depend_on_referenced_packages
 
 import 'dart:convert';
 
@@ -10,6 +10,8 @@ import 'package:frontend/provider/transaction_list_notifier.dart';
 import 'package:frontend/theme/colors.dart';
 import 'package:frontend/theme/text_styles.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
+
 
 
 class AcceptedTransactionNotifier extends StateNotifier<Set<Transaction>> {
@@ -37,30 +39,34 @@ class AcceptedTransactionNotifier extends StateNotifier<Set<Transaction>> {
     });
   }
 
-Future<void> updateStatus(String transactionId, String requestNumber, String newStatus,  WidgetRef ref, BuildContext context) async {
+Future<bool> updateStatus(String transactionId, String requestNumber, String newStatus,  WidgetRef ref, BuildContext context) async {
   // Call the method to update the status in the database
-  await updateTransactionStatusInDatabase(transactionId, requestNumber, newStatus, http.Client(), ref, context);
+  final success = await updateTransactionStatusInDatabase(transactionId, requestNumber, newStatus, http.Client(), ref, context);
 
-  // Continue updating local state as shown earlier
-  final updatedSet = state.map((transaction) {
-    if (transaction.id.toString() == transactionId && 
-        transaction.requestNumber.toString() == requestNumber) {
-      return transaction.copyWith(requestStatus: newStatus);  // Update status
-    }
-    return transaction;
-  }).toSet();
+  if (success) {
+     // Continue updating local state as shown earlier
+    final updatedSet = state.map((transaction) {
+      if (transaction.id.toString() == transactionId && 
+          transaction.requestNumber.toString() == requestNumber) {
+        return transaction.copyWith(requestStatus: newStatus);  // Update status
+      }
+      return transaction;
+    }).toSet();
 
-  state = updatedSet;
+    state = updatedSet;
 
-  final transactionListNotifier =
-      ref.read(transactionListProvider.notifier);
-  transactionListNotifier.updateTransactionStatus(
-    int.parse(transactionId),
-    newStatus,
-  );
+    final transactionListNotifier =
+        ref.read(transactionListProvider.notifier);
+    transactionListNotifier.updateTransactionStatus(
+      int.parse(transactionId),
+      newStatus,
+    );
+  }
+  return success;
+ 
 }
 
-Future<void> updateTransactionStatusInDatabase(
+Future<bool> updateTransactionStatusInDatabase(
   String transactionId, String requestNumber, String newStatus, http.Client httpClient, WidgetRef ref, BuildContext context) async {
 
     final uid = ref.watch(authNotifierProvider).uid;
@@ -71,11 +77,17 @@ Future<void> updateTransactionStatusInDatabase(
       throw Exception('UID is missing. Please log in.');
     }
     // print('✅ Retrieved UID: $uid'); // Debugging UID
-  final url = Uri.parse('http://192.168.76.86:8080/api/odoo/$transactionId/status?uid=$uid'); // Adjust URL as needed
+    final url = Uri.parse('http://192.168.76.86:8080/api/odoo/$transactionId/status?uid=$uid'); // Adjust URL as needed
+
+    final now = DateTime.now();
+    final timestamp = DateFormat("yyyy-MM-dd HH:mm:ss.SSSSSS").format(now);
+
+   // Adjust URL as needed
 
   final payload = jsonEncode({
     'requestNumber': requestNumber,
     'requestStatus': newStatus,  // Send the correct status
+    'timestamp': timestamp, // Include the timestamp
   });
 
   try {
@@ -85,196 +97,199 @@ Future<void> updateTransactionStatusInDatabase(
       headers: {'Content-Type': 'application/json','password': password},
     );
 
-    if (response.statusCode == 200) {
-      print('Status updated successfully in backend');
+    return response.statusCode == 200;
+
+    // if (response.statusCode == 200) {
+    //   print('Status updated successfully in backend');
      
-      showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            title: Text(
-              'Success!', 
-              style: AppTextStyles.subtitle.copyWith(
-                fontWeight: FontWeight.bold
-              ),
-              textAlign: TextAlign.center,
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Text(
-                  'Booking has been accepted',
-                  style: AppTextStyles.body.copyWith(
-                    color: Colors.black87
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                const Icon (
-                  Icons.check_circle,
-                  color: mainColor,
-                  size: 100
-                )
-              ],
-            ),
-            actions: [
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12.0),
-                child: Center(
-                  child: SizedBox(
-                    width: 200,
-                    child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    }, 
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: mainColor,
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(25),
-                      ),
-                    ),
-                    child: Text(
-                      "Continue",
-                      style: AppTextStyles.body.copyWith(
-                        color: Colors.white,
-                      )
-                    )
-                  ),
-                  )
-                )
-              )
-            ],
-          );
-        }
-      );
-    } else {
-      showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            title: Text(
-              'Error!', 
-              style: AppTextStyles.subtitle.copyWith(
-                fontWeight: FontWeight.bold
-              ),
-              textAlign: TextAlign.center,
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Text(
-                  'There seems to be an issue. Please try again.',
-                  style: AppTextStyles.body.copyWith(
-                    color: Colors.black87
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                const Icon (
-                  Icons.highlight_off_rounded,
-                  color: Colors.red,
-                  size: 100
-                )
-              ],
-            ),
-            actions: [
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12.0),
-                child: Center(
-                  child: SizedBox(
-                    width: 200,
-                    child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    }, 
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(25),
-                      ),
-                    ),
-                    child: Text(
-                      "Try Again",
-                      style: AppTextStyles.body.copyWith(
-                        color: Colors.white,
-                      )
-                    )
-                  ),
-                  )
-                )
-              )
-            ],
-          );
-        }
-      );
-    }
+    //   showDialog(
+    //     context: context,
+    //     builder: (context) {
+    //       return AlertDialog(
+    //         title: Text(
+    //           'Success!', 
+    //           style: AppTextStyles.subtitle.copyWith(
+    //             fontWeight: FontWeight.bold
+    //           ),
+    //           textAlign: TextAlign.center,
+    //         ),
+    //         content: Column(
+    //           mainAxisSize: MainAxisSize.min,
+    //           crossAxisAlignment: CrossAxisAlignment.center,
+    //           children: [
+    //             Text(
+    //               'Booking has been accepted',
+    //               style: AppTextStyles.body.copyWith(
+    //                 color: Colors.black87
+    //               ),
+    //               textAlign: TextAlign.center,
+    //             ),
+    //             const SizedBox(height: 16),
+    //             const Icon (
+    //               Icons.check_circle,
+    //               color: mainColor,
+    //               size: 100
+    //             )
+    //           ],
+    //         ),
+    //         actions: [
+    //           Padding(
+    //             padding: const EdgeInsets.only(bottom: 12.0),
+    //             child: Center(
+    //               child: SizedBox(
+    //                 width: 200,
+    //                 child: ElevatedButton(
+    //                 onPressed: () {
+    //                   Navigator.of(context).pop();
+    //                 }, 
+    //                 style: ElevatedButton.styleFrom(
+    //                   backgroundColor: mainColor,
+    //                   padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+    //                   shape: RoundedRectangleBorder(
+    //                     borderRadius: BorderRadius.circular(25),
+    //                   ),
+    //                 ),
+    //                 child: Text(
+    //                   "Continue",
+    //                   style: AppTextStyles.body.copyWith(
+    //                     color: Colors.white,
+    //                   )
+    //                 )
+    //               ),
+    //               )
+    //             )
+    //           )
+    //         ],
+    //       );
+    //     }
+    //   );
+    // } else {
+    //   showDialog(
+    //     context: context,
+    //     builder: (context) {
+    //       return AlertDialog(
+    //         title: Text(
+    //           'Error!', 
+    //           style: AppTextStyles.subtitle.copyWith(
+    //             fontWeight: FontWeight.bold
+    //           ),
+    //           textAlign: TextAlign.center,
+    //         ),
+    //         content: Column(
+    //           mainAxisSize: MainAxisSize.min,
+    //           crossAxisAlignment: CrossAxisAlignment.center,
+    //           children: [
+    //             Text(
+    //               'There seems to be an issue. Please try again.',
+    //               style: AppTextStyles.body.copyWith(
+    //                 color: Colors.black87
+    //               ),
+    //               textAlign: TextAlign.center,
+    //             ),
+    //             const SizedBox(height: 16),
+    //             const Icon (
+    //               Icons.highlight_off_rounded,
+    //               color: Colors.red,
+    //               size: 100
+    //             )
+    //           ],
+    //         ),
+    //         actions: [
+    //           Padding(
+    //             padding: const EdgeInsets.only(bottom: 12.0),
+    //             child: Center(
+    //               child: SizedBox(
+    //                 width: 200,
+    //                 child: ElevatedButton(
+    //                 onPressed: () {
+    //                   Navigator.of(context).pop();
+    //                 }, 
+    //                 style: ElevatedButton.styleFrom(
+    //                   backgroundColor: Colors.red,
+    //                   padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+    //                   shape: RoundedRectangleBorder(
+    //                     borderRadius: BorderRadius.circular(25),
+    //                   ),
+    //                 ),
+    //                 child: Text(
+    //                   "Try Again",
+    //                   style: AppTextStyles.body.copyWith(
+    //                     color: Colors.white,
+    //                   )
+    //                 )
+    //               ),
+    //               )
+    //             )
+    //           )
+    //         ],
+    //       );
+    //     }
+    //   );
+    // }
   } catch (e) {
     print('Error updating database: $e');
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(
-            'Error!', 
-            style: AppTextStyles.subtitle.copyWith(
-              fontWeight: FontWeight.bold
-            ),
-            textAlign: TextAlign.center,
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Text(
-                'There seems to be an issue. Please try again.',
-                style: AppTextStyles.body.copyWith(
-                  color: Colors.black87
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              const Icon (
-                Icons.highlight_off_rounded,
-                color: mainColor,
-                size: 100
-              )
-            ],
-          ),
-          actions: [
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12.0),
-              child: Center(
-                child: SizedBox(
-                  width: 200,
-                  child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  }, 
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(25),
-                    ),
-                  ),
-                  child: Text(
-                    "Try Again",
-                    style: AppTextStyles.body.copyWith(
-                      color: Colors.white,
-                    )
-                  )
-                ),
-                )
-              )
-            )
-          ],
-        );
-      }
-    );
+    return false;
+    // showDialog(
+    //   context: context,
+    //   builder: (context) {
+    //     return AlertDialog(
+    //       title: Text(
+    //         'Error!', 
+    //         style: AppTextStyles.subtitle.copyWith(
+    //           fontWeight: FontWeight.bold
+    //         ),
+    //         textAlign: TextAlign.center,
+    //       ),
+    //       content: Column(
+    //         mainAxisSize: MainAxisSize.min,
+    //         crossAxisAlignment: CrossAxisAlignment.center,
+    //         children: [
+    //           Text(
+    //             'There seems to be an issue. Please try again.',
+    //             style: AppTextStyles.body.copyWith(
+    //               color: Colors.black87
+    //             ),
+    //             textAlign: TextAlign.center,
+    //           ),
+    //           const SizedBox(height: 16),
+    //           const Icon (
+    //             Icons.highlight_off_rounded,
+    //             color: mainColor,
+    //             size: 100
+    //           )
+    //         ],
+    //       ),
+    //       actions: [
+    //         Padding(
+    //           padding: const EdgeInsets.only(bottom: 12.0),
+    //           child: Center(
+    //             child: SizedBox(
+    //               width: 200,
+    //               child: ElevatedButton(
+    //               onPressed: () {
+    //                 Navigator.of(context).pop();
+    //               }, 
+    //               style: ElevatedButton.styleFrom(
+    //                 backgroundColor: Colors.red,
+    //                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+    //                 shape: RoundedRectangleBorder(
+    //                   borderRadius: BorderRadius.circular(25),
+    //                 ),
+    //               ),
+    //               child: Text(
+    //                 "Try Again",
+    //                 style: AppTextStyles.body.copyWith(
+    //                   color: Colors.white,
+    //                 )
+    //               )
+    //             ),
+    //             )
+    //           )
+    //         )
+    //       ],
+    //     );
+    //   }
+    // );
   }
 }
 

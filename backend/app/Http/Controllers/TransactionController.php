@@ -371,6 +371,7 @@ class TransactionController extends Controller
         $validated = $request->validate([
             'requestNumber' => 'required|string',
             'requestStatus' => 'required|string',
+            'timestamp' => 'required|date',
         ]);
        
         $url = $this->url;
@@ -677,12 +678,283 @@ class TransactionController extends Controller
         $transactionId = (int)$request->input('id');
         $dispatchType = $request->input('dispatch_type');
         $requestNumber = $request->input('request_number');
+        $actualTime = $request->input('timestamp');
 
         Log::info('Received file uplodad request', [
             'uid' => $uid,
             'id' => $transactionId,
             'dispatch_type' => $dispatchType,
             'requestNumber' => $request->requestNumber,
+            'actualTime' => $actualTime,
+            
+            // 'images' => $request->input('images'),
+            // 'signature' => $request->input('signature'),
+        ]); 
+
+        
+
+        if (!$uid) {
+            return response()->json(['success' => false, 'message' => 'UID is required'], 400);
+        }
+
+        $odooUrl = $this->odoo_url;
+        $proof_attach = [
+            "jsonrpc" => "2.0",
+            "method" => "call",
+            "params" => [
+                "service" => "object",
+                "method" => "execute_kw",
+                "args" => [
+                    $db, 
+                    $uid, 
+                    $odooPassword, 
+                    "dispatch.manager", 
+                    "search_read",
+                    [[["id", "=", $transactionId]]],  // Search by Request Number
+                    ["fields" => ["dispatch_type","de_request_no", "pl_request_no", "dl_request_no", "pe_request_no","service_type" ]]
+                ]
+            ],
+            "id" => 1
+        ];
+        
+        $statusResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
+            "http" => [
+                "header" => "Content-Type: application/json",
+                "method" => "POST",
+                "content" => json_encode($proof_attach),
+            ],
+        ])), true);
+    
+        if (!isset($statusResponse['result']) || empty($statusResponse['result'])) {
+            Log::error("❌ No data on this ID", ["response" => $statusResponse]);
+            return response()->json(['success' => false, 'message' => 'Data not found'], 404);
+        }
+
+        $type = $statusResponse['result'][0] ?? null;
+      
+        if (!$type) {
+            Log::error("❌ Missing dispatch_type", ["response" => $statusResponse]);
+            return response()->json(['success' => false, 'message' => 'dispatch_type is missing or invalid'], 404);
+        }
+        
+        // Check that the type is valid before proceeding
+        if (!in_array($type['dispatch_type'], ['ot', 'dt'])) {
+            Log::error("Incorrect dispatch_type", ["dispatch_type" => $type, "response" => $statusResponse]);
+            return response()->json(['success' => false, 'message' => 'Invalid dispatch_type value'], 404);
+        }
+
+        $updateField = [];
+
+        if ($type['dispatch_type'] == "ot" && $type['de_request_no'] == $requestNumber) {
+            Log::info("Updating PE proof and signature for request number: {$requestNumber}");
+            $updateField = [
+                "pe_proof" => $images,
+                "pe_signature" => $signature,
+            ];
+        } elseif ($type['dispatch_type'] == "ot" && $type['pl_request_no'] == $requestNumber) {
+            Log::info("Updating PL proof and signature for request number: {$requestNumber}");
+            $updateField = [
+                "pl_proof" => $images,
+                "pl_signature" => $signature,
+            ];
+        }
+
+        if ($type['dispatch_type'] == "dt" && $type['dl_request_no'] == $requestNumber) {
+            Log::info("Updating PL proof and signature for request number: {$requestNumber}");
+           $updateField = [
+                "pl_proof" => $images,
+                "pl_signature" => $signature,
+            ];
+        } elseif ($type['dispatch_type'] == "dt" && $type['pe_request_no'] == $requestNumber) {
+            Log::info("Updating PE proof and signature for request number: {$requestNumber}");
+            $updateField = [
+                "pe_proof" => $images,
+                "pe_signature" => $signature,
+            ];
+        }
+      
+
+        $updatePOD = [
+            "jsonrpc" => "2.0",
+            "method" => "call",
+            "params" => [
+                "service" => "object",
+                "method" => "execute_kw",
+                "args" => [
+                    $db, 
+                    $uid, 
+                    $odooPassword, 
+                    "dispatch.manager", 
+                    "write",
+                    [
+                        [$transactionId],
+                       
+                        $updateField,
+                        
+                    ]
+                ]
+            ],
+            "id" => 2
+        ];
+
+        $updateResponse = json_decode(file_get_contents($odooUrl,false,stream_context_create([
+            "http" => [
+                "header" => "Content-Type: application/json",
+                "method" => "POST",
+                "content" => json_encode($updatePOD),
+            ]
+        ])), true);
+
+
+        if (isset($updateResponse['result']) && $updateResponse['result']) {
+            Log::info("✅ POD uploaded. Proceeding with milestone update.");
+
+            $milestoneCodeSearch = [
+                "jsonrpc" => "2.0",
+                "method" => "call",
+                "params" => [
+                    "service" => "object",
+                    "method" => "execute_kw",
+                    "args" => [
+                        $db, 
+                        $uid, 
+                        $odooPassword, 
+                        "dispatch.milestone.history", 
+                        "search_read",
+                        [[["dispatch_id", "=", $transactionId]]],  // Search by Request Number
+                        ["fields" => ["id","dispatch_type","actual_datetime","scheduled_datetime","fcl_code"]]
+                    ]
+                ],
+                "id" => 3
+            ];
+        
+            $fcl_code_response = json_decode(file_get_contents($odooUrl, false, stream_context_create([
+                "http" => [
+                    "header" => "Content-Type: application/json",
+                    "method" => "POST",
+                    "content" => json_encode($milestoneCodeSearch),
+                ],
+            ])), true);
+    
+            if (!isset($fcl_code_response['result']) || empty($fcl_code_response['result'])) {
+                Log::error("❌ No data on this ID", ["response" => $fcl_code_response]);
+                return response()->json(['success' => false, 'message' => 'Data not found'], 404);
+            }
+
+            $milestoneResult = $fcl_code_response['result'][0];
+            Log::info("🎯 Milestone result list", ['result' => $milestoneResult]);
+
+            $serviceType = is_array($type['service_type']) ? $type['service_type'][0] : $type['service_type'];
+
+
+            $milestoneCodeToUpdate = null;
+            $milestoneIdToUpdate = null;
+            
+
+            // Determine milestone code based on dispatch_type, request number, and service_type
+            if ($type['dispatch_type'] == "ot" && $type['de_request_no'] == $requestNumber && $serviceType == 1) {
+                $milestoneCodeToUpdate = "TYOT";
+                Log::info("Milestone to update: {$milestoneCodeToUpdate} with actual time: {$actualTime}");
+            } elseif ($type['dispatch_type'] == "ot" && $type['pl_request_no'] == $requestNumber && $serviceType == 1) {
+                $milestoneCodeToUpdate = "TLOT";
+                Log::info("Milestone to update: {$milestoneCodeToUpdate} with actual time: {$actualTime}");
+            } elseif ($type['dispatch_type'] == "dt" && $type['dl_request_no'] == $requestNumber && $serviceType == 1) {
+                $milestoneCodeToUpdate = "GYDT";
+                Log::info("Milestone to update: {$milestoneCodeToUpdate} with actual time: {$actualTime}");
+            } elseif ($type['dispatch_type'] == "dt" && $type['pe_request_no'] == $requestNumber && $serviceType == 1) {
+                $milestoneCodeToUpdate = "CLDT";
+                Log::info("Milestone to update: {$milestoneCodeToUpdate} with actual time: {$actualTime}");
+            }
+
+            $milestoneResultList = $fcl_code_response['result'];
+          
+
+            if ($milestoneCodeToUpdate) {
+               
+                foreach ($milestoneResultList as $milestone) {
+                    if ($milestone['fcl_code'] === $milestoneCodeToUpdate) {
+                        $milestoneIdToUpdate = $milestone['id'];
+                        break;
+                    }
+                }
+                
+
+                if ($milestoneIdToUpdate) {
+                    // Update actual datetime
+                    $update_actual_time = [
+                        "jsonrpc" => "2.0",
+                        "method" => "call",
+                        "params" => [
+                            "service" => "object",
+                            "method" => "execute_kw",
+                            "args" => [
+                                $db,
+                                $uid,
+                                $odooPassword,
+                                "dispatch.milestone.history",
+                                "write",
+                                [
+                                    [$milestoneIdToUpdate],
+                                    [
+                                        'actual_datetime' => $actualTime,
+                                    ]
+                                ]
+                            ]
+                        ],
+                        "id" => 4
+                    ];
+
+                    $updateActualResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
+                        "http" => [
+                            "header" => "Content-Type: application/json",
+                            "method" => "POST",
+                            "content" => json_encode($update_actual_time),
+                        ]
+                    ])), true);
+
+                    if (isset($updateActualResponse['result']) && $updateActualResponse['result']) {
+                        Log::info("✅ Actual time updated successfully for milestone ID: {$milestoneIdToUpdate}");
+                        return response()->json(['success' => true, 'message' => 'POD and milestome updated'], 200);
+                    } else {
+                        Log::error("⚠️ POD updated but failed to update milestone", ['response' => $updateActualResponse]);
+                        return response()->json(['success' => false, 'message' => 'POD updated but milestone failed'], 500);
+                    }
+                }
+            }
+            return response()->json(['success' => true, 'message' => 'POD uploaded, but no matching milestone found']);
+
+        }else{
+            Log::error("Failed to insert image", ["response" => $updateResponse]);
+            return response()->json(['success' => false,'message'=>'Failed to upload POD'], 500);
+        }
+    
+        return response()->json($statusResponse);
+
+    }
+
+    
+
+    public function uploadPOD_sec(Request $request)
+    {
+        $url = $this->url;
+        $db = $this->db;
+       
+        $uid = $request->query('uid') ;
+        $odooPassword = $request->header('password');
+        $images = $request->input('images');
+        $signature = $request->input('signature');
+        $transactionId = (int)$request->input('id');
+        $dispatchType = $request->input('dispatch_type');
+        $requestNumber = $request->input('request_number');
+        $actualTime = $request->input('timestamp');
+
+        Log::info('Received file uplodad request', [
+            'uid' => $uid,
+            'id' => $transactionId,
+            'dispatch_type' => $dispatchType,
+            'requestNumber' => $request->requestNumber,
+            'actualTime' => $actualTime,
+            
             // 'images' => $request->input('images'),
             // 'signature' => $request->input('signature'),
         ]); 
@@ -741,82 +1013,33 @@ class TransactionController extends Controller
 
         $updateField = [];
 
-       
-        if($type['dispatch_type'] == "ot") {
-            if ($requestNumber == $type['de_request_no']) {
-                if (empty($type['de_proof'])) {
-                    Log::info("Deliver Empty POD Freight side");
-                    $updateField = [
-                        "pe_proof" => $images,
-                        "pe_signature" => $signature,
-                    ];
-                } else {
-                    Log::info("Deliver Empty POD shipper side");
-                    $updateField = [
-                        "de_proof" => $images,
-                        "de_signature" => $signature,
-                    ];
-                }
-            } elseif ($type['pl_request_no'] == $requestNumber) {
-                if (empty($type['pl_proof'])) {
-                    Log::info("Pickup Laden POD shipper side");
-                    $updateField = [
-                        "pl_proof" => $images,
-                        "pl_signature" => $signature,
-                    ];
-                } else {
-                    Log::info("Pickup Laden POD Freight side");
-                    $updateField = [
-                        "dl_proof" => $images,
-                        "dl_signature" => $signature,
-                    ];
-                }
-            }
-        } elseif ($type['dispatch_type'] == "dt") {    
-            if ($type['dl_request_no'] == $requestNumber) {
-                if (empty($type['pl_proof'])) {
-                    Log::info("Deliver Laden POD freight side");
-                    $updateField = [
-                        "dl_proof" => $images,
-                        "dl_signature" => $signature,
-                    ];
-                } else {
-                    Log::info("Deliver Laden POD consignee side");
-                    $updateField = [
-                        "pl_proof" => $images,
-                        "pl_signature" => $signature,
-                    ];
-                }
-            } elseif ($type['pe_request_no'] == $requestNumber) {
-                if (empty($type['pe_proof'])) {
-                    Log::info("Pickup Empty POD consignee side");
-                    $updateField = [
-                        "de_proof" => $images,
-                        "de_signature" => $signature,
-                    ];
-                } else {
-                    Log::info("Pickup Empty POD Freight side");
-                    $updateField = [
-                        "pe_proof" => $images,
-                        "pe_signature" => $signature,
-                    ];
-                }
-            }
-        } else {
-            Log::info("Dispatch type not recognized: {$type['dispatch_type']}");
+        if ($type['dispatch_type'] == "ot" && $type['de_request_no'] == $requestNumber) {
+            Log::info("Updating DE proof and signature for request number: {$requestNumber}");
             $updateField = [
-                "de_proof" => null,
-                "de_signature" => null,
-                "pl_proof" => null,
-                "pl_signature" => null,
-                "dl_proof" => null,
-                "dl_signature" => null,
-                "pe_proof" => null,
-                "pe_signature" => null,
+                "de_proof" => $images,
+                "de_signature" => $signature,
+            ];
+        } elseif ($type['dispatch_type'] == "ot" && $type['pl_request_no'] == $requestNumber) {
+            Log::info("Updating DL proof and signature for request number: {$requestNumber}");
+            $updateField = [
+                "dl_proof" => $images,
+                "dl_signature" => $signature,
             ];
         }
-        
-    
+
+        if ($type['dispatch_type'] == "dt" && $type['dl_request_no'] == $requestNumber) {
+            Log::info("Updating DL proof and signature for request number: {$requestNumber}");
+           $updateField = [
+                "dl_proof" => $images,
+                "dl_signature" => $signature,
+            ];
+        } elseif ($type['dispatch_type'] == "dt" && $type['pe_request_no'] == $requestNumber) {
+            Log::info("Updating DE proof and signature for request number: {$requestNumber}");
+            $updateField = [
+                "de_proof" => $images,
+                "de_signature" => $signature,
+            ];
+        }
 
         $updatePOD = [
             "jsonrpc" => "2.0",
@@ -851,14 +1074,129 @@ class TransactionController extends Controller
 
 
         if (isset($updateResponse['result']) && $updateResponse['result']) {
-            return response()->json(['success' => true, 'message'=>'POD uploaded succcessfully!']);
+            Log::info("✅ POD uploaded. Proceeding with milestone update.");
+
+            $milestoneCodeSearch = [
+                "jsonrpc" => "2.0",
+                "method" => "call",
+                "params" => [
+                    "service" => "object",
+                    "method" => "execute_kw",
+                    "args" => [
+                        $db, 
+                        $uid, 
+                        $odooPassword, 
+                        "dispatch.milestone.history", 
+                        "search_read",
+                        [[["dispatch_id", "=", $transactionId]]],  // Search by Request Number
+                        ["fields" => ["id","dispatch_type","actual_datetime","scheduled_datetime","fcl_code"]]
+                    ]
+                ],
+                "id" => 3
+            ];
+        
+            $fcl_code_response = json_decode(file_get_contents($odooUrl, false, stream_context_create([
+                "http" => [
+                    "header" => "Content-Type: application/json",
+                    "method" => "POST",
+                    "content" => json_encode($milestoneCodeSearch),
+                ],
+            ])), true);
+    
+            if (!isset($fcl_code_response['result']) || empty($fcl_code_response['result'])) {
+                Log::error("❌ No data on this ID", ["response" => $fcl_code_response]);
+                return response()->json(['success' => false, 'message' => 'Data not found'], 404);
+            }
+
+            $milestoneResult = $fcl_code_response['result'][0];
+            Log::info("🎯 Milestone result list", ['result' => $milestoneResult]);
+
+            $serviceType = is_array($type['service_type']) ? $type['service_type'][0] : $type['service_type'];
+
+
+            $milestoneCodeToUpdate = null;
+            $milestoneIdToUpdate = null;
+
+           
+            // Determine milestone code based on dispatch_type, request number, and service_type
+            if ($type['dispatch_type'] == "ot" && $type['de_request_no'] == $requestNumber && $serviceType == 1) {
+                $milestoneCodeToUpdate = "TEOT";
+                Log::info("Milestone to update: {$milestoneCodeToUpdate} with actual time: {$actualTime}");
+            } elseif ($type['dispatch_type'] == "ot" && $type['pl_request_no'] == $requestNumber && $serviceType == 1) {
+                $milestoneCodeToUpdate = "CLOT";
+                Log::info("Milestone to update: {$milestoneCodeToUpdate} with actual time: {$actualTime}");
+            } elseif ($type['dispatch_type'] == "dt" && $type['dl_request_no'] == $requestNumber && $serviceType == 1) {
+                $milestoneCodeToUpdate = "GLDT";
+                Log::info("Milestone to update: {$milestoneCodeToUpdate} with actual time: {$actualTime}");
+            } elseif ($type['dispatch_type'] == "dt" && $type['pe_request_no'] == $requestNumber && $serviceType == 1) {
+                $milestoneCodeToUpdate = "CYDT";
+                Log::info("Milestone to update: {$milestoneCodeToUpdate} with actual time: {$actualTime}");
+            }
+
+            $milestoneResultList = $fcl_code_response['result'];
+          
+
+            if ($milestoneCodeToUpdate) {
+               
+                foreach ($milestoneResultList as $milestone) {
+                    if ($milestone['fcl_code'] === $milestoneCodeToUpdate) {
+                        $milestoneIdToUpdate = $milestone['id'];
+                        break;
+                    }
+                }
+                
+
+                if ($milestoneIdToUpdate) {
+                    // Update actual datetime
+                    $update_actual_time = [
+                        "jsonrpc" => "2.0",
+                        "method" => "call",
+                        "params" => [
+                            "service" => "object",
+                            "method" => "execute_kw",
+                            "args" => [
+                                $db,
+                                $uid,
+                                $odooPassword,
+                                "dispatch.milestone.history",
+                                "write",
+                                [
+                                    [$milestoneIdToUpdate],
+                                    [
+                                        'actual_datetime' => $actualTime,
+                                    ]
+                                ]
+                            ]
+                        ],
+                        "id" => 4
+                    ];
+
+                    $updateActualResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
+                        "http" => [
+                            "header" => "Content-Type: application/json",
+                            "method" => "POST",
+                            "content" => json_encode($update_actual_time),
+                        ]
+                    ])), true);
+
+                    if (isset($updateActualResponse['result']) && $updateActualResponse['result']) {
+                        Log::info("✅ Actual time updated successfully for milestone ID: {$milestoneIdToUpdate}");
+                        return response()->json(['success' => true, 'message' => 'POD and milestome updated'], 200);
+                    } else {
+                        Log::error("⚠️ POD updated but failed to update milestone", ['response' => $updateActualResponse]);
+                        return response()->json(['success' => false, 'message' => 'POD updated but milestone failed'], 500);
+                    }
+                }
+            }
+            return response()->json(['success' => true, 'message' => 'POD uploaded, but no matching milestone found']);
+
         }else{
             Log::error("Failed to insert image", ["response" => $updateResponse]);
             return response()->json(['success' => false,'message'=>'Failed to upload POD'], 500);
         }
-       
+    
         return response()->json($statusResponse);
+
        
     }
-
 }

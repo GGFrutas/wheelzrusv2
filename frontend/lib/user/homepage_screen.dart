@@ -104,9 +104,10 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
               physics: const AlwaysScrollableScrollPhysics(), // Allow scrolling even if the list is empty
               child: SizedBox(
                 height: MediaQuery.of(context).size.height * 0.8, // Adjust height as needed
-                child: const Center(
+                child: Center(
                   child: Text(
-                    'No transactions available.'
+                    'No pending transactions available.',
+                    style: AppTextStyles.subtitle,
                   ),
                 ),
               ),

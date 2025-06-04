@@ -4,6 +4,8 @@ import 'package:animated_toggle_switch/animated_toggle_switch.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/provider/theme_provider.dart';
+import 'package:frontend/theme/colors.dart';
+import 'package:frontend/theme/text_styles.dart';
 import 'package:frontend/user/profile_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -24,16 +26,14 @@ class _SettingPageState extends ConsumerState<SettingScreen>{
     final isLightTheme = ref.watch(themeProvider);
     return Scaffold(
       appBar: AppBar(
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: mainColor),
         title: Text(
           'Settings',
-          style: GoogleFonts.montserrat(
-            fontSize: 24,
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
+          style: AppTextStyles.title.copyWith(
+            color: mainColor,
           ),
         ),
-        backgroundColor: const Color(0xFF1d3c34),
+        // backgroundColor: const Color(0xFF1d3c34),
         centerTitle: true,
       ),
       body:ListView (
@@ -46,11 +46,11 @@ class _SettingPageState extends ConsumerState<SettingScreen>{
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.dark_mode, color: Colors.blue),
+                    const Icon(Icons.dark_mode_outlined, color: mainColor),
                     const SizedBox(width:10),
                     Text(
                       "Dark Mode",
-                      style: GoogleFonts.montserrat(fontSize: 16, fontWeight: FontWeight.w500 ),
+                      style: AppTextStyles.body,
                     ),
                   ],
                 ),
@@ -85,11 +85,11 @@ class _SettingPageState extends ConsumerState<SettingScreen>{
                     iconBuilder:(value) => value
                       ? const FittedBox(
                         fit: BoxFit.contain,
-                        child: Icon(Icons.wb_sunny, color: Colors.white, size: 18),
+                        child: Icon(Icons.wb_sunny_outlined, color: Colors.white, size: 18),
                       )
                       : const FittedBox(
                         fit: BoxFit.contain,
-                        child:Icon(Icons.nights_stay,size: 18),
+                        child:Icon(Icons.nightlight_round,size: 18),
                       ),
                   ),
                 ),
@@ -117,7 +117,7 @@ class _SettingPageState extends ConsumerState<SettingScreen>{
                     }, 
                     child: Row(
                       children: [
-                        const Icon(Icons.person, color: Colors.blue),
+                        const Icon(Icons.person_outline_rounded, color: mainColor),
                         const SizedBox(width:10),
                         Text(
                           "Profile",

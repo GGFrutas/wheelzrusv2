@@ -8,6 +8,7 @@ import 'package:frontend/provider/reject_provider.dart';
 import 'package:frontend/provider/transaction_provider.dart';
 import 'package:frontend/theme/colors.dart';
 import 'package:frontend/theme/text_styles.dart';
+import 'package:frontend/user/history_details.dart';
 import 'package:frontend/user/rejection_details.dart';
 import 'package:frontend/user/transaction_details.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -40,11 +41,22 @@ class _HistoryPageState extends ConsumerState<HistoryScreen> {
     
     try {
       DateTime dateTime = DateTime.parse(dateString); // Convert string to DateTime
-       return DateFormat('MMMM d, yyyy - h:mm a').format(dateTime); // Format date-time
+       return DateFormat('d MMMM, yyyy').format(dateTime); // Format date-time
     } catch (e) {
       return "Invalid Date"; // Handle errors gracefully
     }
   } 
+
+  Color getStatusColor(String status) {
+    switch (status) {
+      case 'Completed':
+        return const Color.fromARGB(255, 28, 157, 114);
+      case 'Rejected':
+        return  Colors.red;
+      default:
+      return Colors.grey;
+    }
+  }
 
   
   
@@ -184,9 +196,8 @@ class _HistoryPageState extends ConsumerState<HistoryScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => TransactionDetails(
+                            builder: (context) => HistoryDetailScreen(
                               transaction: item,
-                              id: item.id,
                               uid: uid ?? '',
                             ),
                           ),
@@ -197,34 +208,7 @@ class _HistoryPageState extends ConsumerState<HistoryScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              children: [
-                                const SizedBox(width: 20),
-                                Expanded(
-                                  child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // Space between label and value
-                                    Text(
-                                      '${item.origin} — ${item.destination}',
-                                      style: AppTextStyles.body.copyWith(
-                                        color: mainColor,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    Text(
-                                      formatDateTime(item.arrivalDate),
-                                      style: AppTextStyles.caption.copyWith(
-                                        color: darkerBgColor,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                ) // Space between icon and text
-                                
-                              ],
-                            ),
-                            const SizedBox(height: 20),
+                            
                             Row(
                               children: [
                                 const SizedBox(width: 20), // Space between icon and text
@@ -259,14 +243,13 @@ class _HistoryPageState extends ConsumerState<HistoryScreen> {
                                     children: [
                                       // Space between label and value
                                       Text(
-                                        "Truck Number",
+                                        "Delivered Date",
                                         style: AppTextStyles.caption.copyWith(
                                           color: darkerBgColor,
                                         ),
                                       ),
                                       Text(
-                                        (item.truckPlateNumber?.isNotEmpty ?? false)
-                                          ? item.truckPlateNumber! : '—',
+                                        formatDateTime(item.deliveryDate),
                                         style: AppTextStyles.body.copyWith(
                                           color: mainColor,
                                           fontWeight: FontWeight.bold,
@@ -281,16 +264,13 @@ class _HistoryPageState extends ConsumerState<HistoryScreen> {
                                   ),
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(20),
-                                    gradient: const LinearGradient(
-                                      colors: [Color.fromARGB(255, 253, 246, 20), Colors.grey],
-                                      stops: [0.5, 0.5],
-                                    ),
+                                    color: getStatusColor(item.requestStatus ?? ''),
                                   ),
                                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                   child: Text(
-                                    'Ongoing',
+                                    item.requestStatus ?? '',
                                     style: AppTextStyles.caption.copyWith(
-                                      color: Colors.black,
+                                      color: Colors.white,
                                       fontWeight: FontWeight.bold
                                     ),
                                     textAlign: TextAlign.center,

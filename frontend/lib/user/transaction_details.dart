@@ -1,4 +1,4 @@
-// ignore_for_file: avoid_print, unused_import
+// ignore_for_file: avoid_print, unused_import, depend_on_referenced_packages
 
 import 'dart:convert';
 
@@ -116,8 +116,6 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
   } 
 
 
-  
- 
   @override
   Widget build(BuildContext context) {
     // If transaction is null, display a fallback message
@@ -132,7 +130,6 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
             body: const Center(
               child: Text("No transaction details available."),
             ),
-            
           );
         }
       
@@ -272,26 +269,28 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                               size: 30,
                             ),
                             const SizedBox(width: 8), // Space between icon and text
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Space between label and value
+                            Expanded (
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Space between label and value
+                                  Text(
+                                    widget.transaction?.destination ?? '',
+                                    style: AppTextStyles.subtitle.copyWith(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: mainColor,
+                                    ),
+                                  ),
                                 Text(
-                                  widget.transaction?.destination ?? '',
-                                  style: AppTextStyles.subtitle.copyWith(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                    color: mainColor,
+                                    "Pick-up Address",
+                                    style: AppTextStyles.caption.copyWith(
+                                      color: mainColor,
+                                    ),
                                   ),
-                                ),
-                               Text(
-                                  "Pick-up Address",
-                                  style: AppTextStyles.caption.copyWith(
-                                    color: mainColor,
-                                  ),
-                                ),
-                              ],
-                            ),
+                                ],
+                              ),
+                            )
                           ],
                         ),
                       ),
@@ -325,25 +324,27 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                               size: 20,
                             ),
                             const SizedBox(width: 8), // Space between icon and text
-                            Column(
+                            Expanded (
+                              child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Space between label and value
-                                Text(
-                                  widget.transaction?.origin ?? '',
-                                  style: AppTextStyles.subtitle.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: mainColor,
-                                  )
-                                ),
-                                Text(
-                                  "Delivery Address",
-                                  style: AppTextStyles.caption.copyWith(
-                                    color: mainColor,
+                                children: [
+                                  // Space between label and value
+                                  Text(
+                                    widget.transaction?.origin ?? '',
+                                    style: AppTextStyles.subtitle.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: mainColor,
+                                    )
                                   ),
-                                ),
-                              ],
-                            ),
+                                  Text(
+                                    "Delivery Address",
+                                    style: AppTextStyles.caption.copyWith(
+                                      color: mainColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
                           ],
                         ),
                       ),
@@ -392,86 +393,369 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
           ),
           bottomSheet: Container(
             padding: const EdgeInsets.all(10.0),
-            child: SizedBox(
-              width: double.infinity, // Make the button full width
-              child: ElevatedButton(
-              onPressed: () async {
-                if (widget.transaction?.requestStatus == 'Ongoing' || widget.transaction?.requestStatus == "Accepted") {
-                  
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => DetailedDetailScreen(uid: widget.uid, transaction: widget.transaction),
+            child: Column (
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: double.infinity, // Make the button full width
+                  child: ElevatedButton(
+                  onPressed: () async {
+                    if (widget.transaction?.requestStatus != 'Pending') {
+                      
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => DetailedDetailScreen(uid: widget.uid, transaction: widget.transaction),
+                        ),
+                      );
+                      // print("SUCCESS");
+                    } else {
+                    
+                      final acceptedTransactionNotifier = ref.read(accepted_transaction.acceptedTransactionProvider.notifier);
+
+                        final isAccepted = acceptedTransactionNotifier.isAccepted(
+                          widget.transaction!.id, 
+                          widget.transaction!.requestNumber.toString(),
+                        );
+
+                        // If not accepted, update the status and add it to accepted transactions
+                      if (isAccepted) {
+                          _loadingStates[widget.transaction!.requestNumber.toString()] = false;
+                        return;
+                      }
+
+                      final success = await acceptedTransactionNotifier.updateStatus(
+                        widget.transaction!.id.toString(),
+                        widget.transaction!.requestNumber.toString(),
+                        'Accepted', // Update status to 'Accepted'
+                        ref,
+                        context,
+                      );
+
+                      if (success) {
+                        acceptedTransactionNotifier.addProduct(widget.transaction!); //Add to accepted 
+                        showDialog(
+                          context: context,
+                          builder: (context) {
+                            return AlertDialog(
+                              title: Text(
+                                'Success!', 
+                                style: AppTextStyles.subtitle.copyWith(
+                                  fontWeight: FontWeight.bold
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              content: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    'Booking has been accepted',
+                                    style: AppTextStyles.body.copyWith(
+                                      color: Colors.black87
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  const Icon (
+                                    Icons.check_circle,
+                                    color: mainColor,
+                                    size: 100
+                                  )
+                                ],
+                              ),
+                              actions: [
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 12.0),
+                                  child: Center(
+                                    child: SizedBox(
+                                      width: 200,
+                                      child: ElevatedButton(
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => DetailedDetailScreen(uid: widget.uid, transaction: widget.transaction),
+                                          ),
+                                        );
+                                      }, 
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: mainColor,
+                                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(25),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        "Continue",
+                                        style: AppTextStyles.body.copyWith(
+                                          color: Colors.white,
+                                        )
+                                      )
+                                    ),
+                                    )
+                                  )
+                                )
+                              ],
+                            );
+                          }
+                        );
+                      }
+                      acceptedTransactionNotifier.updateStatus(
+                        widget.transaction!.id.toString(),
+                        widget.transaction!.requestNumber.toString(),
+                        'Accepted', ref, context// Pass both ID and RequestNumber
+                      );
+                        
+                          // transaction?.removeWhere((t) => t.id == transaction?.id);
+                        // ref.read(filteredItemsProvider.notifier).removeTransaction(transaction?);
+                        // ref.refresh(acceptedTransactionProvider);
+                      
+
+                      // Find and display the updated transaction
+                        final updatedState = ref.read(transaction_list.acceptedTransactionProvider);
+                        final updatedTransaction = updatedState.firstWhere(
+                          (transaction) => transaction.id == transaction.id,
+                          orElse: () => widget.transaction!, // Return the original if not found
+                        );
+
+                        //Print the updated status
+                      print('ID: ${widget.transaction?.id}');
+                      print('Request Number: ${updatedTransaction.requestNumber}');
+                      print('Updated Status: ${updatedTransaction.requestStatus}');
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: mainColor,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 80,
+                      vertical: 20,
                     ),
-                  );
-                  // print("SUCCESS");
-                } else {
-                
-                  final acceptedTransactionNotifier = ref.read(accepted_transaction.acceptedTransactionProvider.notifier);
-
-                    final isAccepted = acceptedTransactionNotifier.isAccepted(
-                      widget.transaction!.id, 
-                      widget.transaction!.requestNumber.toString(),
-                    );
-
-                    // If not accepted, update the status and add it to accepted transactions
-                  if (isAccepted) {
-                      _loadingStates[widget.transaction!.requestNumber.toString()] = false;
-                    return;
-                  }
-                  acceptedTransactionNotifier.updateStatus(
-                    widget.transaction!.id.toString(),
-                    widget.transaction!.requestNumber.toString(),
-                    'Accepted', ref, context// Pass both ID and RequestNumber
-                  );
-                    acceptedTransactionNotifier.addProduct(widget.transaction!); //Add to accepted 
-                      // transaction?.removeWhere((t) => t.id == transaction?.id);
-                    // ref.read(filteredItemsProvider.notifier).removeTransaction(transaction?);
-                    // ref.refresh(acceptedTransactionProvider);
-                  
-
-                  // Find and display the updated transaction
-                    final updatedState = ref.read(transaction_list.acceptedTransactionProvider);
-                    final updatedTransaction = updatedState.firstWhere(
-                      (transaction) => transaction.id == transaction.id,
-                      orElse: () => widget.transaction!, // Return the original if not found
-                    );
-
-                    //Print the updated status
-                  print('ID: ${widget.transaction?.id}');
-                  print('Request Number: ${updatedTransaction.requestNumber}');
-                  print('Updated Status: ${updatedTransaction.requestStatus}');
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: mainColor,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 80,
-                  vertical: 20,
-                ),
-                disabledForegroundColor: mainColor,
-                disabledBackgroundColor: mainColor,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30.0),
+                    disabledForegroundColor: mainColor,
+                    disabledBackgroundColor: mainColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30.0),
+                    ),
+                  ),
+                  child: Text(
+                    widget.transaction?.requestStatus != 'Pending'
+                    // widget.transaction?.requestStatus == 'Accepted' || widget.transaction?.requestStatus == 'Ongoing'
+                                  ? 'View Booking' // New label for accepted transactions
+                                  : 'Accept Booking', 
+                    style: AppTextStyles.body.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center, // Ensure the text is centered
+                    overflow: TextOverflow.ellipsis, // Handle overflow if needed
+                    maxLines: 1,
+                  ),
                 ),
               ),
-              child: Text(
-                widget.transaction?.requestStatus == 'Accepted' || widget.transaction?.requestStatus == 'Ongoing'
-                              ? 'View Booking' // New label for accepted transactions
-                              : 'Accept Booking', 
-                style: AppTextStyles.body.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
+                const SizedBox(height: 10), // Add some space between buttons
+                if (widget.transaction?.requestStatus == "Pending") // Show only if not accepted
+                SizedBox(
+                  width: double.infinity, // Make the button full width
+                  child: OutlinedButton(
+                    onPressed: () {
+                      _showModal(context,ref);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      padding: const EdgeInsets.symmetric(horizontal: 80, vertical: 20),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30.0),
+                      ),
+                    ),
+                    child: Text(
+                      'Decline Booking',
+                      style: AppTextStyles.body.copyWith(
+                       
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center, // Ensure the text is centered
+                      overflow: TextOverflow.ellipsis, // Handle overflow if needed
+                      maxLines: 1,
+                    ),
+                  ),
                 ),
-                textAlign: TextAlign.center, // Ensure the text is centered
-                overflow: TextOverflow.ellipsis, // Handle overflow if needed
-                maxLines: 1,
-              ),
+              ],
             ),
-            ),
+            
           ),
           
-          
+          // bottomNavigationBar: const NavigationMenu(), // Show navigation menu only if it's the home screen
+
+        );
+      },
+    );
+  }
+
+   void _showModal(BuildContext context, WidgetRef ref) {
+    TextEditingController controller = TextEditingController();
+    String? selectedValue;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('REJECT BOOKING', style: AppTextStyles.subtitle.copyWith(color: mainColor), textAlign: TextAlign.center),
+              const SizedBox(height: 8),
+              const Icon(Icons.sentiment_dissatisfied, color: mainColor, size: 75), // Cancel icon
+            ],
+          ),
+      
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+               Text('Please let us know your reason for cancelling or rejecting this booking to help us improve our services.',
+              style: AppTextStyles.caption.copyWith(color: Colors.black, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              Consumer(
+                builder: (context, ref, child) {
+                  final rejectionReasonsAsync = ref.watch(rejectionReasonsProvider);
+                  final selectedValue = ref.watch(selectedReasonsProvider);
+                  return rejectionReasonsAsync.when(
+                    data: (reasons) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey, width: 1),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        child: DropdownButton<String>(
+                          isExpanded: true,
+                          value: selectedValue,
+                          hint: Text('Select Reason', style: AppTextStyles.body),
+                          underline: const SizedBox(), // Remove the underline
+                          onChanged: (String? newValue) {
+                            ref.read(selectedReasonsProvider.notifier).state = newValue;
+                          },
+                          items: reasons.map<DropdownMenuItem<String>>((RejectionReason reason) {
+                            return DropdownMenuItem<String>(
+                              value: reason.id.toString(), // Using the 'id' from the model
+                              child: Text(reason.name, style: AppTextStyles.body), // Using the 'name' from the model
+                            );
+                          }).toList(),
+                        ),
+                      );
+                      
+                    },
+                      loading: () => const CircularProgressIndicator(),
+                    error: (e, stackTrace) => Text('Error: $e'),
+                  );
+                },
+              ),
+
+              const SizedBox(height: 10),
+              
+
+              // Text Area for feedback s
+              SingleChildScrollView(
+                child: TextField(
+                  controller: controller,
+                  maxLines: 3,  // Multi-line text area
+                  decoration: InputDecoration(
+                    border: const OutlineInputBorder(),
+                    hintText: 'Your feedback...',
+                    hintStyle: AppTextStyles.body, // Use caption style for hint text
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: <Widget>[
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+              onPressed: () async {
+                final uid = ref.read(authNotifierProvider).uid;
+                final transactionId = widget.transaction!;
+
+                // Handle Reject Action here (using _selectedValue and controller.text)
+                final selectedReason = ref.read(selectedReasonsProvider);
+                final feedback = controller.text;
+
+                if(selectedReason == null || selectedReason.isEmpty){
+                  print('Please select a reason');
+                  return;
+                }
+
+                //Clear selection//
+                ref.read(selectedReasonsProvider.notifier).state = null;
+                controller.clear();
+
+                print('🟥 Rejecting Transaction');
+                print('🔹 UID: $uid');
+                print('🔹 Transaction ID: ${transactionId.id}');
+                print('🔹 Reason: $selectedReason');
+                print('🔹 Feedback: $feedback');
+
+                try{
+                  final password = ref.watch(authNotifierProvider).password ?? '';
+                  final response = await http.post(
+                    Uri.parse('http://192.168.118.102:8000/api/odoo/reject-booking'),
+                    headers:{
+                      'Content-Type': 'application/json',
+                      'Accept': 'application/json',
+                      'password': password,
+                    },
+                    body: jsonEncode({
+                      'uid': uid,
+                      'transaction_id': transactionId.id,
+                      'reason': selectedReason,
+                      'feedback': feedback
+                    }),
+                  );
+                  if (response.statusCode == 200) {
+                      final rejectedTransactionNotifier = ref.read(accepted_transaction.acceptedTransactionProvider.notifier);
+                      rejectedTransactionNotifier.updateStatus(transactionId.id.toString(), transactionId.requestNumber.toString(),'Rejected',ref, context);
+
+                      final updated = await fetchTransactionStatus(ref, transactionId.id.toString());
+                      print('Updated Status: ${updated.requestStatus}');
+
+                      if(updated.requestStatus == "Rejected") {
+                        print('Rejection Successful');
+                      } else {
+                        print('Rejection Failed');
+                      }
+                      Navigator.of(context).pop();
+                    } else {
+                      print('Button Rejection Failed');
+                    }
+                }catch (e){
+                  print('Error: $e');
+                  Navigator.of(context).pop();
+                }
+
+                
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color.fromARGB(255, 236, 162, 55),
+                padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 20),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30.0),
+                ),  
+              ),
+              child: Text(
+                'Confirm',
+                style: AppTextStyles.subtitle.copyWith(
+                  color: Colors.black, // White text color
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            ),
+            
+            
+          ],
         );
       },
     );

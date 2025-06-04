@@ -121,26 +121,29 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
                           size: 20,
                         ),
                         const SizedBox(width: 20), // Space between icon and text
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Space between label and value
-                            Text(
-                            (widget.transaction?.origin.isNotEmpty ?? false)
-                            ? widget.transaction!.origin : '—',
-                              // Use the originPort variable here
-                              style: AppTextStyles.subtitle.copyWith(
-                                color: mainColor,
+                        Expanded (
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Space between label and value
+                              Text(
+                              (widget.transaction?.origin.isNotEmpty ?? false)
+                              ? widget.transaction!.origin : '—',
+                                // Use the originPort variable here
+                                style: AppTextStyles.subtitle.copyWith(
+                                  color: mainColor,
+                                ),
                               ),
-                            ),
-                            Text(
-                              "Port of Origin",
-                              style: AppTextStyles.caption.copyWith(
-                                color: mainColor,
+                              Text(
+                                "Port of Origin",
+                                style: AppTextStyles.caption.copyWith(
+                                  color: mainColor,
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
+                            ],
+                          ),
+                        )
+                        
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -402,10 +405,13 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
         ),
         
       ),
-      bottomSheet: SizedBox(
+      bottomSheet:  (widget.transaction?.requestStatus == "Completed") 
+      ? null
+      : SizedBox (
         width: double.infinity,
         child: ElevatedButton(
         onPressed: () {
+          
           print("uid: ${widget.uid}");
       
           Navigator.push(
