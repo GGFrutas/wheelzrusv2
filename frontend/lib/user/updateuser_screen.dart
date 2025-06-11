@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:form_validator/form_validator.dart';
 import 'package:frontend/notifiers/auth_notifier.dart';
 import 'package:frontend/notifiers/navigation_notifier.dart';
+import 'package:frontend/provider/base_url_provider.dart';
 import 'package:frontend/provider/theme_provider.dart';
 import 'package:frontend/screen/login_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -44,7 +45,8 @@ class _UpdateUserScreenState extends ConsumerState<UpdateUserScreen> {
   }
 
   String _getProfileImageUrl(String picture) {
-    return 'http://192.168.76.86:8080/storage/$picture'; // Correct URL for the emulator
+    final baseUrl = ref.watch(baseUrlProvider);
+    return '$baseUrl/storage/$picture'; // Correct URL for the emulator
   }
 
   final GlobalKey<FormState> _formKey =

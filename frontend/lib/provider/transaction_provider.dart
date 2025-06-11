@@ -4,7 +4,9 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/notifiers/transaction_notifier.dart';
+import 'package:frontend/provider/base_url_provider.dart';
 import 'package:frontend/provider/transaction_list_notifier.dart';
+import 'package:frontend/user/map_api.dart';
 import 'package:http/http.dart' as http;
 import 'package:frontend/models/transaction_model.dart';
 import 'package:frontend/notifiers/auth_notifier.dart';
@@ -18,6 +20,7 @@ Future<List<Transaction>> fetchTransactions(FutureProviderRef<List<Transaction>>
  
     final uid = ref.watch(authNotifierProvider).uid;
     final password = ref.watch(authNotifierProvider).password ?? '';
+    final baseUrl = ref.watch(baseUrlProvider);
 
   
     if (uid == null || uid.isEmpty) {
@@ -26,7 +29,7 @@ Future<List<Transaction>> fetchTransactions(FutureProviderRef<List<Transaction>>
     // print('✅ Retrieved UID: $uid'); // Debugging UID
 
     final response = await http.get(
-      Uri.parse('http://192.168.76.86:8080/api/odoo/booking?uid=$uid'),
+      Uri.parse('$baseUrl/api/odoo/booking?uid=$uid'),
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -81,12 +84,13 @@ Future<Transaction> fetchTransactionStatus(WidgetRef ref, String transactionId) 
     // print("Fetching Transactions status for ID : $transactionId");
     final uid = ref.watch(authNotifierProvider).uid;
     final password = ref.watch(authNotifierProvider).password ?? '';
+    
     if (uid == null || uid.isEmpty) {
       throw Exception('UID is missing. Please log in.');
     }
 
     final response = await http.get(
-      Uri.parse('http://192.168.76.86:8080/api/odoo/booking?uid=$uid&transaction_id=$transactionId'),
+      Uri.parse('$baseUrl/api/odoo/booking?uid=$uid&transaction_id=$transactionId'),
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',

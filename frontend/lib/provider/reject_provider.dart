@@ -3,6 +3,8 @@
 import 'dart:convert';
 import 'package:frontend/models/transaction_model.dart';
 import 'package:frontend/notifiers/auth_notifier.dart';
+import 'package:frontend/provider/base_url_provider.dart';
+import 'package:frontend/user/map_api.dart';
 import 'package:http/http.dart' as http;
 import 'package:frontend/models/reject_reason_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,13 +19,14 @@ Future<List<RejectionReason>> fetchReasons(FutureProviderRef<List<RejectionReaso
   try {
     final uid = ref.watch(authNotifierProvider).uid;
     final password = ref.watch(authNotifierProvider).password ?? '';
+    final baseUrl = ref.watch(baseUrlProvider);
 
     if (uid == null || uid.isEmpty) {
       // print('❌ UID not found or empty!');
       throw Exception('UID is missing. Please log in.');
     }
     // print('✅ Retrieved UID: $uid'); // Debugging UID
-    final response = await http.get(Uri.parse('http://192.168.76.86:8080/api/odoo/reason?uid=$uid'), 
+    final response = await http.get(Uri.parse('$baseUrl/api/odoo/reason?uid=$uid'), 
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -71,7 +74,7 @@ Future<List<Transaction>> fetchReject(FutureProviderRef<List<Transaction>> ref, 
     // print('✅ Retrieved UID: $uid'); // Debugging UID
 
     final response = await http.get(
-      Uri.parse('http://192.168.76.86:8080/api/odoo/booking?uid=$uid'),
+      Uri.parse('$baseUrl/api/odoo/booking?uid=$uid'),
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',

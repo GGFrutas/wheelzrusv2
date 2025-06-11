@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:frontend/models/transaction_model.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/notifiers/auth_notifier.dart';
+import 'package:frontend/provider/base_url_provider.dart';
 import 'package:frontend/provider/transaction_list_notifier.dart';
 import 'package:frontend/theme/colors.dart';
 import 'package:frontend/theme/text_styles.dart';
@@ -71,13 +72,14 @@ Future<bool> updateTransactionStatusInDatabase(
 
     final uid = ref.watch(authNotifierProvider).uid;
     final password = ref.watch(authNotifierProvider).password ?? '';
+    final baseUrl = ref.watch(baseUrlProvider);
 
     if (uid == null || uid.isEmpty) {
       // print('❌ UID not found or empty!');
       throw Exception('UID is missing. Please log in.');
     }
     // print('✅ Retrieved UID: $uid'); // Debugging UID
-    final url = Uri.parse('http://192.168.76.86:8080/api/odoo/$transactionId/status?uid=$uid'); // Adjust URL as needed
+  final url = Uri.parse('$baseUrl/api/odoo/$transactionId/status?uid=$uid'); // Adjust URL as needed
 
     final now = DateTime.now();
     final timestamp = DateFormat("yyyy-MM-dd HH:mm:ss.SSSSSS").format(now);
