@@ -436,6 +436,15 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                         acceptedTransactionNotifier.addProduct(widget.transaction!); //Add to accepted 
                         showDialog(
                           context: context,
+                          barrierDismissible: false,
+                          builder:(context) {
+                            return const Center (
+                              child: CircularProgressIndicator(),
+                            );
+                          },
+                        );
+                        showDialog(
+                          context: context,
                           builder: (context) {
                             return AlertDialog(
                               title: Text(

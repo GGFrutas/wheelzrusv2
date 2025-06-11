@@ -16,8 +16,9 @@ use Ripcord\Ripcord;
 class TransactionController extends Controller
 {
     protected $url = "https://jralejandria-beta-dev-yxe.odoo.com";
-    protected $db = 'jralejandria-beta-dev-yxe-production-beta-20247511';
-    protected $odoo_url = "http://192.168.76.86:8080/odoo/jsonrpc";
+    protected $db = 'jralejandria-beta-dev-yxe-production-beta-20996469';
+    // protected $odoo_url = "http://192.168.76.86:8080/odoo/jsonrpc";
+    protected $odoo_url = "https://jralejandria-beta-dev-yxe.odoo.com/jsonrpc";
    
 
     public function getBooking(Request $request)
@@ -233,25 +234,30 @@ class TransactionController extends Controller
             ],
             "id" => 3
         ];
+        ini_set('memory_limit', '512M');
 
     
-        $transactionResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
+        $transactionResponse =[
             "http" => [
                 "header" => "Content-Type: application/json",
                 "method" => "POST",
                 "content" => json_encode($transactionData, JSON_UNESCAPED_SLASHES),
                 "timeout" => 10, // seconds
             ],
-        ])), true);
+        ];
+
+        $context1 = stream_context_create($transactionResponse);
+        $response1 = file_get_contents($odooUrl, false , $context1);
+        $transacationResult = json_decode($response1, true);
     
         // 🚨 Error Handling for Missing Response
-        if (!isset($transactionResponse['result'])) {
-            Log::error("❌ Invalid response for transactions", ["response" => $transactionResponse]);
+        if (!isset($transacationResult['result'])) {
+            Log::error("❌ Invalid response for transactions", ["response" => $transacationResult]);
             return response()->json(['success' => false, 'message' => 'Error fetching transactions', 'error_details' => $transactionResponse], 500);
         }
 
         // ✅ Filter Transactions (Ensure Correct Partner Matching)
-        $filteredTransactions = array_filter($transactionResponse['result'], function ($transaction) use ($partnerId) {
+        $filteredTransactions = array_filter($transacationResult['result'], function ($transaction) use ($partnerId) {
             foreach (["de_truck_driver_name", "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name"] as $field) {
                 if (isset($transaction[$field][0]) && $transaction[$field][0] == $partnerId) { 
                     return true; // ✅ Partner ID matches truck driver field

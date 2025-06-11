@@ -346,7 +346,7 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
                             // Space between label and value
                             Text(
                             (widget.transaction?.containerNumber?.isNotEmpty ?? false)
-                            ? widget.transaction!.contactNumber! : '—',
+                            ? widget.transaction!.containerNumber! : '—',
                               // Use the originPort variable here
                               style: AppTextStyles.subtitle.copyWith(
                                 color: mainColor,

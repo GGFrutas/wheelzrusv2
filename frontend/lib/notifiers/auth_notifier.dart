@@ -21,7 +21,7 @@ class AuthState {
   final String? uid;
   final String? password;
   final String? partnerId;
-  final String? partnerName;
+  final String? driverName;
 
   AuthState({
     required this.isLoading,
@@ -29,20 +29,20 @@ class AuthState {
     required this.uid,
     required this.password,
     required this.partnerId,
-    this.partnerName,
+    required this.driverName,
   });
 
   
 
   // Helper method to copy the state with updated values
-  AuthState copyWith({bool? isLoading, bool? isError, String? uid, String? password, String? partnerId, String? partnerName}) {
+  AuthState copyWith({bool? isLoading, bool? isError, String? uid, String? password, String? partnerId, String? driverName}) {
     return AuthState(
       isLoading: isLoading ?? this.isLoading,
       isError: isError ?? this.isError,
       uid: uid ?? this.uid,
       password: password ?? this.password,
       partnerId: partnerId ?? this.partnerId,
-      partnerName: partnerName ?? this.partnerName,
+      driverName: driverName ?? this.driverName,
     );
   }
 }
@@ -51,7 +51,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   final AuthService _authService;
 
   AuthNotifier(this._authService)
-      : super(AuthState(isLoading: false, isError: false, uid: null, password: null, partnerId: null)) {
+      : super(AuthState(isLoading: false, isError: false, uid: null, password: null, partnerId: null, driverName: '')) {
     // loadUid();  
     _initialize(); // Load UID from SharedPreferences when the notifier is created
   }
@@ -82,8 +82,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
         final String apiPassword = (data['password'] ?? '').toString();
         final List<dynamic> partnerData = data['user']['partner_id'];
         final String partnerId = partnerData[0].toString(); // 👈 this gets just the ID (e.g., "238")
-        final String partnerName = partnerData[1].toString(); // 👈 this gets just the ID (e.g., "238")
+        final String partnerFullName = partnerData[1].toString(); // 👈 this gets just the ID (e.g., "238")
 
+        final String driverName = partnerFullName.split(',').length > 1
+            ? partnerFullName.split(',')[1].trim()
+            : partnerFullName;
 
         if (user == null) {
           throw Exception('User or uid is null');
@@ -93,7 +96,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
         await prefs.setString('uid', uid);
         await prefs.setString('password', apiPassword);
         await prefs.setString('partner_id', partnerId);
-        await prefs.setString('name', partnerName);
+        await prefs.setString('name', partnerFullName);
+        await prefs.setString('diver_name', driverName);
 
         if (context.mounted) {
           Navigator.pushReplacement(
@@ -104,7 +108,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           );
         }
 
-        state = state.copyWith(isLoading: false, isError: false, uid: uid, password: password, partnerId: partnerId); // ✅ Store both uid and password
+        state = state.copyWith(isLoading: false, isError: false, uid: uid, password: password, partnerId: partnerId, driverName: driverName); // ✅ Store both uid and password
       } catch (e) {
         // print('Login Error: $e');
         state = state.copyWith(isLoading: false, isError: true);
@@ -117,13 +121,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
     final storedUid = prefs.getString('uid');
     final storedPassword = prefs.getString('password');
     final storedPartnerId = prefs.getString('partnerId');
-    final storedPartnerName = prefs.getString('name');
+    final storedDriverName = prefs.getString('driver_name') ?? '';
 
     if (storedUid != null && storedUid.isNotEmpty && storedPassword != null) {
       print('✅ Loaded UID: $storedUid');
       print('✅ Loaded Partner ID: $storedPartnerId'); 
 
-      state = state.copyWith(uid: storedUid, password: storedPassword, partnerId:storedPartnerId, partnerName: storedPartnerName); // ✅ Store both
+      state = state.copyWith(uid: storedUid, password: storedPassword, partnerId:storedPartnerId, driverName: storedDriverName); // ✅ Store both
     } else {
       // print('❌ Missing UID or Password in storage.');
     } 

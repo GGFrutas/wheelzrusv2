@@ -107,6 +107,15 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
     print('Posting to: $url for status update to $nextStatus');
     if (response.statusCode == 200) {
       print("Files uploaded successfully!");
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder:(context) {
+          return const Center (
+            child: CircularProgressIndicator(),
+          );
+        },
+      );
       showSuccessDialog(context, "Proof of delivery has been successfully uploaded!");
       final ongoingTransactionNotifier = ref.read(accepted_transaction.acceptedTransactionProvider.notifier);
 
