@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/models/transaction_model.dart';
 import 'package:frontend/notifiers/auth_notifier.dart';
 import 'package:frontend/provider/accepted_transaction.dart' as accepted_transaction;
+import 'package:frontend/provider/base_url_provider.dart';
 import 'package:frontend/provider/theme_provider.dart';
 import 'package:frontend/provider/transaction_list_notifier.dart';
 import 'package:frontend/provider/transaction_provider.dart';
@@ -26,7 +27,7 @@ class ProofOfDeliveryScreen extends ConsumerStatefulWidget{
   final String uid;
   final Transaction? transaction; 
   final List<String> base64Images;
-
+  
   const ProofOfDeliveryScreen({super.key, required this.uid, required this.transaction,required this.base64Images});
 
   @override
@@ -71,19 +72,21 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
     }
 
     final currentStatus = widget.transaction!.requestStatus;
+    final baseUrl = ref.watch(baseUrlProvider);
+    
     print("Current Status: $currentStatus");
     Uri url;
   
     String nextStatus;
     if (currentStatus == "Accepted" || currentStatus == "Pending") {
       nextStatus = "Ongoing";
-     url = Uri.parse('http://192.168.118.102:8000/api/odoo/pod-accepted-to-ongoing?uid=$uid');
+     url = Uri.parse('$baseUrl/api/odoo/pod-accepted-to-ongoing?uid=$uid');
       nextStatus = "Ongoing";
       
 
     } else if (currentStatus == "Ongoing") {
       nextStatus = "Completed";
-     url = Uri.parse('http://192.168.118.102:8000/api/odoo/pod-ongoing-to-complete?uid=$uid');
+     url = Uri.parse('$baseUrl/api/odoo/pod-ongoing-to-complete?uid=$uid');
     } else {
       showSuccessDialog(context, "Invalid transaction!");
       return;

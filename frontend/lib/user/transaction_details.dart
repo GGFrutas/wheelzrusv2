@@ -11,6 +11,7 @@ import 'package:frontend/notifiers/auth_notifier.dart';
 import 'package:frontend/notifiers/navigation_notifier.dart';
 import 'package:frontend/provider/accepted_transaction.dart' as accepted_transaction;
 import 'package:frontend/provider/accepted_transaction.dart' as transaction_list;
+import 'package:frontend/provider/base_url_provider.dart';
 import 'package:frontend/provider/reject_provider.dart';
 import 'package:frontend/provider/transaction_provider.dart';
 import 'package:frontend/screen/homepage_screen.dart';
@@ -383,7 +384,6 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 70),
                     ],
                   ),
                 ),
@@ -391,7 +391,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
             ),
             
           ),
-          bottomSheet: Container(
+          bottomNavigationBar: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column (
               mainAxisSize: MainAxisSize.min,
@@ -608,170 +608,185 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
 
    void _showModal(BuildContext context, WidgetRef ref) {
     TextEditingController controller = TextEditingController();
-    String? selectedValue;
+  
 
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('REJECT BOOKING', style: AppTextStyles.subtitle.copyWith(color: mainColor), textAlign: TextAlign.center),
-              const SizedBox(height: 8),
-              const Icon(Icons.sentiment_dissatisfied, color: mainColor, size: 75), // Cancel icon
-            ],
-          ),
-      
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-               Text('Please let us know your reason for cancelling or rejecting this booking to help us improve our services.',
-              style: AppTextStyles.caption.copyWith(color: Colors.black, fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              Consumer(
-                builder: (context, ref, child) {
-                  final rejectionReasonsAsync = ref.watch(rejectionReasonsProvider);
-                  final selectedValue = ref.watch(selectedReasonsProvider);
-                  return rejectionReasonsAsync.when(
-                    data: (reasons) {
-                      return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey, width: 1),
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                        child: DropdownButton<String>(
-                          isExpanded: true,
-                          value: selectedValue,
-                          hint: Text('Select Reason', style: AppTextStyles.body),
-                          underline: const SizedBox(), // Remove the underline
-                          onChanged: (String? newValue) {
-                            ref.read(selectedReasonsProvider.notifier).state = newValue;
-                          },
-                          items: reasons.map<DropdownMenuItem<String>>((RejectionReason reason) {
-                            return DropdownMenuItem<String>(
-                              value: reason.id.toString(), // Using the 'id' from the model
-                              child: Text(reason.name, style: AppTextStyles.body), // Using the 'name' from the model
-                            );
-                          }).toList(),
-                        ),
-                      );
+        return Dialog(
+          insetPadding: const EdgeInsets.all(20.0),
+          child: LayoutBuilder(
+            builder:(context, constraints) {
+              return SingleChildScrollView(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom, // Add padding for keyboard
+                  top: 20.0, // Add top padding for better appearance
+                  left: 20.0,
+                  right: 20.0,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min, // Use min size to fit content
+                  children: [
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('REJECT BOOKING', style: AppTextStyles.subtitle.copyWith(color: mainColor), textAlign: TextAlign.center),
+                        const SizedBox(height: 8),
+                        const Icon(Icons.sentiment_dissatisfied, color: mainColor, size: 75), // Cancel icon
+                      ],
+                    ),
+                    Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Text('Please let us know your reason for cancelling or rejecting this booking to help us improve our services.',
+                      style: AppTextStyles.caption.copyWith(color: Colors.black, fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      Consumer(
+                        builder: (context, ref, child) {
+                          final rejectionReasonsAsync = ref.watch(rejectionReasonsProvider);
+                          final selectedValue = ref.watch(selectedReasonsProvider);
+                          return rejectionReasonsAsync.when(
+                            data: (reasons) {
+                              return Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: Colors.grey, width: 1),
+                                  borderRadius: BorderRadius.circular(5),
+                                ),
+                                child: DropdownButton<String>(
+                                  isExpanded: true,
+                                  value: selectedValue,
+                                  hint: Text('Select Reason', style: AppTextStyles.body),
+                                  underline: const SizedBox(), // Remove the underline
+                                  onChanged: (String? newValue) {
+                                    ref.read(selectedReasonsProvider.notifier).state = newValue;
+                                  },
+                                  items: reasons.map<DropdownMenuItem<String>>((RejectionReason reason) {
+                                    return DropdownMenuItem<String>(
+                                      value: reason.id.toString(), // Using the 'id' from the model
+                                      child: Text(reason.name, style: AppTextStyles.body), // Using the 'name' from the model
+                                    );
+                                  }).toList(),
+                                ),
+                              );
+                              
+                            },
+                              loading: () => const CircularProgressIndicator(),
+                            error: (e, stackTrace) => Text('Error: $e'),
+                          );
+                        },
+                      ),
+
+                      const SizedBox(height: 10),
                       
-                    },
-                      loading: () => const CircularProgressIndicator(),
-                    error: (e, stackTrace) => Text('Error: $e'),
-                  );
-                },
-              ),
 
-              const SizedBox(height: 10),
-              
+                      // Text Area for feedback s
+                      TextField(
+                        controller: controller,
+                        maxLines: 3,  // Multi-line text area
+                        decoration: InputDecoration(
+                          border: const OutlineInputBorder(),
+                          hintText: 'Your feedback...',
+                          hintStyle: AppTextStyles.body, // Use caption style for hint text
+                        ),
+                      ),
+                       const SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                        onPressed: () async {
+                          final uid = ref.read(authNotifierProvider).uid;
+                          final transactionId = widget.transaction!;
+                           final baseUrl = ref.watch(baseUrlProvider);
+                          // Handle Reject Action here (using _selectedValue and controller.text)
+                          final selectedReason = ref.read(selectedReasonsProvider);
+                          final feedback = controller.text;
 
-              // Text Area for feedback s
-              SingleChildScrollView(
-                child: TextField(
-                  controller: controller,
-                  maxLines: 3,  // Multi-line text area
-                  decoration: InputDecoration(
-                    border: const OutlineInputBorder(),
-                    hintText: 'Your feedback...',
-                    hintStyle: AppTextStyles.body, // Use caption style for hint text
+                          if(selectedReason == null || selectedReason.isEmpty){
+                            print('Please select a reason');
+                            return;
+                          }
+
+                          //Clear selection//
+                          ref.read(selectedReasonsProvider.notifier).state = null;
+                          controller.clear();
+
+                          print('🟥 Rejecting Transaction');
+                          print('🔹 UID: $uid');
+                          print('🔹 Transaction ID: ${transactionId.id}');
+                          print('🔹 Reason: $selectedReason');
+                          print('🔹 Feedback: $feedback');
+
+                          try{
+                            final password = ref.watch(authNotifierProvider).password ?? '';
+                            final response = await http.post(
+                              Uri.parse('$baseUrl/api/odoo/reject-booking'),
+                              headers:{
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'password': password,
+                              },
+                              body: jsonEncode({
+                                'uid': uid,
+                                'transaction_id': transactionId.id,
+                                'reason': selectedReason,
+                                'feedback': feedback
+                              }),
+                            );
+                            if (response.statusCode == 200) {
+                              final rejectedTransactionNotifier = ref.read(accepted_transaction.acceptedTransactionProvider.notifier);
+                              rejectedTransactionNotifier.updateStatus(transactionId.id.toString(), transactionId.requestNumber.toString(),'Rejected',ref, context);
+
+                              final updated = await fetchTransactionStatus(ref, transactionId.id.toString());
+                              print('Updated Status: ${updated.requestStatus}');
+
+                              if(updated.requestStatus == "Rejected") {
+                                print('Rejection Successful');
+                              } else {
+                                print('Rejection Failed');
+                              }
+                              Navigator.of(context).pop();
+                            } else {
+                              print('Button Rejection Failed');
+                            }
+                          }catch (e){
+                            print('Error: $e');
+                            Navigator.of(context).pop();
+                          }
+
+                          
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color.fromARGB(255, 236, 162, 55),
+                          padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 20),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30.0),
+                          ),  
+                        ),
+                        child: Text(
+                          'Confirm',
+                          style: AppTextStyles.subtitle.copyWith(
+                            color: Colors.black, // White text color
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      ),
+                      const SizedBox(height: 10),
+                      
+                    ],
                   ),
-                ),
-              ),
-            ],
-          ),
-          actions: <Widget>[
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-              onPressed: () async {
-                final uid = ref.read(authNotifierProvider).uid;
-                final transactionId = widget.transaction!;
-
-                // Handle Reject Action here (using _selectedValue and controller.text)
-                final selectedReason = ref.read(selectedReasonsProvider);
-                final feedback = controller.text;
-
-                if(selectedReason == null || selectedReason.isEmpty){
-                  print('Please select a reason');
-                  return;
-                }
-
-                //Clear selection//
-                ref.read(selectedReasonsProvider.notifier).state = null;
-                controller.clear();
-
-                print('🟥 Rejecting Transaction');
-                print('🔹 UID: $uid');
-                print('🔹 Transaction ID: ${transactionId.id}');
-                print('🔹 Reason: $selectedReason');
-                print('🔹 Feedback: $feedback');
-
-                try{
-                  final password = ref.watch(authNotifierProvider).password ?? '';
-                  final response = await http.post(
-                    Uri.parse('http://192.168.118.102:8000/api/odoo/reject-booking'),
-                    headers:{
-                      'Content-Type': 'application/json',
-                      'Accept': 'application/json',
-                      'password': password,
-                    },
-                    body: jsonEncode({
-                      'uid': uid,
-                      'transaction_id': transactionId.id,
-                      'reason': selectedReason,
-                      'feedback': feedback
-                    }),
-                  );
-                  if (response.statusCode == 200) {
-                      final rejectedTransactionNotifier = ref.read(accepted_transaction.acceptedTransactionProvider.notifier);
-                      rejectedTransactionNotifier.updateStatus(transactionId.id.toString(), transactionId.requestNumber.toString(),'Rejected',ref, context);
-
-                      final updated = await fetchTransactionStatus(ref, transactionId.id.toString());
-                      print('Updated Status: ${updated.requestStatus}');
-
-                      if(updated.requestStatus == "Rejected") {
-                        print('Rejection Successful');
-                      } else {
-                        print('Rejection Failed');
-                      }
-                      Navigator.of(context).pop();
-                    } else {
-                      print('Button Rejection Failed');
-                    }
-                }catch (e){
-                  print('Error: $e');
-                  Navigator.of(context).pop();
-                }
-
-                
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color.fromARGB(255, 236, 162, 55),
-                padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 20),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30.0),
-                ),  
-              ),
-              child: Text(
-                'Confirm',
-                style: AppTextStyles.subtitle.copyWith(
-                  color: Colors.black, // White text color
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-            ),
-            
-            
-          ],
+                  ],
+                )
+              );
+            },
+          )
+          
         );
       },
     );

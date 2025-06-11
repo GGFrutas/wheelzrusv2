@@ -398,7 +398,6 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 70),
             ],
           ),
           

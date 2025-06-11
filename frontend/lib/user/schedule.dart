@@ -277,7 +277,6 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
                 ),
                 
               ),
-              const SizedBox(height: 70),
             ],
           ),
           
