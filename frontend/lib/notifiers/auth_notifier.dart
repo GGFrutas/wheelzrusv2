@@ -82,7 +82,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
         final String apiPassword = (data['password'] ?? '').toString();
         final List<dynamic> partnerData = data['user']['partner_id'];
         final String partnerId = partnerData[0].toString(); // 👈 this gets just the ID (e.g., "238")
-        final String partnerFullName = partnerData[1].toString(); // 👈 this gets just the ID (e.g., "238")
+        final String partnerFullName = partnerData[1].toString();
+
+        // 👇 Extract "Driver 1" from "Z Transport, Driver 1"
+        final String driverName = partnerFullName.split(',').length > 1
+            ? partnerFullName.split(',')[1].trim()
+            : partnerFullName;
+
+        print('🧾 Partner Name: $partnerFullName');
+        print('👤 Driver Name: $driverName');
 
         final String driverName = partnerFullName.split(',').length > 1
             ? partnerFullName.split(',')[1].trim()
@@ -97,7 +105,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         await prefs.setString('password', apiPassword);
         await prefs.setString('partner_id', partnerId);
         await prefs.setString('name', partnerFullName);
-        await prefs.setString('diver_name', driverName);
+        await prefs.setString('driver_name', driverName);
 
         if (context.mounted) {
           Navigator.pushReplacement(
@@ -121,7 +129,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     final storedUid = prefs.getString('uid');
     final storedPassword = prefs.getString('password');
     final storedPartnerId = prefs.getString('partnerId');
-    final storedDriverName = prefs.getString('driver_name') ?? '';
+    final storedDriverName = prefs.getString('driver_name') ?? ''; 
 
     if (storedUid != null && storedUid.isNotEmpty && storedPassword != null) {
       print('✅ Loaded UID: $storedUid');

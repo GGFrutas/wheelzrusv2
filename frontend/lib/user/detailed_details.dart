@@ -405,10 +405,13 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
         ),
         
       ),
-      bottomSheet:  (widget.transaction?.requestStatus == "Completed") 
-      ? null
-      : SizedBox (
-        width: double.infinity,
+      bottomNavigationBar: Padding(
+        padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+          top: 0,
+          left: 16,
+          right: 16,
+        ),
         child: ElevatedButton(
         onPressed: () {
           

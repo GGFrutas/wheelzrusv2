@@ -240,7 +240,7 @@ class HomePage extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          authState.driverName ?? 'Driver',
+                          authState.driverName ?? 'No Name',
                           style: AppTextStyles.subtitle.copyWith(
                             fontWeight: FontWeight.bold,
                           ),

@@ -228,7 +228,7 @@ class TransactionController extends Controller
                         "container_number", "seal_number", "booking_reference_no", "origin_forwarder_name", "destination_forwarder_name", "freight_booking_number",
                         "origin_container_location", "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
                         "freight_forwarder_name", "shipper_phone", "consignee_phone", "dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", "pl_truck_plate_no",
-                        "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id"
+                        "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name"
                     ]]
                 ]
             ],
@@ -272,7 +272,7 @@ class TransactionController extends Controller
             "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no","origin","destination","arrival_date","delivery_date",
             "container_number","seal_number","booking_reference_no","origin_forwarder_name","freight_booking_number", "origin_container_location", "freight_bl_number",
             "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature","freight_forwarder_name","shipper_phone", "consignee_phone",
-            "dl_truck_plate_no","pe_truck_plate_no","de_truck_plate_no","pl_truck_plate_no","de_truck_type","dl_truck_type","pe_truck_type","pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id"] as $field) {
+            "dl_truck_plate_no","pe_truck_plate_no","de_truck_plate_no","pl_truck_plate_no","de_truck_type","dl_truck_type","pe_truck_type","pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name"] as $field) {
                 if ($transaction[$field] === false || $transaction[$field] === null) {
                     $transaction[$field] = ""; 
                 }
@@ -302,27 +302,45 @@ class TransactionController extends Controller
         if (!$uid) {
             return response()->json(['success' => false, 'message' => 'UID is required'], 400);
         }
-        
-        $client = new Client("$url/xmlrpc/2/object");
 
-        $checkAccessRequest = new XmlRpcRequest('execute_kw', [
-            new Value($db, "string"),
-            new Value($uid, "int"),
-            new Value($odooPassword, "string"),
-            new Value("dispatch.reject.reason", "string"),
-            new Value("check_access_rights", "string"), 
-            new Value([new Value("read", "string")], "array"), // ✅ Corrected array wrapping
-            new Value(["raise_exception" => new Value(false, "boolean")], "struct") // ✅ Fixed boolean format
-                
-        ]);
+        $odooUrl = $this->odoo_url;
 
-        
-        $searchResponse = $client->send($checkAccessRequest);
-        // dd($searchResponse);
+        $checkAccessRequest = [
+            "jsonrpc" => "2.0",
+            "method" => "call",
+            "params" => [
+                "service" => "object",
+                "method" => "execute_kw",
+                "args" => [
+                    $db, 
+                    $uid, 
+                    $odooPassword, 
+                    "dispatch.reject.reason", 
+                    "check_access_rights",
+                    ["read"],  // Search by UID
+                    ["raise_exception" => false] // Don't raise exception if access is denied]
+                ]
+            ],
+            "id" => 1
+        ];
+        $option = [
+            "http" => [
+                "header" => "Content-Type: application/json",
+                "method" => "POST",
+                "content" => json_encode($checkAccessRequest),
+                "ignore_errors" => true,
+            ],
+        ];
+        $context = stream_context_create($option);
+        $jsonresponse = file_get_contents($odooUrl, false, $context);
 
-        Log::info("🔍 Search Users Raw Response: ", ["response" => var_export($searchResponse->value(), true)]);
-        
-        if (empty($searchResponse->value())) {
+        if($jsonresponse === false) {
+            Log::error("❌ Failed to connect to Odoo API", ["response" => $jsonresponse]);
+            return response()->json(['error' => 'Access Denied'], 403);
+        }
+        $jsonResult = json_decode($jsonresponse, true);
+        Log::info("JSON Raw response: ", ["response" => $jsonresponse]);
+        if(!isset($jsonResult['result']) || $jsonResult['result'] === false) {
             Log::error("🚨 UID {$uid} cannot read `dispatch.reject.reason`.");
             return response()->json(["error" => "Access Denied"], 403);
         } else {
@@ -330,7 +348,7 @@ class TransactionController extends Controller
         }
 
         
-        $odooUrl = $this->odoo_url;
+        
         $rejectReasons = [
             "jsonrpc" => "2.0",
             "method" => "call",
@@ -349,7 +367,7 @@ class TransactionController extends Controller
                     ]]
                 ]
             ],
-            "id" => 1
+            "id" => 2
         ];
     
         $rejectResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
@@ -523,34 +541,55 @@ class TransactionController extends Controller
         if (!$uid) {
             return response()->json(['success' => false, 'message' => 'UID is required'], 400);
         }
-        
-        $client = new Client("$url/xmlrpc/2/object");
 
-        $checkAccessRequest = new XmlRpcRequest('execute_kw', [
-            new Value($db, "string"),
-            new Value($uid, "int"),
-            new Value($odooPassword, "string"),
-            new Value("dispatch.reject.vendor", "string"),
-            new Value("check_access_rights", "string"), 
-            new Value([new Value("read", "string")], "array"), // ✅ Corrected array wrapping
-            new Value(["raise_exception" => new Value(false, "boolean")], "struct") // ✅ Fixed boolean format
-                
-        ]);
+        $odooUrl = $this->odoo_url;
 
-        
-        $searchResponse = $client->send($checkAccessRequest);
-        // dd($searchResponse);
+       
 
-        Log::info("🔍 Search Users Raw Response: ", ["response" => var_export($searchResponse->value(), true)]);
-        
-        if (empty($searchResponse->value())) {
+
+        $checkAccessRequest = [
+            "jsonrpc" => "2.0",
+            "method" => "call",
+            "params" => [
+                "service" => "object",
+                "method" => "execute_kw",
+                "args" => [
+                    $db, 
+                    $uid, 
+                    $odooPassword, 
+                    "dispatch.reject.vendor", 
+                    "check_access_rights",
+                    ["read"],  // Search by UID
+                    ["raise_exception" => false] // Don't raise exception if access is denied]
+                ]
+            ],
+            "id" => 1
+        ];
+        $option = [
+            "http" => [
+                "header" => "Content-Type: application/json",
+                "method" => "POST",
+                "content" => json_encode($checkAccessRequest),
+                "ignore_errors" => true,
+            ],
+        ];
+        $context = stream_context_create($option);
+        $jsonresponse = file_get_contents($odooUrl, false, $context);
+        if($jsonresponse === false) {
+            Log::error("❌ Failed to connect to Odoo API", ["response" => $jsonresponse]);
+            return response()->json(['error' => 'Access Denied'], 403);
+        }
+        $jsonResult = json_decode($jsonresponse, true);
+        Log::info("JSON Raw response: ", ["response" => $jsonresponse]);
+        if(!isset($jsonResult['result']) || $jsonResult['result'] === false) {
             Log::error("🚨 UID {$uid} cannot read `dispatch.reject.vendor`.");
             return response()->json(["error" => "Access Denied"], 403);
         } else {
             Log::info("✅ UID {$uid} can read 'dispatch.reject.vendor`.");
         }
 
-        $odooUrl = $this->odoo_url;
+
+        
         $rejectVendor = [
             "jsonrpc" => "2.0",
             "method" => "call",
@@ -572,7 +611,7 @@ class TransactionController extends Controller
                    
                 ]
             ],
-            "id" => 1
+            "id" => 2
         ];
 
         $response = json_decode(file_get_contents($odooUrl, false, stream_context_create([
@@ -605,35 +644,78 @@ class TransactionController extends Controller
         if (!$uid) {
             return response()->json(['success' => false, 'message' => 'UID is required'], 400);
         }
-        
-        $client = new Client("$url/xmlrpc/2/object");
 
-        $checkAccessRequest = new XmlRpcRequest('execute_kw', [
-            new Value($db, "string"),
-            new Value($uid, "int"),
-            new Value($odooPassword, "string"),
-            new Value("dispatch.reject.vendor", "string"),
-            new Value("check_access_rights", "string"), 
-            new Value([new Value("read", "string")], "array"), // ✅ Corrected array wrapping
-            new Value(["raise_exception" => new Value(false, "boolean")], "struct") // ✅ Fixed boolean format
+        $odooUrl = $this->odoo_url;
+        // $client = new Client("$url/xmlrpc/2/object");
+
+        // $checkAccessRequest = new XmlRpcRequest('execute_kw', [
+        //     new Value($db, "string"),
+        //     new Value($uid, "int"),
+        //     new Value($odooPassword, "string"),
+        //     new Value("dispatch.reject.vendor", "string"),
+        //     new Value("check_access_rights", "string"), 
+        //     new Value([new Value("read", "string")], "array"), // ✅ Corrected array wrapping
+        //     new Value(["raise_exception" => new Value(false, "boolean")], "struct") // ✅ Fixed boolean format
                 
-        ]);
+        // ]);
 
         
-        $searchResponse = $client->send($checkAccessRequest);
-        // dd($searchResponse);
+        // $searchResponse = $client->send($checkAccessRequest);
+        // // dd($searchResponse);
 
-        Log::info("🔍 Search Users Raw Response: ", ["response" => var_export($searchResponse->value(), true)]);
+        // Log::info("🔍 Search Users Raw Response: ", ["response" => var_export($searchResponse->value(), true)]);
         
-        if (empty($searchResponse->value())) {
+        // if (empty($searchResponse->value())) {
+        //     Log::error("🚨 UID {$uid} cannot read `dispatch.reject.vendor`.");
+        //     return response()->json(["error" => "Access Denied"], 403);
+        // } else {
+        //     Log::info("✅ UID {$uid} can read 'dispatch.reject.vendor`.");
+        // }
+
+        $checkAccessRequest = [
+            "jsonrpc" => "2.0",
+            "method" => "call",
+            "params" => [
+                "service" => "object",
+                "method" => "execute_kw",
+                "args" => [
+                    $db, 
+                    $uid, 
+                    $odooPassword, 
+                    "dispatch.reject.vendor", 
+                    "check_access_rights",
+                    ["read"],  // Search by UID
+                    ["raise_exception" => false] // Don't raise exception if access is denied]
+                ]
+            ],
+            "id" => 1
+        ];
+        $option = [
+            "http" => [
+                "header" => "Content-Type: application/json",
+                "method" => "POST",
+                "content" => json_encode($checkAccessRequest),
+                "ignore_errors" => true,
+            ],
+        ];
+        $context = stream_context_create($option); 
+        $jsonresponse = file_get_contents($this->odoo_url, false, $context);
+        if($jsonresponse === false) {
+            Log::error("❌ Failed to connect to Odoo API", ["response" => $jsonresponse]);
+            return response()->json(['error' => 'Access Denied'], 403);
+        }
+        $jsonResult = json_decode($jsonresponse, true);
+        Log::info("JSON Raw response: ", ["response" => $jsonresponse]);
+        if(!isset($jsonResult['result']) || $jsonResult['result'] === false) {
             Log::error("🚨 UID {$uid} cannot read `dispatch.reject.vendor`.");
             return response()->json(["error" => "Access Denied"], 403);
         } else {
             Log::info("✅ UID {$uid} can read 'dispatch.reject.vendor`.");
         }
+        
 
         
-        $odooUrl = $this->odoo_url;
+        
         $rejectvendors = [
             "jsonrpc" => "2.0",
             "method" => "call",
@@ -652,7 +734,7 @@ class TransactionController extends Controller
                     ]]
                 ]
             ],
-            "id" => 1
+            "id" => 2
         ];
     
         $rejectResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
@@ -985,7 +1067,7 @@ class TransactionController extends Controller
                     "dispatch.manager", 
                     "search_read",
                     [[["id", "=", $transactionId]]],  // Search by Request Number
-                    ["fields" => ["dispatch_type","de_request_no", "pl_request_no", "dl_request_no", "pe_request_no"]]
+                    ["fields" => ["dispatch_type","de_request_no", "pl_request_no", "dl_request_no", "pe_request_no","service_type" ]]
                 ]
             ],
             "id" => 1

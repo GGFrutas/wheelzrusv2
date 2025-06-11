@@ -383,7 +383,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 50),
+                      const SizedBox(height: 70),
                     ],
                   ),
                 ),
@@ -392,7 +392,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
             
           ),
           bottomSheet: Container(
-            padding: const EdgeInsets.all(10.0),
+            padding: const EdgeInsets.all(16.0),
             child: Column (
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -434,6 +434,20 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
 
                       if (success) {
                         acceptedTransactionNotifier.addProduct(widget.transaction!); //Add to accepted 
+                        showDialog(
+                          context:context,
+                          barrierDismissible: false,
+                          builder: (context) {
+                            return const Center (
+                              child: CircularProgressIndicator(),
+                            );
+                          },
+                        );
+
+                        await Future.delayed(const Duration(seconds: 2));
+                        Navigator.of(context).pop(); // Close the loading dialog
+
+
                         showDialog(
                           context: context,
                           barrierDismissible: false,
@@ -481,6 +495,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                                       width: 200,
                                       child: ElevatedButton(
                                       onPressed: () {
+                                        Navigator.pop(context);
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
@@ -759,6 +774,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
                 ),
+                textAlign: TextAlign.center,
               ),
             ),
             ),
