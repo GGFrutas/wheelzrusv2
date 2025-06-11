@@ -284,8 +284,13 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
         ),
         
       ),
-      bottomSheet: SizedBox(
-        width: double.infinity,
+      bottomNavigationBar: Padding(
+        padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+          top: 8,
+          left: 16,
+          right: 16,
+        ),
         child: ElevatedButton(
         onPressed: () {
           print("uid: ${widget.uid}");

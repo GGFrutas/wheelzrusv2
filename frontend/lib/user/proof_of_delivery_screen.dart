@@ -107,7 +107,6 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
     print('Posting to: $url for status update to $nextStatus');
     if (response.statusCode == 200) {
       print("Files uploaded successfully!");
-      showSuccessDialog(context, "Proof of delivery has been successfully uploaded!");
       final ongoingTransactionNotifier = ref.read(accepted_transaction.acceptedTransactionProvider.notifier);
 
       if (currentStatus == "Accepted") {
@@ -139,6 +138,9 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
         );
 
       print('Updated to Ongoing: ${updatedTransaction.requestStatus}');
+
+      Navigator.of(context).pop(); // Close the loading dialog
+      showSuccessDialog(context, "Proof of delivery has been successfully uploaded!");
       
     } else {
       showSuccessDialog(context, "Failed to upload files!");
@@ -178,14 +180,39 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
         iconTheme: const IconThemeData(color: mainColor),
         backgroundColor: bgColor,
       ),
-      body: Padding (
-        padding: const EdgeInsetsDirectional.only(top: 100),
+      body: SingleChildScrollView (
+
+        padding: const EdgeInsetsDirectional.only(top: 10),
         
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.center,
           
           children: [
+            Text(
+              widget.transaction?.requestStatus == "Accepted" ? 'Released By:'
+              : widget.transaction?.requestStatus == "Ongoing" ? 'Received By:'
+              : "Released By:",
+              style: AppTextStyles.subtitle.copyWith(
+                color: mainColor
+              ),
+            ),
+            const SizedBox(height: 10),
+            Container (
+              width: MediaQuery.of(context).size.width * 0.9,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: TextField(
+                decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  hintText: 'Enter name',
+                  hintStyle: AppTextStyles.body, // Use caption style for hint text
+                ),
+              ),
+            ),
+           const SizedBox(height: 20),
             Text(
               'Please provide your signature below:',
               style: AppTextStyles.subtitle.copyWith(
@@ -196,7 +223,7 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
             Signature(
               controller: _controller,
               width: MediaQuery.of(context).size.width * 0.9,
-              height: 350,
+              height: 200,
               backgroundColor: Colors.white,
             ),
             const SizedBox(height: 20),
@@ -225,81 +252,100 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
           
         ),
       ),
-      bottomSheet: Container(
-        color: Colors.transparent,
-        child: SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
+      bottomNavigationBar: Padding(
+        padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+          top: 8,
+          left: 16,
+          right: 16,
+        ),
+        child: ElevatedButton(
           onPressed:() async {
-          if (_controller.isEmpty) {
-            showDialog(
-              context: context,
-              builder: (context) {
-                return AlertDialog(
-                  title: Text(
-                    'Submission Error!', 
-                    style: AppTextStyles.subtitle.copyWith(
-                      fontWeight: FontWeight.bold
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Please provide signature.',
-                        style: AppTextStyles.body.copyWith(
-                          color: Colors.black87
-                        ),
-                        textAlign: TextAlign.center,
+            if (_controller.isEmpty) {
+              showDialog(
+                context: context,
+                builder: (context) {
+                  return AlertDialog(
+                    title: Text(
+                      'Submission Error!', 
+                      style: AppTextStyles.subtitle.copyWith(
+                        fontWeight: FontWeight.bold
                       ),
-                      const SizedBox(height: 16),
-                      const Icon (
-                        Icons.edit,
-                        color: bgColor,
-                        size: 100
-                      )
-                    ],
-                  ),
-                  actions: [
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12.0),
-                      child: Center(
-                        child: SizedBox(
-                          width: 200,
-                          child: ElevatedButton(
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                          }, 
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
-                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(25),
-                            ),
+                      textAlign: TextAlign.center,
+                    ),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Please provide signature.',
+                          style: AppTextStyles.body.copyWith(
+                            color: Colors.black87
                           ),
-                          child: Text(
-                            "Try Again",
-                            style: AppTextStyles.body.copyWith(
-                              color: Colors.white,
-                            )
-                          )
+                          textAlign: TextAlign.center,
                         ),
+                        const SizedBox(height: 16),
+                        const Icon (
+                          Icons.edit,
+                          color: bgColor,
+                          size: 100
+                        )
+                      ],
+                    ),
+                    actions: [
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12.0),
+                        child: Center(
+                          child: SizedBox(
+                            width: 200,
+                            child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            }, 
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(25),
+                              ),
+                            ),
+                            child: Text(
+                              "Try Again",
+                              style: AppTextStyles.body.copyWith(
+                                color: Colors.white,
+                              )
+                            )
+                          ),
+                          )
                         )
                       )
-                    )
-                  ],
-                );
+                    ],
+                  );
+                }
+              );
+            } else {
+
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder:(context) {
+                  return const Center (
+                    child: CircularProgressIndicator(),
+                  );
+                },
+              );
+              try {
+                print("UID: ${widget.uid}");
+                print("Request Number: ${widget.transaction?.requestNumber}");
+                print("Request Number: ${widget.transaction?.requestStatus}");
+                  _printFilenames();
+              } catch (e) {
+                print("Error: $e");
+                Navigator.of(context).pop(); // Close the loading dialog
+                showSuccessDialog(context, "An error occurred while uploading the files.");
               }
-            );
-          } else {
-            print("UID: ${widget.uid}");
-            print("Request Number: ${widget.transaction?.requestNumber}");
-            print("Request Number: ${widget.transaction?.requestStatus}");
-              _printFilenames();
-          }
-        },
+            }
+          },
           style: ElevatedButton.styleFrom(
             backgroundColor: mainColor,
             padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 20),
@@ -317,7 +363,6 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
             overflow: TextOverflow.ellipsis,
             maxLines: 1,
           ),
-        ),
         ),
       ),
     );

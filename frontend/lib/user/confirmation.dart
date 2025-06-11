@@ -214,48 +214,18 @@ class _ConfirmationState extends ConsumerState<ConfirmationScreen> {
                   ),
                 ), 
               ),
-              const SizedBox(height: 20),
-              Column(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Text(
-                        '${(_uploadProgress * 100).toStringAsFixed(1)}%',
-                        style: AppTextStyles.body.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: mainColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 5),
-                  Container(// Adjust width
-                    height: 20, // Adjust height
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(10), // Rounded border
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(10), // Applies rounding inside
-                      child: LinearProgressIndicator(
-                        value: _uploadProgress, // Example: 70%
-                        backgroundColor: Colors.grey[300],
-                        valueColor:const AlwaysStoppedAnimation<Color>(mainColor),
-                        minHeight: 20, // Matches container height
-                      ),
-                    ),
-                  ),
-                ],
-              ),
               const SizedBox(height: 70),
             ],
           ),
         ),
       ),
-      bottomSheet: SizedBox(
-        width: double.infinity,
+      bottomNavigationBar: Padding(
+        padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+          top: 8,
+          left: 16,
+          right: 16,
+        ),
         child: ElevatedButton(
         onPressed:() async {
           if (_images.isEmpty) {
