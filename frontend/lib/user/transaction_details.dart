@@ -1,6 +1,7 @@
 // ignore_for_file: avoid_print, unused_import, depend_on_referenced_packages
 
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -19,6 +20,7 @@ import 'package:frontend/screen/navigation_menu.dart';
 import 'package:frontend/theme/colors.dart';
 import 'package:frontend/theme/text_styles.dart';
 import 'package:frontend/user/detailed_details.dart';
+import 'package:frontend/user/history_screen.dart';
 import 'package:frontend/user/proof_of_delivery_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
@@ -51,6 +53,7 @@ class TransactionDetails extends ConsumerStatefulWidget {
 
   
 class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
+  
   final Map<String, bool> _loadingStates = {};
 
   late MapController mapController;
@@ -59,6 +62,16 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
   PermissionStatus? _permissionGranted;
   bool _serviceEnabled = false;
   LocationData? _locationData;
+
+  int? _expandedTabIndex;
+
+  List<String> get tabTitles {
+    final type = widget.transaction?.dispatchType;
+    return [
+      'Freight',
+      type == 'dt' ? 'Consignee' : 'Shipper',
+    ];
+  }
 
   
 
@@ -120,6 +133,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
   @override
   Widget build(BuildContext context) {
     // If transaction is null, display a fallback message
+    final showTabs = !(widget.transaction?.requestStatus == "Pending" || widget.transaction?.requestStatus == "Accepted");
     return Consumer(
       builder: (context, ref, child) {
         
@@ -144,7 +158,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
             padding: const EdgeInsets.all(14.0),
             child: ListView( // Use ListView to allow scrolling
               children: [
-                Container(
+                Padding(
                   // color: Colors.green[500], // Set background color for this section
                   padding: const EdgeInsets.all(8.0),
                   child: Text(
@@ -155,6 +169,52 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                     ),
                   ),
                 ),
+                if (showTabs) ...[
+                  Row(
+                    children: List.generate(tabTitles.length, (index) {
+                      return Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            // WidgetsBinding.instance.addPostFrameCallback((_) {
+                              setState(() {
+                                if(_expandedTabIndex == index) {
+                                  _expandedTabIndex = null;
+                                } else {
+                                  _expandedTabIndex = index;
+                                }
+                              });
+                            // });
+                            
+                          },
+                          child: Container (
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            decoration: BoxDecoration(
+                              border: Border (
+                                bottom: BorderSide(
+                                  color: _expandedTabIndex == index ? mainColor : bgColor,
+                                  width: 2,
+                                ),
+                              ),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              tabTitles[index],
+                              style: AppTextStyles.body.copyWith(
+                                color:  _expandedTabIndex == index ? mainColor : bgColor,
+                                fontWeight: FontWeight.bold
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                  const SizedBox(height: 16),
+                  if(_expandedTabIndex == 0) _buildFreightTab(),
+                  if(_expandedTabIndex == 1) _buildShipConsTab(),
+
+                ],
                 const SizedBox(height: 12), // Add some space between sections
                 Container(
                   padding: const EdgeInsets.all(12.0),
@@ -615,12 +675,93 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
     );
   }
 
+  Widget _buildFreightTab (){
+
+    final isDT = widget.transaction?.dispatchType == 'dt';
+   
+
+    Uint8List? _decodeBase64(String? data) {
+      if(data == null || data.isEmpty)  return null;
+      try{
+      
+        return base64Decode(data.trim());
+      } catch (e) {
+        debugPrint('Base64 error: $e');
+        return null;
+      }
+    }
+
+    final signBytes = isDT ? _decodeBase64(widget.transaction?.plSign) : _decodeBase64(widget.transaction?.peSign);
+    final proofBytes = isDT ? _decodeBase64(widget.transaction?.plProof) : _decodeBase64(widget.transaction?.peProof);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+        'Freight Documents',
+          style: AppTextStyles.body.copyWith(
+            color: mainColor,
+          )
+        ),
+        const SizedBox(height: 10),
+        if(proofBytes != null)
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => FullScreenImage(imageBytes: proofBytes),
+                ),
+              );
+            },
+            child: Image.memory(proofBytes, height: 100),
+          ),
+
+        const SizedBox(height: 10),
+
+        if(signBytes != null)
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => FullScreenImage(imageBytes: signBytes),
+                ),
+              );
+            },
+            child: Image.memory(signBytes, height: 100),
+          ),
+
+          
+       
+      ],
+    );
+  }
+
+  Widget _buildShipConsTab (){
+    final isDT = widget.transaction?.dispatchType == 'dt';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          isDT ? 'Consignee Documents' : 'Shipper Documrnts',
+          style: AppTextStyles.body.copyWith(
+            color: mainColor,
+          )
+        ),
+       
+      ],
+    );
+  }
+
+
    void _showModal(BuildContext context, WidgetRef ref) {
     TextEditingController controller = TextEditingController();
-  
-
+    
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (BuildContext context) {
         return Dialog(
           insetPadding: const EdgeInsets.all(20.0),
@@ -702,89 +843,110 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                           hintStyle: AppTextStyles.body, // Use caption style for hint text
                         ),
                       ),
-                       const SizedBox(height: 10),
+                      const SizedBox(height: 10),
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                        onPressed: () async {
-                          final uid = ref.read(authNotifierProvider).uid;
-                          final transactionId = widget.transaction!;
-                           final baseUrl = ref.watch(baseUrlProvider);
-                          // Handle Reject Action here (using _selectedValue and controller.text)
-                          final selectedReason = ref.read(selectedReasonsProvider);
-                          final feedback = controller.text;
+                          onPressed: () async {
+                            final uid = ref.read(authNotifierProvider).uid;
+                            final transactionId = widget.transaction!;
+                            final baseUrl = ref.watch(baseUrlProvider);
+                            // Handle Reject Action here (using _selectedValue and controller.text)
+                            final selectedReason = ref.read(selectedReasonsProvider);
+                            final feedback = controller.text;
 
-                          if(selectedReason == null || selectedReason.isEmpty){
-                            print('Please select a reason');
-                            return;
-                          }
-
-                          //Clear selection//
-                          ref.read(selectedReasonsProvider.notifier).state = null;
-                          controller.clear();
-
-                          print('🟥 Rejecting Transaction');
-                          print('🔹 UID: $uid');
-                          print('🔹 Transaction ID: ${transactionId.id}');
-                          print('🔹 Reason: $selectedReason');
-                          print('🔹 Feedback: $feedback');
-
-                          try{
-                            final password = ref.watch(authNotifierProvider).password ?? '';
-                            final response = await http.post(
-                              Uri.parse('$baseUrl/api/odoo/reject-booking'),
-                              headers:{
-                                'Content-Type': 'application/json',
-                                'Accept': 'application/json',
-                                'password': password,
-                              },
-                              body: jsonEncode({
-                                'uid': uid,
-                                'transaction_id': transactionId.id,
-                                'reason': selectedReason,
-                                'feedback': feedback
-                              }),
-                            );
-                            if (response.statusCode == 200) {
-                              final rejectedTransactionNotifier = ref.read(accepted_transaction.acceptedTransactionProvider.notifier);
-                              rejectedTransactionNotifier.updateStatus(transactionId.id.toString(), transactionId.requestNumber.toString(),'Rejected',ref, context);
-
-                              final updated = await fetchTransactionStatus(ref, transactionId.id.toString());
-                              print('Updated Status: ${updated.requestStatus}');
-
-                              if(updated.requestStatus == "Rejected") {
-                                print('Rejection Successful');
-                              } else {
-                                print('Rejection Failed');
-                              }
-                              Navigator.of(context).pop();
-                            } else {
-                              print('Button Rejection Failed');
+                            if(selectedReason == null || selectedReason.isEmpty){
+                              print('Please select a reason');
+                              return;
                             }
-                          }catch (e){
-                            print('Error: $e');
-                            Navigator.of(context).pop();
-                          }
 
-                          
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color.fromARGB(255, 236, 162, 55),
-                          padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 20),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30.0),
-                          ),  
-                        ),
-                        child: Text(
-                          'Confirm',
-                          style: AppTextStyles.subtitle.copyWith(
-                            color: Colors.black, // White text color
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
+                            //Clear selection//
+                            ref.read(selectedReasonsProvider.notifier).state = null;
+                            controller.clear();
+
+                            print('🟥 Rejecting Transaction');
+                            print('🔹 UID: $uid');
+                            print('🔹 Transaction ID: ${transactionId.id}');
+                            print('🔹 Reason: $selectedReason');
+                            print('🔹 Feedback: $feedback');
+
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder:(context) {
+                                return const Center (
+                                  child: CircularProgressIndicator(),
+                                );
+                              },
+                            );
+
+                            try{
+                              final password = ref.watch(authNotifierProvider).password ?? '';
+                              final response = await http.post(
+                                Uri.parse('$baseUrl/api/odoo/reject-booking'),
+                                headers:{
+                                  'Content-Type': 'application/json',
+                                  'Accept': 'application/json',
+                                  'password': password,
+                                },
+                                body: jsonEncode({
+                                  'uid': uid,
+                                  'transaction_id': transactionId.id,
+                                  'reason': selectedReason,
+                                  'feedback': feedback
+                                }),
+                              );
+                              Navigator.of(context).pop(); // Close the loading dialog
+
+                              if (response.statusCode == 200) {
+                                final rejectedTransactionNotifier = ref.read(accepted_transaction.acceptedTransactionProvider.notifier);
+                                rejectedTransactionNotifier.updateStatus(transactionId.id.toString(), transactionId.requestNumber.toString(),'Rejected',ref, context);
+
+                                final updated = await fetchTransactionStatus(ref, transactionId.id.toString());
+                                print('Updated Status: ${updated.requestStatus}');
+
+                                if(updated.requestStatus == "Rejected") {
+                                  print('Rejection Successful');
+                                  ref.read(selectedReasonsProvider.notifier).state = null; // Clear the selected reason
+                                  controller.clear(); // Clear the text field
+
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => HistoryScreen(user: {'uid': uid})
+                                    ),
+                                  );
+                                } else {
+                                  print('Rejection Failed');
+                                }
+                                Navigator.of(context).pop();
+                              } else {
+                                print('Button Rejection Failed');
+                              }
+                            }catch (e){
+                              print('Error: $e');
+                              Navigator.of(context).pop();
+                            }
+
+                            
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color.fromARGB(255, 236, 162, 55),
+                            padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 20),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30.0),
+                            ),  
                           ),
-                          textAlign: TextAlign.center,
+                          child: Text(
+                            'Confirm',
+                            style: AppTextStyles.subtitle.copyWith(
+                              color: Colors.black, // White text color
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
                         ),
-                      ),
                       ),
                       const SizedBox(height: 10),
                       
@@ -798,6 +960,26 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
           
         );
       },
+    );
+  }
+}
+
+// Move FullScreenImage to the top-level (outside of any class)
+class FullScreenImage extends StatelessWidget{
+  final Uint8List imageBytes;
+
+  const FullScreenImage({super.key, required this.imageBytes});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold (
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+      ),
+      body: Center (
+        child: InteractiveViewer(child: Image.memory(imageBytes)),
+      )
     );
   }
 }

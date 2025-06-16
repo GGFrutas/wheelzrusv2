@@ -39,7 +39,7 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
   // final List<File?> _images = [];
   late final String uid;
 
- 
+ String? _enteredName;
    
   final SignatureController _controller = SignatureController(
     penStrokeWidth: 5,
@@ -208,6 +208,11 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
                 borderRadius: BorderRadius.circular(4),
               ),
               child: TextField(
+                onChanged: (val){
+                  setState(() {
+                    _enteredName = val;
+                  });
+                },
                 decoration: InputDecoration(
                   border: const OutlineInputBorder(),
                   hintText: 'Enter name',
@@ -263,8 +268,19 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
           right: 16,
         ),
         child: ElevatedButton(
+          
           onPressed:() async {
-            if (_controller.isEmpty) {
+            final missingSignature = _controller.isEmpty;
+            final missingName =  _enteredName == null || _enteredName!.trim().isEmpty;
+            if (missingSignature || missingName) {
+              String message = '';
+              if (missingSignature && missingName){
+                message = 'Please enter a name and provide signature.';
+              }else if (missingName) {
+                message = 'Please enter a name.';
+              }else if(missingSignature) {
+                 message = 'Please provide signature.';
+              }
               showDialog(
                 context: context,
                 builder: (context) {
@@ -281,7 +297,7 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Text(
-                          'Please provide signature.',
+                          message,
                           style: AppTextStyles.body.copyWith(
                             color: Colors.black87
                           ),

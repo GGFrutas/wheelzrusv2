@@ -71,6 +71,7 @@ dependency_overrides:
   path_provider: ^2.1.5
   line_awesome_flutter: ^3.0.1
   carousel_slider: ^5.0.0
+  flutter_custom_clippers: ^2.1.0
   # camera: ^0.11.0+2
 
 dev_dependencies:

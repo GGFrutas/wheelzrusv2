@@ -46,6 +46,16 @@ class Transaction {
 
   final String? contactNumber;
 
+  final String? deProof;
+  final String? plProof;
+  final String? dlProof;
+  final String? peProof;
+
+  final String? deSign;
+  final String? plSign;
+  final String? dlSign;
+  final String? peSign;
+
 
   const Transaction({
     required this.id,
@@ -91,7 +101,15 @@ class Transaction {
     required this.truckType,
     required this.contactPerson,
     required this.vehicleName,
-      this.isAccepted = false,
+    required this.deProof,
+    required this.plProof,
+    required this.dlProof,
+    required this.peProof,
+    required this.deSign,  
+    required this.plSign,   
+    required this.dlSign,   
+    required this.peSign,      
+    this.isAccepted = false,
   });
 
   factory Transaction.fromJson(Map<String, dynamic> json) {
@@ -157,7 +175,16 @@ class Transaction {
       plTruckType: _extractName(json['pl_truck_type'])?.toString(),
       dlTruckType: _extractName(json['dl_truck_type'])?.toString(),
       peTruckType: _extractName(json['pe_truck_type'])?.toString(),
-      vehicleName: _extractName(json['vehicle_name'])?.toString(),
+      vehicleName: _extractName(json['vehicle_name'])?.toString(), // Provide a default value
+      deProof: json['de_proof'],
+      plProof: json['pl_proof'],
+      dlProof: json['dl_proof'],
+      peProof: json['pe_proof'],
+
+      deSign: json['de_signature'],
+      plSign: json['pl_signature'],
+      dlSign: json['dl_signature'],
+      peSign: json['pe_signature'],
      
 
       isAccepted: false,  // set default or map from API
@@ -229,6 +256,15 @@ class Transaction {
       contactNumber: contactNumber,
       contactPerson: contactPerson,
       vehicleName: vehicleName,
+      deProof: deProof,
+      plProof: plProof,
+      dlProof: dlProof,
+      peProof: peProof,
+
+      deSign: deSign,
+      plSign: plSign,
+      dlSign: dlSign, 
+      peSign: peSign
     );
   }
   @override

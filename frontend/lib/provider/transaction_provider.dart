@@ -140,15 +140,19 @@ final filteredItemsProvider = FutureProvider<List<Transaction>>((ref) async {
 
   final filtered = transactions.where((t) {
     final isAllPending =  t.deRequestStatus == 'Pending' || t.deRequestStatus == 'Accepted' ||
+                          t.deRequestStatus == 'Rejected' || t.deRequestStatus == 'Completed' || t.deRequestStatus == 'Ongoing' ||
                           // t.deTruckDriverName == authPartnerId || 
 
                           t.plRequestStatus == 'Pending' || t.plRequestStatus == 'Accepted' ||
+                          t.plRequestStatus == 'Rejected' || t.plRequestStatus == 'Completed' || t.plRequestStatus == 'Ongoing' ||
                           // t.plTruckDriverName == authPartnerId ||
 
                           t.dlRequestStatus == 'Pending' || t.dlRequestStatus == 'Accepted' ||
+                          t.dlRequestStatus == 'Rejected' || t.dlRequestStatus == 'Completed' || t.dlRequestStatus == 'Ongoing' ||
                           // t.dlTruckDriverName == authPartnerId ||
 
-                          t.peRequestStatus == 'Pending' || t.peRequestStatus == 'Accepted';
+                          t.peRequestStatus == 'Pending' || t.peRequestStatus == 'Accepted' ||
+                          t.peRequestStatus == 'Rejected' || t.peRequestStatus == 'Completed'  || t.peRequestStatus == 'Ongoing';
                           // t.peTruckDriverName == authPartnerId;
     // final isAllPending = [
     //   if(t.deTruckDriverName == authPartnerId) "de",
