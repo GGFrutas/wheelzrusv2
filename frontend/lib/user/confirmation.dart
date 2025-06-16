@@ -36,7 +36,6 @@ class ConfirmationScreen extends ConsumerStatefulWidget {
 class _ConfirmationState extends ConsumerState<ConfirmationScreen> {
   String? uid;
  final List<File?> _images = [];
-  double _uploadProgress = 0.0;
 
   Future<void> _pickImage() async {
     final ImagePicker picker = ImagePicker();

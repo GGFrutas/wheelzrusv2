@@ -42,8 +42,19 @@ class Transaction {
   final String? dlTruckType;
   final String? peTruckType;
   final String? contactPerson;
+  final String? vehicleName;
 
   final String? contactNumber;
+
+  final String? deProof;
+  final String? plProof;
+  final String? dlProof;
+  final String? peProof;
+
+  final String? deSign;
+  final String? plSign;
+  final String? dlSign;
+  final String? peSign;
 
 
   const Transaction({
@@ -89,7 +100,16 @@ class Transaction {
     required this.peTruckType,
     required this.truckType,
     required this.contactPerson,
-      this.isAccepted = false,
+    required this.vehicleName,
+    required this.deProof,
+    required this.plProof,
+    required this.dlProof,
+    required this.peProof,
+    required this.deSign,  
+    required this.plSign,   
+    required this.dlSign,   
+    required this.peSign,      
+    this.isAccepted = false,
   });
 
   factory Transaction.fromJson(Map<String, dynamic> json) {
@@ -150,11 +170,21 @@ class Transaction {
       plTruckPlateNumber: _extractName(json['pl_truck_plate_no'])?.toString(),
       dlTruckPlateNumber: _extractName(json['dl_truck_plate_no'])?.toString(),
       peTruckPlateNumber: _extractName(json['pe_truck_plate_no'])?.toString(),
-      truckType: json['de_truck_type'],
-      deTruckType: json['de_truck_type'],
-      plTruckType: json['pl_truck_type'],
-      dlTruckType: json['dl_truck_type'],
-      peTruckType: json['pe_truck_type'],
+      truckType: _extractName(json['de_truck_type'])?.toString(),
+      deTruckType: _extractName(json['de_truck_type'])?.toString(),
+      plTruckType: _extractName(json['pl_truck_type'])?.toString(),
+      dlTruckType: _extractName(json['dl_truck_type'])?.toString(),
+      peTruckType: _extractName(json['pe_truck_type'])?.toString(),
+      vehicleName: _extractName(json['vehicle_name'])?.toString(), // Provide a default value
+      deProof: json['de_proof'],
+      plProof: json['pl_proof'],
+      dlProof: json['dl_proof'],
+      peProof: json['pe_proof'],
+
+      deSign: json['de_signature'],
+      plSign: json['pl_signature'],
+      dlSign: json['dl_signature'],
+      peSign: json['pe_signature'],
      
 
       isAccepted: false,  // set default or map from API
@@ -225,6 +255,16 @@ class Transaction {
       peTruckType: peTruckType,
       contactNumber: contactNumber,
       contactPerson: contactPerson,
+      vehicleName: vehicleName,
+      deProof: deProof,
+      plProof: plProof,
+      dlProof: dlProof,
+      peProof: peProof,
+
+      deSign: deSign,
+      plSign: plSign,
+      dlSign: dlSign, 
+      peSign: peSign
     );
   }
   @override

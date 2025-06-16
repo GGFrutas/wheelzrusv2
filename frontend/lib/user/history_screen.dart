@@ -15,7 +15,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 class HistoryScreen extends ConsumerStatefulWidget{
-  const HistoryScreen({super.key, required Map<String, dynamic> user});
+  final Map<String, dynamic> user;
+  const HistoryScreen({super.key, required this.user});
 
   @override
   // ignore: library_private_types_in_public_api
