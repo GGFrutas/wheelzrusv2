@@ -92,9 +92,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
         print('🧾 Partner Name: $partnerFullName');
         print('👤 Driver Name: $driverName');
 
-        final String driverName = partnerFullName.split(',').length > 1
-            ? partnerFullName.split(',')[1].trim()
-            : partnerFullName;
 
         if (user == null) {
           throw Exception('User or uid is null');

@@ -42,6 +42,7 @@ class Transaction {
   final String? dlTruckType;
   final String? peTruckType;
   final String? contactPerson;
+  final String? vehicleName;
 
   final String? contactNumber;
 
@@ -89,6 +90,7 @@ class Transaction {
     required this.peTruckType,
     required this.truckType,
     required this.contactPerson,
+    required this.vehicleName,
       this.isAccepted = false,
   });
 
@@ -150,11 +152,12 @@ class Transaction {
       plTruckPlateNumber: _extractName(json['pl_truck_plate_no'])?.toString(),
       dlTruckPlateNumber: _extractName(json['dl_truck_plate_no'])?.toString(),
       peTruckPlateNumber: _extractName(json['pe_truck_plate_no'])?.toString(),
-      truckType: json['de_truck_type'],
-      deTruckType: json['de_truck_type'],
-      plTruckType: json['pl_truck_type'],
-      dlTruckType: json['dl_truck_type'],
-      peTruckType: json['pe_truck_type'],
+      truckType: _extractName(json['de_truck_type'])?.toString(),
+      deTruckType: _extractName(json['de_truck_type'])?.toString(),
+      plTruckType: _extractName(json['pl_truck_type'])?.toString(),
+      dlTruckType: _extractName(json['dl_truck_type'])?.toString(),
+      peTruckType: _extractName(json['pe_truck_type'])?.toString(),
+      vehicleName: _extractName(json['vehicle_name'])?.toString(),
      
 
       isAccepted: false,  // set default or map from API
@@ -225,6 +228,7 @@ class Transaction {
       peTruckType: peTruckType,
       contactNumber: contactNumber,
       contactPerson: contactPerson,
+      vehicleName: vehicleName,
     );
   }
   @override
