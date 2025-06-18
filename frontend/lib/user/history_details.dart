@@ -51,7 +51,7 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
       if (dateString == null || dateString.isEmpty) return "N/A"; // Handle null values
       
       try {
-        DateTime dateTime = DateTime.parse(dateString); // Convert string to DateTime
+        DateTime dateTime = DateTime.parse("${dateString}Z").toLocal(); // Convert string to DateTime
         return DateFormat('dd / MM / yyyy  - h:mm a').format(dateTime); // Format date-time
       } catch (e) {
         return "Invalid Date"; // Handle errors gracefully
@@ -188,7 +188,8 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
                                 ),
                               ),
                               Text(
-                                "Delivered Date",
+                                widget.transaction?.requestStatus == 'Rejected' ?
+                                "Rejected Date" : widget.transaction?.requestStatus == 'Completed' ? 'Completed Date' : 'Date',
                                 style: AppTextStyles.caption.copyWith(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,

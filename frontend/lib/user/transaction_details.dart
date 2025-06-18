@@ -122,7 +122,8 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
     if (dateString == null || dateString.isEmpty) return "N/A"; // Handle null values
     
     try {
-      DateTime dateTime = DateTime.parse(dateString); // Convert string to DateTime
+      DateTime dateTime = DateTime.parse("${dateString}Z").toLocal();
+       // Convert string to DateTime
        return DateFormat('MMMM d, yyyy - h:mm a').format(dateTime); // Format date-time
     } catch (e) {
       return "Invalid Date"; // Handle errors gracefully
@@ -426,15 +427,17 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 // Space between label and value
-                                Text(
-                                  formatDateTime(widget.transaction?.arrivalDate),
+                                Text( 
+                                  widget.transaction?.dispatchType == 'ot' ? formatDateTime(widget.transaction?.departureDate)
+                                  : formatDateTime(widget.transaction?.arrivalDate),
                                   style: AppTextStyles.subtitle.copyWith(
                                     fontWeight: FontWeight.bold,
                                     color: mainColor,
                                   )
                                 ),
                                 Text(
-                                  "Arrival Date",
+                                  widget.transaction?.dispatchType == 'ot' ? "Departure Date" 
+                                  :  "Arrival Date",
                                   style: AppTextStyles.caption.copyWith(
                                     color: mainColor,
                                   ),
@@ -507,30 +510,24 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                         await Future.delayed(const Duration(seconds: 2));
                         Navigator.of(context).pop(); // Close the loading dialog
 
-
                         showDialog(
                           context: context,
                           barrierDismissible: false,
-                          builder:(context) {
-                            return const Center (
-                              child: CircularProgressIndicator(),
-                            );
+                          builder: (_) => PopScope(
+                          canPop: false, // Prevent default pop behavior
+                          onPopInvoked: (didPop) {
+                            if (!didPop) {
+                              // Navigate to home if system back button is pressed
+                              Navigator.of(context).popUntil((route) => route.isFirst);
+                            }
                           },
-                        );
-                        showDialog(
-                          context: context,
-                          builder: (context) {
-                            return AlertDialog(
-                              title: Text(
-                                'Success!', 
-                                style: AppTextStyles.subtitle.copyWith(
-                                  fontWeight: FontWeight.bold
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                              content: Column(
+                          child: Dialog(
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                            backgroundColor: Colors.white,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
+                              child: Column(
                                 mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                                   Text(
                                     'Booking has been accepted',
@@ -544,25 +541,21 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                                     Icons.check_circle,
                                     color: mainColor,
                                     size: 100
-                                  )
-                                ],
-                              ),
-                              actions: [
-                                Padding(
-                                  padding: const EdgeInsets.only(bottom: 12.0),
-                                  child: Center(
-                                    child: SizedBox(
-                                      width: 200,
-                                      child: ElevatedButton(
+                                  ),
+                                  const SizedBox(height: 24),
+                                  SizedBox(
+                                    width: 200,
+                                    child:ElevatedButton(
                                       onPressed: () {
                                         Navigator.pop(context);
+                                        // Navigator.of(context).popUntil((route) => route.isFirst);
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
                                             builder: (context) => DetailedDetailScreen(uid: widget.uid, transaction: widget.transaction),
                                           ),
                                         );
-                                      }, 
+                                      },
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: mainColor,
                                         padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
@@ -570,20 +563,86 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                                           borderRadius: BorderRadius.circular(25),
                                         ),
                                       ),
-                                      child: Text(
-                                        "Continue",
-                                        style: AppTextStyles.body.copyWith(
-                                          color: Colors.white,
-                                        )
-                                      )
+                                      child: Text("Continue", style: AppTextStyles.body.copyWith(color: Colors.white)),
                                     ),
-                                    )
                                   )
-                                )
-                              ],
-                            );
-                          }
+                                  
+                                ],
+                              ),
+                            ),
+                          ),
+                          ),
                         );
+
+
+                        // showDialog(
+                        //   context: context,
+                        //   barrierDismissible: false,
+                        //   builder: (context) {
+                        //     return AlertDialog(
+                        //       title: Text(
+                        //         'Success!', 
+                        //         style: AppTextStyles.subtitle.copyWith(
+                        //           fontWeight: FontWeight.bold
+                        //         ),
+                        //         textAlign: TextAlign.center,
+                        //       ),
+                        //       content: Column(
+                        //         mainAxisSize: MainAxisSize.min,
+                        //         crossAxisAlignment: CrossAxisAlignment.center,
+                        //         children: [
+                        //           Text(
+                        //             'Booking has been accepted',
+                        //             style: AppTextStyles.body.copyWith(
+                        //               color: Colors.black87
+                        //             ),
+                        //             textAlign: TextAlign.center,
+                        //           ),
+                        //           const SizedBox(height: 16),
+                        //           const Icon (
+                        //             Icons.check_circle,
+                        //             color: mainColor,
+                        //             size: 100
+                        //           )
+                        //         ],
+                        //       ),
+                        //       actions: [
+                        //         Padding(
+                        //           padding: const EdgeInsets.only(bottom: 12.0),
+                        //           child: Center(
+                        //             child: SizedBox(
+                        //               width: 200,
+                        //               child: ElevatedButton(
+                        //               onPressed: () {
+                        //                 Navigator.pop(context);
+                        //                 Navigator.push(
+                        //                   context,
+                        //                   MaterialPageRoute(
+                        //                     builder: (context) => DetailedDetailScreen(uid: widget.uid, transaction: widget.transaction),
+                        //                   ),
+                        //                 );
+                        //               }, 
+                        //               style: ElevatedButton.styleFrom(
+                        //                 backgroundColor: mainColor,
+                        //                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                        //                 shape: RoundedRectangleBorder(
+                        //                   borderRadius: BorderRadius.circular(25),
+                        //                 ),
+                        //               ),
+                        //               child: Text(
+                        //                 "Continue",
+                        //                 style: AppTextStyles.body.copyWith(
+                        //                   color: Colors.white,
+                        //                 )
+                        //               )
+                        //             ),
+                        //             )
+                        //           )
+                        //         )
+                        //       ],
+                        //     );
+                        //   }
+                        // );
                       }
                       acceptedTransactionNotifier.updateStatus(
                         widget.transaction!.id.toString(),
@@ -745,7 +804,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          isDT ? 'Consignee Documents' : 'Shipper Documrnts',
+          isDT ? 'Consignee Documents' : 'Shipper Documents',
           style: AppTextStyles.body.copyWith(
             color: mainColor,
           )
@@ -767,194 +826,263 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
           insetPadding: const EdgeInsets.all(20.0),
           child: LayoutBuilder(
             builder:(context, constraints) {
-              return SingleChildScrollView(
-                padding: EdgeInsets.only(
-                  bottom: MediaQuery.of(context).viewInsets.bottom, // Add padding for keyboard
-                  top: 20.0, // Add top padding for better appearance
-                  left: 20.0,
-                  right: 20.0,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min, // Use min size to fit content
-                  children: [
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text('REJECT BOOKING', style: AppTextStyles.subtitle.copyWith(color: mainColor), textAlign: TextAlign.center),
-                        const SizedBox(height: 8),
-                        const Icon(Icons.sentiment_dissatisfied, color: mainColor, size: 75), // Cancel icon
-                      ],
+              return Stack (
+                children: [
+                  SingleChildScrollView(
+                    padding: EdgeInsets.only(
+                      bottom: MediaQuery.of(context).viewInsets.bottom, // Add padding for keyboard
+                      top: 20.0, // Add top padding for better appearance
+                      left: 20.0,
+                      right: 20.0,
                     ),
-                    Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      Text('Please let us know your reason for cancelling or rejecting this booking to help us improve our services.',
-                      style: AppTextStyles.caption.copyWith(color: Colors.black, fontWeight: FontWeight.bold),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 16),
-                      Consumer(
-                        builder: (context, ref, child) {
-                          final rejectionReasonsAsync = ref.watch(rejectionReasonsProvider);
-                          final selectedValue = ref.watch(selectedReasonsProvider);
-                          return rejectionReasonsAsync.when(
-                            data: (reasons) {
-                              return Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                decoration: BoxDecoration(
-                                  border: Border.all(color: Colors.grey, width: 1),
-                                  borderRadius: BorderRadius.circular(5),
-                                ),
-                                child: DropdownButton<String>(
-                                  isExpanded: true,
-                                  value: selectedValue,
-                                  hint: Text('Select Reason', style: AppTextStyles.body),
-                                  underline: const SizedBox(), // Remove the underline
-                                  onChanged: (String? newValue) {
-                                    ref.read(selectedReasonsProvider.notifier).state = newValue;
-                                  },
-                                  items: reasons.map<DropdownMenuItem<String>>((RejectionReason reason) {
-                                    return DropdownMenuItem<String>(
-                                      value: reason.id.toString(), // Using the 'id' from the model
-                                      child: Text(reason.name, style: AppTextStyles.body), // Using the 'name' from the model
-                                    );
-                                  }).toList(),
-                                ),
-                              );
-                              
-                            },
-                              loading: () => const CircularProgressIndicator(),
-                            error: (e, stackTrace) => Text('Error: $e'),
-                          );
-                        },
-                      ),
-
-                      const SizedBox(height: 10),
-                      
-
-                      // Text Area for feedback s
-                      TextField(
-                        controller: controller,
-                        maxLines: 3,  // Multi-line text area
-                        decoration: InputDecoration(
-                          border: const OutlineInputBorder(),
-                          hintText: 'Your feedback...',
-                          hintStyle: AppTextStyles.body, // Use caption style for hint text
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min, // Use min size to fit content
+                      children: [
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('REJECT BOOKING', style: AppTextStyles.subtitle.copyWith(color: mainColor), textAlign: TextAlign.center),
+                            const SizedBox(height: 8),
+                            const Icon(Icons.sentiment_dissatisfied, color: mainColor, size: 75), // Cancel icon
+                          ],
                         ),
-                      ),
-                      const SizedBox(height: 10),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            final uid = ref.read(authNotifierProvider).uid;
-                            final transactionId = widget.transaction!;
-                            final baseUrl = ref.watch(baseUrlProvider);
-                            // Handle Reject Action here (using _selectedValue and controller.text)
-                            final selectedReason = ref.read(selectedReasonsProvider);
-                            final feedback = controller.text;
-
-                            if(selectedReason == null || selectedReason.isEmpty){
-                              print('Please select a reason');
-                              return;
-                            }
-
-                            //Clear selection//
-                            ref.read(selectedReasonsProvider.notifier).state = null;
-                            controller.clear();
-
-                            print('🟥 Rejecting Transaction');
-                            print('🔹 UID: $uid');
-                            print('🔹 Transaction ID: ${transactionId.id}');
-                            print('🔹 Reason: $selectedReason');
-                            print('🔹 Feedback: $feedback');
-
-                            showDialog(
-                              context: context,
-                              barrierDismissible: false,
-                              builder:(context) {
-                                return const Center (
-                                  child: CircularProgressIndicator(),
-                                );
-                              },
-                            );
-
-                            try{
-                              final password = ref.watch(authNotifierProvider).password ?? '';
-                              final response = await http.post(
-                                Uri.parse('$baseUrl/api/odoo/reject-booking'),
-                                headers:{
-                                  'Content-Type': 'application/json',
-                                  'Accept': 'application/json',
-                                  'password': password,
-                                },
-                                body: jsonEncode({
-                                  'uid': uid,
-                                  'transaction_id': transactionId.id,
-                                  'reason': selectedReason,
-                                  'feedback': feedback
-                                }),
-                              );
-                              Navigator.of(context).pop(); // Close the loading dialog
-
-                              if (response.statusCode == 200) {
-                                final rejectedTransactionNotifier = ref.read(accepted_transaction.acceptedTransactionProvider.notifier);
-                                rejectedTransactionNotifier.updateStatus(transactionId.id.toString(), transactionId.requestNumber.toString(),'Rejected',ref, context);
-
-                                final updated = await fetchTransactionStatus(ref, transactionId.id.toString());
-                                print('Updated Status: ${updated.requestStatus}');
-
-                                if(updated.requestStatus == "Rejected") {
-                                  print('Rejection Successful');
-                                  ref.read(selectedReasonsProvider.notifier).state = null; // Clear the selected reason
-                                  controller.clear(); // Clear the text field
-
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => HistoryScreen(user: {'uid': uid})
-                                    ),
-                                  );
-                                } else {
-                                  print('Rejection Failed');
-                                }
-                                Navigator.of(context).pop();
-                              } else {
-                                print('Button Rejection Failed');
-                              }
-                            }catch (e){
-                              print('Error: $e');
-                              Navigator.of(context).pop();
-                            }
-
-                            
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color.fromARGB(255, 236, 162, 55),
-                            padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 20),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30.0),
-                            ),  
-                          ),
-                          child: Text(
-                            'Confirm',
-                            style: AppTextStyles.subtitle.copyWith(
-                              color: Colors.black, // White text color
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                            ),
+                        Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Text('Please let us know your reason for cancelling or rejecting this booking to help us improve our services.',
+                          style: AppTextStyles.caption.copyWith(color: Colors.black, fontWeight: FontWeight.bold),
                             textAlign: TextAlign.center,
                           ),
+                          const SizedBox(height: 16),
+                          Consumer(
+                            builder: (context, ref, child) {
+                              final rejectionReasonsAsync = ref.watch(rejectionReasonsProvider);
+                              final selectedValue = ref.watch(selectedReasonsProvider);
+                              return rejectionReasonsAsync.when(
+                                data: (reasons) {
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                    decoration: BoxDecoration(
+                                      border: Border.all(color: Colors.grey, width: 1),
+                                      borderRadius: BorderRadius.circular(5),
+                                    ),
+                                    child: DropdownButton<String>(
+                                      isExpanded: true,
+                                      value: selectedValue,
+                                      hint: Text('Select Reason', style: AppTextStyles.body),
+                                      underline: const SizedBox(), // Remove the underline
+                                      onChanged: (String? newValue) {
+                                        ref.read(selectedReasonsProvider.notifier).state = newValue;
+                                      },
+                                      items: reasons.map<DropdownMenuItem<String>>((RejectionReason reason) {
+                                        return DropdownMenuItem<String>(
+                                          value: reason.id.toString(), // Using the 'id' from the model
+                                          child: Text(reason.name, style: AppTextStyles.body), // Using the 'name' from the model
+                                        );
+                                      }).toList(),
+                                    ),
+                                  );
+                                  
+                                },
+                                  loading: () => const CircularProgressIndicator(),
+                                error: (e, stackTrace) => Text('Error: $e'),
+                              );
+                            },
+                          ),
+
+                          const SizedBox(height: 10),
+                          
+
+                          // Text Area for feedback s
+                          TextField(
+                            controller: controller,
+                            maxLines: 3,  // Multi-line text area
+                            decoration: InputDecoration(
+                              border: const OutlineInputBorder(),
+                              hintText: 'Your feedback...',
+                              hintStyle: AppTextStyles.body, // Use caption style for hint text
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: () async {
+                                final uid = ref.read(authNotifierProvider).uid;
+                                final transactionId = widget.transaction!;
+                                final baseUrl = ref.watch(baseUrlProvider);
+                                // Handle Reject Action here (using _selectedValue and controller.text)
+                                final selectedReason = ref.read(selectedReasonsProvider);
+                                final feedback = controller.text;
+
+                                if(selectedReason == null || selectedReason.isEmpty){
+                                  showDialog(
+                                    context: context,
+                                    builder: (context) {
+                                      return AlertDialog(
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                        title: Text (
+                                          "No Reason Selected!",
+                                          style: AppTextStyles.body.copyWith(color: Colors.red, fontWeight: FontWeight.bold),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                        content: Text (
+                                          'Please select a reason before rejecting.',
+                                          style: AppTextStyles.body,
+                                          textAlign: TextAlign.center,
+                                        ),
+                                        actions: [
+                                          Padding(
+                                            padding: const EdgeInsets.only(bottom: 12.0),
+                                            child: Center(
+                                              child: SizedBox(
+                                                width: 200,
+                                                child: ElevatedButton(
+                                                onPressed: () {
+                                                  Navigator.of(context).pop();
+                                                }, 
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: Colors.red,
+                                                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius: BorderRadius.circular(25),
+                                                  ),
+                                                ),
+                                                child: Text(
+                                                  "OK",
+                                                  style: AppTextStyles.body.copyWith(
+                                                    color: Colors.white,
+                                                  )
+                                                )
+                                              ),
+                                              )
+                                            )
+                                          )
+                                        ],
+                                      );
+                                    }
+                                  );
+                                  return;
+                                }
+
+                                //Clear selection//
+                                ref.read(selectedReasonsProvider.notifier).state = null;
+                                controller.clear();
+
+                                print('🟥 Rejecting Transaction');
+                                print('🔹 UID: $uid');
+                                print('🔹 Transaction ID: ${transactionId.id}');
+                                print('🔹 Reason: $selectedReason');
+                                print('🔹 Feedback: $feedback');
+
+                                showDialog(
+                                  context: context,
+                                  barrierDismissible: false,
+                                  builder:(context) {
+                                    return const Center (
+                                      child: CircularProgressIndicator(),
+                                    );
+                                  },
+                                );
+
+                                try{
+                                  final password = ref.watch(authNotifierProvider).password ?? '';
+                                  final response = await http.post(
+                                    Uri.parse('$baseUrl/api/odoo/reject-booking'),
+                                    headers:{
+                                      'Content-Type': 'application/json',
+                                      'Accept': 'application/json',
+                                      'password': password,
+                                    },
+                                    body: jsonEncode({
+                                      'uid': uid,
+                                      'transaction_id': transactionId.id,
+                                      'reason': selectedReason,
+                                      'feedback': feedback
+                                    }),
+                                  );
+                                  Navigator.of(context).pop(); // Close the loading dialog
+
+                                  if (response.statusCode == 200) {
+                                    final rejectedTransactionNotifier = ref.read(accepted_transaction.acceptedTransactionProvider.notifier);
+                                    rejectedTransactionNotifier.updateStatus(transactionId.id.toString(), transactionId.requestNumber.toString(),'Rejected',ref, context);
+
+                                    final updated = await fetchTransactionStatus(ref, transactionId.id.toString());
+                                    print('Updated Status: ${updated.requestStatus}');
+
+                                    if(updated.requestStatus == "Rejected") {
+                                      print('Rejection Successful');
+                                      ref.read(selectedReasonsProvider.notifier).state = null; // Clear the selected reason
+                                      controller.clear(); // Clear the text field
+
+                                      Navigator.of(context).popUntil((route) => route.isFirst);
+                                      Navigator.pushReplacement(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => HistoryScreen(user: {'uid': uid})
+                                        ),
+                                      );
+
+                                      
+                                    } else {
+                                      print('Rejection Failed');
+                                    }
+                                    Navigator.of(context).pop();
+                                  } else {
+                                    print('Button Rejection Failed');
+                                  }
+                                }catch (e){
+                                  print('Error: $e');
+                                  Navigator.of(context).pop();
+                                }
+
+                                
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color.fromARGB(255, 236, 162, 55),
+                                padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 20),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(30.0),
+                                ),  
+                              ),
+                              child: Text(
+                                'Confirm',
+                                style: AppTextStyles.subtitle.copyWith(
+                                  color: Colors.black, // White text color
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          
+                        ],
+                      ),
+                      ],
+                    ),
+                    
+                  ),
+                  Positioned(
+                      top: 8,
+                      right: 8,
+                      child: GestureDetector(
+                        onTap: () => Navigator.of(context).pop(),
+                        child: Container(
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.red,
+                          ),
+                          padding: const EdgeInsets.all(4),
+                          child: const Icon(Icons.close, size: 25, color: Colors.white),
                         ),
                       ),
-                      const SizedBox(height: 10),
-                      
-                    ],
-                  ),
-                  ],
-                )
+                    ),
+                ]
               );
+              
             },
           )
           

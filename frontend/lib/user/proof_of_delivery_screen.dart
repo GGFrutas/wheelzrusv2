@@ -56,6 +56,8 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
     final now = DateTime.now();
     final timestamp = DateFormat("yyyy-MM-dd HH:mm:ss").format(now);
 
+    String? enteredName = _enteredName;
+
 
     if(_controller.isNotEmpty){
       Uint8List? signatureImage = await _controller.toPngBytes();
@@ -74,7 +76,7 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
     final currentStatus = widget.transaction!.requestStatus;
     final baseUrl = ref.watch(baseUrlProvider);
     
-    print("Current Status: $currentStatus");
+    print("Entered Name: $enteredName");
     Uri url;
   
     String nextStatus;
@@ -105,6 +107,7 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
         'dispatch_type': widget.transaction?.dispatchType,
         'request_number': widget.transaction?.requestNumber,
         'timestamp': timestamp,
+        'enteredName': enteredName,
       }),
     );
     print('Posting to: $url for status update to $nextStatus');
@@ -279,7 +282,7 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
               }else if (missingName) {
                 message = 'Please enter a name.';
               }else if(missingSignature) {
-                 message = 'Please provide signature.';
+                 message = 'Please provide a signature.';
               }
               showDialog(
                 context: context,
@@ -357,6 +360,7 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
                 print("UID: ${widget.uid}");
                 print("Request Number: ${widget.transaction?.requestNumber}");
                 print("Request Number: ${widget.transaction?.requestStatus}");
+                print("Entered Name: $_enteredName");
                   _printFilenames();
               } catch (e) {
                 print("Error: $e");
@@ -390,7 +394,15 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => Dialog(
+      builder: (_) => PopScope(
+      canPop: false, // Prevent default pop behavior
+      onPopInvoked: (didPop) {
+        if (!didPop) {
+          // Navigate to home if system back button is pressed
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        }
+      },
+      child: Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         backgroundColor: Colors.white,
         child: Padding(
@@ -436,7 +448,7 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
           ),
         ),
       ),
+      ),
     );
   }
-
 }
