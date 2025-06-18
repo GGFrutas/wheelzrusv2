@@ -41,8 +41,8 @@ class _HistoryPageState extends ConsumerState<HistoryScreen> {
     if (dateString == null || dateString.isEmpty) return "N/A"; // Handle null values
     
     try {
-      DateTime dateTime = DateTime.parse(dateString); // Convert string to DateTime
-       return DateFormat('d MMMM, yyyy').format(dateTime); // Format date-time
+      DateTime dateTime = DateTime.parse("${dateString}Z").toLocal();// Convert string to DateTime
+      return DateFormat('d MMMM, yyyy').format(dateTime); // Format date-time
     } catch (e) {
       return "Invalid Date"; // Handle errors gracefully
     }
@@ -244,7 +244,7 @@ class _HistoryPageState extends ConsumerState<HistoryScreen> {
                                     children: [
                                       // Space between label and value
                                       Text(
-                                        "Delivered Date",
+                                        "Date Delivered",
                                         style: AppTextStyles.caption.copyWith(
                                           color: darkerBgColor,
                                         ),

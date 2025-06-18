@@ -5,6 +5,8 @@ class Transaction {
   final String destination;
   final String arrivalDate;
   final String deliveryDate;
+  final String pickupDate;
+  final String departureDate;
   final String status;
   final bool isAccepted;
   final String dispatchType;
@@ -108,7 +110,9 @@ class Transaction {
     required this.deSign,  
     required this.plSign,   
     required this.dlSign,   
-    required this.peSign,      
+    required this.peSign,  
+    required this.pickupDate,   
+    required this.departureDate,    
     this.isAccepted = false,
   });
 
@@ -185,6 +189,9 @@ class Transaction {
       plSign: json['pl_signature'],
       dlSign: json['dl_signature'],
       peSign: json['pe_signature'],
+
+      pickupDate: json['pickup_date'] ?? 'Unknown Pick Up Date',  // Provide a default value
+      departureDate: json['departure_date'] ?? 'Unknown DEparture Date',  // Provide a default value
      
 
       isAccepted: false,  // set default or map from API
@@ -264,7 +271,11 @@ class Transaction {
       deSign: deSign,
       plSign: plSign,
       dlSign: dlSign, 
-      peSign: peSign
+      peSign: peSign,
+
+      pickupDate: pickupDate,
+      departureDate: departureDate,
+
     );
   }
   @override

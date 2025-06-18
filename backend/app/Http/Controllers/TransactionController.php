@@ -194,7 +194,9 @@ class TransactionController extends Controller
                         ["pe_request_status", "=", "Pending"],
                         ["pe_request_status", "=", "Accepted"],
 
-                        ["dispatch_type", "!=", "ff"]
+                        ["dispatch_type", "!=", "ff"],
+
+                        ["stage_id" , "!=" , 6]
                     ]], // <-- this was missing an extra ]
                     ["fields" => [
                         "id", "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
@@ -203,8 +205,9 @@ class TransactionController extends Controller
                         "container_number", "seal_number", "booking_reference_no", "origin_forwarder_name", "destination_forwarder_name", "freight_booking_number",
                         "origin_container_location", "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
                         "freight_forwarder_name", "shipper_phone", "consignee_phone", "dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", "pl_truck_plate_no",
-                        "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name"
-                    ]]
+                        "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
+                        "pickup_date", "departure_date",
+                    ]],
                 ]
             ],
             "id" => 3
@@ -242,7 +245,8 @@ class TransactionController extends Controller
             "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no","origin","destination","arrival_date","delivery_date",
             "container_number","seal_number","booking_reference_no","origin_forwarder_name","freight_booking_number", "origin_container_location", "freight_bl_number",
             "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature","freight_forwarder_name","shipper_phone", "consignee_phone",
-            "dl_truck_plate_no","pe_truck_plate_no","de_truck_plate_no","pl_truck_plate_no","de_truck_type","dl_truck_type","pe_truck_type","pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name"] as $field) {
+            "dl_truck_plate_no","pe_truck_plate_no","de_truck_plate_no","pl_truck_plate_no","de_truck_type","dl_truck_type","pe_truck_type","pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
+            "pickup_date", "departure_date",] as $field) {
                 if ($transaction[$field] === false || $transaction[$field] === null) {
                     $transaction[$field] = ""; 
                 }
@@ -737,6 +741,7 @@ class TransactionController extends Controller
         $dispatchType = $request->input('dispatch_type');
         $requestNumber = $request->input('request_number');
         $actualTime = $request->input('timestamp');
+        $enteredName = $request->input('enteredName');
 
         Log::info('Received file uplodad request', [
             'uid' => $uid,
@@ -808,12 +813,14 @@ class TransactionController extends Controller
             $updateField = [
                 "pe_proof" => $images,
                 "pe_signature" => $signature,
+                "pe_release_by" => $enteredName,
             ];
         } elseif ($type['dispatch_type'] == "ot" && $type['pl_request_no'] == $requestNumber) {
             Log::info("Updating PL proof and signature for request number: {$requestNumber}");
             $updateField = [
                 "pl_proof" => $images,
                 "pl_signature" => $signature,
+                "pl_receive_by" => $enteredName,
             ];
         }
 
@@ -822,12 +829,14 @@ class TransactionController extends Controller
            $updateField = [
                 "pl_proof" => $images,
                 "pl_signature" => $signature,
+                "pe_release_by" => $enteredName,
             ];
         } elseif ($type['dispatch_type'] == "dt" && $type['pe_request_no'] == $requestNumber) {
             Log::info("Updating PE proof and signature for request number: {$requestNumber}");
             $updateField = [
                 "pe_proof" => $images,
                 "pe_signature" => $signature,
+                "pl_receive_by" => $enteredName,
             ];
         }
       
@@ -1005,6 +1014,7 @@ class TransactionController extends Controller
         $dispatchType = $request->input('dispatch_type');
         $requestNumber = $request->input('request_number');
         $actualTime = $request->input('timestamp');
+        $enteredName = $request->input('enteredName');
 
         Log::info('Received file uplodad request', [
             'uid' => $uid,
@@ -1076,12 +1086,15 @@ class TransactionController extends Controller
             $updateField = [
                 "de_proof" => $images,
                 "de_signature" => $signature,
+                "de_release_by" => $enteredName,
+                
             ];
         } elseif ($type['dispatch_type'] == "ot" && $type['pl_request_no'] == $requestNumber) {
             Log::info("Updating DL proof and signature for request number: {$requestNumber}");
             $updateField = [
                 "dl_proof" => $images,
                 "dl_signature" => $signature,
+                "dl_receive_by" => $enteredName,
             ];
         }
 
@@ -1090,12 +1103,14 @@ class TransactionController extends Controller
            $updateField = [
                 "dl_proof" => $images,
                 "dl_signature" => $signature,
+                "de_release_by" => $enteredName,
             ];
         } elseif ($type['dispatch_type'] == "dt" && $type['pe_request_no'] == $requestNumber) {
             Log::info("Updating DE proof and signature for request number: {$requestNumber}");
             $updateField = [
                 "de_proof" => $images,
                 "de_signature" => $signature,
+                "dl_receive_by" => $enteredName,
             ];
         }
 
