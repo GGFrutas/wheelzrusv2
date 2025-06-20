@@ -329,7 +329,7 @@ class AuthenticationController extends Controller
                     "res.partner",
                     "search_read",
                     [[["id", "=", $partnerId]]],
-                    ["fields" => ["id", "name", "driver_access"]] // ✅ Fetch `driver_access`
+                    ["fields" => ["id", "name", "driver_access", "mobile"]] // ✅ Fetch `driver_access`
                 ]
             ],
             "id" => 2
@@ -353,6 +353,8 @@ class AuthenticationController extends Controller
         if (isset($partnerResult['result']) && !empty($partnerResult['result'])) {
             $partner = $partnerResult['result'][0];
             $isDriver = $partner['driver_access'] ?? false;
+             $mobile = $partner['mobile'] ?? null;
+            Log::info("📞 Mobile: $mobile");
 
             // if ($isDriver) {
             //     Log::info("✅ Partner {$partner['name']} is a driver.");
@@ -379,6 +381,7 @@ class AuthenticationController extends Controller
             'user' => $user,
             'uid' => $uid,
             'password' => $odooPassword,
+            'mobile' => $mobile
         
         ], 200);
     }

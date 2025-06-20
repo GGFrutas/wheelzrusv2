@@ -99,6 +99,7 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         'password': ref.read(authNotifierProvider).password ?? '',
+        'login':ref.watch(authNotifierProvider).login ?? ''
       },
       body: jsonEncode({
         'id': widget.transaction?.id,

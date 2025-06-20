@@ -18,9 +18,10 @@ import 'package:frontend/notifiers/auth_notifier.dart';
 // Fetch data from the API
 Future<List<Transaction>> fetchTransactions(FutureProviderRef<List<Transaction>> ref, {required uid}) async {
  
-    final uid = ref.watch(authNotifierProvider).uid;
+   
     final password = ref.watch(authNotifierProvider).password ?? '';
     final baseUrl = ref.watch(baseUrlProvider);
+    final login = ref.watch(authNotifierProvider).login ?? '';
 
   
     if (uid == null || uid.isEmpty) {
@@ -34,11 +35,10 @@ Future<List<Transaction>> fetchTransactions(FutureProviderRef<List<Transaction>>
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         'password': password,
+        'login': login
       },
     );
 
-    // print("Response Status: ${response.statusCode}");
-    // print("Response Body: ${response.body}");
 
     if (response.statusCode == 200) {
       if (response.body.isEmpty) {
@@ -60,15 +60,15 @@ Future<List<Transaction>> fetchTransactions(FutureProviderRef<List<Transaction>>
             final transactions = data["transactions"];
 
             // Check what type "transactions" actually is
-            // print("🔍 Type of 'transactions': ${transactions.runtimeType}");
+            print("🔍 Type of 'transactions': ${transactions.runtimeType}");
 
             if (transactions is Map<String, dynamic>) {
               final transactionsList = transactions.values.toList();
-              // print("✅ Parsed transactions count: ${transactionsList.length}");
+              print("✅ Parsed transactions count: ${transactionsList.length}");
               return transactionsList.map((json) => Transaction.fromJson(json)).toList();
             } 
             else if (transactions is List) {
-              // print("✅ Transactions is a List with ${transactions.length} items.");
+              print("✅ Transactions is a List with ${transactions.length} items.");
               return transactions.map((json) => Transaction.fromJson(json)).toList();
             } 
             
@@ -76,7 +76,7 @@ Future<List<Transaction>> fetchTransactions(FutureProviderRef<List<Transaction>>
         } 
       }
     }
-    throw Exception("Unexpected error: Unable to fetch transactions.");
+    throw Exception("Unable to fetch data.");
   }
 
 Future<Transaction> fetchTransactionStatus(WidgetRef ref, String transactionId) async {
@@ -84,6 +84,7 @@ Future<Transaction> fetchTransactionStatus(WidgetRef ref, String transactionId) 
     // print("Fetching Transactions status for ID : $transactionId");
     final uid = ref.watch(authNotifierProvider).uid;
     final password = ref.watch(authNotifierProvider).password ?? '';
+    final login = ref.watch(authNotifierProvider).login ?? '';
     
     if (uid == null || uid.isEmpty) {
       throw Exception('UID is missing. Please log in.');
@@ -95,6 +96,7 @@ Future<Transaction> fetchTransactionStatus(WidgetRef ref, String transactionId) 
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         'password': password,
+        'login': login
       },
     );
 
@@ -139,6 +141,7 @@ final filteredItemsProvider = FutureProvider<List<Transaction>>((ref) async {
   // print("🔍 Total transactions before filtering: ${transactions.length}");
 
   final filtered = transactions.where((t) {
+    
     final isAllPending =  t.deRequestStatus == 'Pending' || t.deRequestStatus == 'Accepted' ||
                           t.deRequestStatus == 'Rejected' || t.deRequestStatus == 'Completed' || t.deRequestStatus == 'Ongoing' ||
                           // t.deTruckDriverName == authPartnerId || 

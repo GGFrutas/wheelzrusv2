@@ -21,6 +21,7 @@ import 'package:frontend/theme/colors.dart';
 import 'package:frontend/theme/text_styles.dart';
 import 'package:frontend/user/detailed_details.dart';
 import 'package:frontend/user/history_screen.dart';
+import 'package:frontend/user/homepage_screen.dart';
 import 'package:frontend/user/proof_of_delivery_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
@@ -815,11 +816,11 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
   }
 
 
-   void _showModal(BuildContext context, WidgetRef ref) {
+  void _showModal(BuildContext context, WidgetRef ref) {
     TextEditingController controller = TextEditingController();
-    
+    final rootContext = context;
     showDialog(
-      context: context,
+      context: rootContext,
       barrierDismissible: false,
       builder: (BuildContext context) {
         return Dialog(
@@ -988,12 +989,14 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
 
                                 try{
                                   final password = ref.watch(authNotifierProvider).password ?? '';
+                                  final login = ref.watch(authNotifierProvider).login ?? '';
                                   final response = await http.post(
                                     Uri.parse('$baseUrl/api/odoo/reject-booking'),
                                     headers:{
                                       'Content-Type': 'application/json',
                                       'Accept': 'application/json',
                                       'password': password,
+                                      'login': login
                                     },
                                     body: jsonEncode({
                                       'uid': uid,
@@ -1002,7 +1005,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                                       'feedback': feedback
                                     }),
                                   );
-                                  Navigator.of(context).pop(); // Close the loading dialog
+                                  Navigator.of(context, rootNavigator: true).pop(); // close loading
 
                                   if (response.statusCode == 200) {
                                     final rejectedTransactionNotifier = ref.read(accepted_transaction.acceptedTransactionProvider.notifier);
@@ -1016,11 +1019,11 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                                       ref.read(selectedReasonsProvider.notifier).state = null; // Clear the selected reason
                                       controller.clear(); // Clear the text field
 
-                                      Navigator.of(context).popUntil((route) => route.isFirst);
-                                      Navigator.pushReplacement(
-                                        context,
+                                      print('🔁 Redirecting to HistoryScreen with UID: $uid');
+
+                                      Navigator.of(rootContext).pushReplacement(
                                         MaterialPageRoute(
-                                          builder: (context) => HistoryScreen(user: {'uid': uid})
+                                          builder: (context) => HistoryScreen(user: {'uid': uid}),
                                         ),
                                       );
 
@@ -1028,13 +1031,17 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                                     } else {
                                       print('Rejection Failed');
                                     }
-                                    Navigator.of(context).pop();
+                                   
                                   } else {
                                     print('Button Rejection Failed');
                                   }
                                 }catch (e){
                                   print('Error: $e');
-                                  Navigator.of(context).pop();
+                                  Navigator.of(rootContext).pushReplacement(
+                                    MaterialPageRoute(
+                                      builder: (context) => HistoryScreen(user: {'uid': uid}),
+                                    ),
+                                  );
                                 }
 
                                 

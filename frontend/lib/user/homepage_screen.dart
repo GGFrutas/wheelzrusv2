@@ -26,8 +26,9 @@ import 'package:carousel_slider/carousel_slider.dart';
 
 class HomepageScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic> user;
+  final int initialIndex;
 
-  const HomepageScreen({super.key, required this.user});
+  const HomepageScreen({this.initialIndex = 0, super.key, required this.user});
 
   @override
   ConsumerState<ConsumerStatefulWidget> createState() => _HomepageScreenState();

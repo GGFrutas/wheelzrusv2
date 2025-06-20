@@ -73,6 +73,7 @@ Future<bool> updateTransactionStatusInDatabase(
     final uid = ref.watch(authNotifierProvider).uid;
     final password = ref.watch(authNotifierProvider).password ?? '';
     final baseUrl = ref.watch(baseUrlProvider);
+    final login = ref.watch(authNotifierProvider).login ?? '';
 
     if (uid == null || uid.isEmpty) {
       // print('❌ UID not found or empty!');
@@ -96,7 +97,7 @@ Future<bool> updateTransactionStatusInDatabase(
     final response = await httpClient.post(
       url,
       body: payload,
-      headers: {'Content-Type': 'application/json','password': password},
+      headers: {'Content-Type': 'application/json','password': password, 'login': login},
     );
 
     return response.statusCode == 200;
