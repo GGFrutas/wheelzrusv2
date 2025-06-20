@@ -57,6 +57,7 @@ class Transaction {
   final String? plSign;
   final String? dlSign;
   final String? peSign;
+  final String? login;
 
 
   const Transaction({
@@ -114,11 +115,12 @@ class Transaction {
     required this.pickupDate,   
     required this.departureDate,    
     this.isAccepted = false,
+    required this.login,
   });
 
   factory Transaction.fromJson(Map<String, dynamic> json) {
     return Transaction(
-      id: json['id'],
+      id: json['id'] ?? 0,
       name: json['name'] ?? 'No Name Provided',  // Provide a default value
       origin: json['origin'] ?? 'Unknown Origin',  // Provide a default value
       destination: json['destination'] ?? 'Unknown Destination',  // Provide a default value
@@ -126,9 +128,9 @@ class Transaction {
       deliveryDate: json['delivery_date'] ?? 'Unknown Delivery Date',  // Provide a default value
       status: json['status'] ?? 'Unknown Status',  // Provide a default value
       dispatchType: json['dispatch_type'] ?? 'Unknown Dispatch Type',
-      containerNumber: json['container_number'],
-      freightBlNumber: json['freight_bl_number'],
-      sealNumber: json['seal_number'],
+      containerNumber: json['container_number'].toString(),
+      freightBlNumber: json['freight_bl_number'].toString(),
+      sealNumber: json['seal_number'].toString(),
       bookingRefNo: json ['booking_reference_no'] ?? 'Unknown Booking Reference Number',
       transportForwarderName: json['origin_forwarder_name'] != null && json['origin_forwarder_name'].isNotEmpty
                             ? _extractName(json ['origin_forwarder_name']) : _extractName(json ['destination_forwarder_name']),
@@ -153,18 +155,18 @@ class Transaction {
                         : _extractName(json['consignee_id'])),
 
                  
-      originContainerYard: json['origin_container_location'],
-      requestNumber: json['de_request_no'],
-      deRequestNumber: json['de_request_no'],
-      plRequestNumber: json['pl_request_no'],
-      dlRequestNumber: json['dl_request_no'],
-      peRequestNumber: json['pe_request_no'],
+      originContainerYard: json['origin_container_location'].toString(),
+      requestNumber: json['de_request_no'].toString(),
+      deRequestNumber: json['de_request_no'].toString(),
+      plRequestNumber: json['pl_request_no'].toString(),
+      dlRequestNumber: json['dl_request_no'].toString(),
+      peRequestNumber: json['pe_request_no'].toString(),
 
-      requestStatus: json['de_request_status'],
-      deRequestStatus: json['de_request_status'],
-      plRequestStatus: json['pl_request_status'],
-      dlRequestStatus: json['dl_request_status'],
-      peRequestStatus: json['pe_request_status'],
+      requestStatus: json['de_request_status'].toString(),
+      deRequestStatus: json['de_request_status'].toString(),
+      plRequestStatus: json['pl_request_status'].toString(),
+      dlRequestStatus: json['dl_request_status'].toString(),
+      peRequestStatus: json['pe_request_status'].toString(),
       deTruckDriverName: _extractDriverId(json['de_truck_driver_name'])?.toString(),
       dlTruckDriverName: _extractDriverId(json['dl_truck_driver_name'])?.toString(),
       peTruckDriverName: _extractDriverId(json['pe_truck_driver_name'])?.toString(),
@@ -180,18 +182,20 @@ class Transaction {
       dlTruckType: _extractName(json['dl_truck_type'])?.toString(),
       peTruckType: _extractName(json['pe_truck_type'])?.toString(),
       vehicleName: _extractName(json['vehicle_name'])?.toString(), // Provide a default value
-      deProof: json['de_proof'],
-      plProof: json['pl_proof'],
-      dlProof: json['dl_proof'],
-      peProof: json['pe_proof'],
+      deProof: json['de_proof'].toString(),
+      plProof: json['pl_proof'].toString(),
+      dlProof: json['dl_proof'].toString(),
+      peProof: json['pe_proof'].toString(),
 
-      deSign: json['de_signature'],
-      plSign: json['pl_signature'],
-      dlSign: json['dl_signature'],
-      peSign: json['pe_signature'],
+      deSign: json['de_signature'].toString(),
+      plSign: json['pl_signature'].toString(),
+      dlSign: json['dl_signature'].toString(),
+      peSign: json['pe_signature'].toString(),
 
       pickupDate: json['pickup_date'] ?? 'Unknown Pick Up Date',  // Provide a default value
       departureDate: json['departure_date'] ?? 'Unknown DEparture Date',  // Provide a default value
+
+      login: json['login'].toString(),
      
 
       isAccepted: false,  // set default or map from API
@@ -275,6 +279,8 @@ class Transaction {
 
       pickupDate: pickupDate,
       departureDate: departureDate,
+
+      login: login,
 
     );
   }

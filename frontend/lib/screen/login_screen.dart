@@ -41,7 +41,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   void _login() async {
     final email = _emailController.text;
     final password = _passwordController.text;
-    
+ 
     final authNotifier = ref.read(authNotifierProvider.notifier);
 
     await authNotifier.login(

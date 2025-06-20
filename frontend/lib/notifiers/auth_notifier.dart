@@ -22,6 +22,8 @@ class AuthState {
   final String? password;
   final String? partnerId;
   final String? driverName;
+  final String? driverNumber;
+  final String? login;
 
   AuthState({
     required this.isLoading,
@@ -30,12 +32,14 @@ class AuthState {
     required this.password,
     required this.partnerId,
     required this.driverName,
+    required this.driverNumber,
+    required this.login
   });
 
   
 
   // Helper method to copy the state with updated values
-  AuthState copyWith({bool? isLoading, bool? isError, String? uid, String? password, String? partnerId, String? driverName}) {
+  AuthState copyWith({bool? isLoading, bool? isError, String? uid, String? password, String? partnerId, String? driverName, String? driverNumber, String? login}) {
     return AuthState(
       isLoading: isLoading ?? this.isLoading,
       isError: isError ?? this.isError,
@@ -43,6 +47,8 @@ class AuthState {
       password: password ?? this.password,
       partnerId: partnerId ?? this.partnerId,
       driverName: driverName ?? this.driverName,
+      driverNumber: driverNumber ?? this.driverNumber,
+      login: login ?? this.login,
     );
   }
 }
@@ -51,7 +57,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   final AuthService _authService;
 
   AuthNotifier(this._authService)
-      : super(AuthState(isLoading: false, isError: false, uid: null, password: null, partnerId: null, driverName: '')) {
+      : super(AuthState(isLoading: false, isError: false, uid: null, password: null, partnerId: null, driverName: '', driverNumber: null, login: null)) {
     // loadUid();  
     _initialize(); // Load UID from SharedPreferences when the notifier is created
   }
@@ -89,8 +95,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
             ? partnerFullName.split(',')[1].trim()
             : partnerFullName;
 
+        
+        final String driverNumber = data['mobile']?.toString() ?? '';
+
+        final String login = user['login'].toString();
+
+
+        
         print('🧾 Partner Name: $partnerFullName');
         print('👤 Driver Name: $driverName');
+
+        print('👤 Driver Contact Number: $driverNumber');
+        print('👤 Login: $login');
 
 
         if (user == null) {
@@ -103,6 +119,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
         await prefs.setString('partner_id', partnerId);
         await prefs.setString('name', partnerFullName);
         await prefs.setString('driver_name', driverName);
+        await prefs.setString('mobile', driverNumber);
+        await prefs.setString('login', login);
 
         if (context.mounted) {
           Navigator.pushReplacement(
@@ -113,7 +131,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           );
         }
 
-        state = state.copyWith(isLoading: false, isError: false, uid: uid, password: password, partnerId: partnerId, driverName: driverName); // ✅ Store both uid and password
+        state = state.copyWith(isLoading: false, isError: false, uid: uid, password: password, partnerId: partnerId, driverName: driverName, driverNumber: driverNumber, login: login); // ✅ Store both uid and password
       } catch (e) {
         // print('Login Error: $e');
         state = state.copyWith(isLoading: false, isError: true);
@@ -127,12 +145,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
     final storedPassword = prefs.getString('password');
     final storedPartnerId = prefs.getString('partnerId');
     final storedDriverName = prefs.getString('driver_name') ?? ''; 
+    final storedDriverNumber = prefs.getString('mobile') ?? ''; 
+    final storedLogin = prefs.getString('login') ?? ''; 
 
     if (storedUid != null && storedUid.isNotEmpty && storedPassword != null) {
       print('✅ Loaded UID: $storedUid');
       print('✅ Loaded Partner ID: $storedPartnerId'); 
 
-      state = state.copyWith(uid: storedUid, password: storedPassword, partnerId:storedPartnerId, driverName: storedDriverName); // ✅ Store both
+      state = state.copyWith(uid: storedUid, password: storedPassword, partnerId:storedPartnerId, driverName: storedDriverName, driverNumber: storedDriverNumber, login: storedLogin); // ✅ Store both
     } else {
       // print('❌ Missing UID or Password in storage.');
     } 

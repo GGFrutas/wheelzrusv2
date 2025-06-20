@@ -20,6 +20,7 @@ Future<List<RejectionReason>> fetchReasons(FutureProviderRef<List<RejectionReaso
     final uid = ref.watch(authNotifierProvider).uid;
     final password = ref.watch(authNotifierProvider).password ?? '';
     final baseUrl = ref.watch(baseUrlProvider);
+    final login = ref.watch(authNotifierProvider).login ?? '';
 
     if (uid == null || uid.isEmpty) {
       // print('❌ UID not found or empty!');
@@ -31,6 +32,7 @@ Future<List<RejectionReason>> fetchReasons(FutureProviderRef<List<RejectionReaso
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         'password': password,
+        'login': login
       },
     );
 
@@ -66,6 +68,7 @@ Future<List<Transaction>> fetchReject(FutureProviderRef<List<Transaction>> ref, 
   try {
     final uid = ref.watch(authNotifierProvider).uid;
     final password = ref.watch(authNotifierProvider).password ?? '';
+    final login = ref.watch(authNotifierProvider).login ?? '';
 
   
     if (uid == null || uid.isEmpty) {
@@ -79,6 +82,7 @@ Future<List<Transaction>> fetchReject(FutureProviderRef<List<Transaction>> ref, 
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         'password': password,
+        'login': login
       },
     );
 

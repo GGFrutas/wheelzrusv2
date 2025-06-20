@@ -57,7 +57,18 @@ class AuthService {
     try {
       final response = await _dio.post(
         '/login',
-        data: {'email': email, 'password': password},
+        data: {
+          'email': email,
+          'password': password,
+        },
+        options: Options(
+        headers: {
+          'Accept': 'application/json', // 👈 Include Accept again
+          'login': email,               // 👈 Laravel expects this in headers
+          'password': password,         // 👈 Laravel expects this too
+        },
+      ),
+        
       );
 
       print('Response: ${response.data}');
@@ -162,6 +173,7 @@ class AuthService {
           headers: {
             'Authorization': 'Bearer $token',
             'Content-Type': 'application/json',
+            'Login':login
           },
         ),
       );

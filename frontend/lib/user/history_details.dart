@@ -73,13 +73,16 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authNotifierProvider);
-    final driverName = authState.driverName;
+  
+    final driverContactNumber = (authState.driverNumber?.isNotEmpty ?? false)
+      ? authState.driverNumber
+      : (authState.driverNumber?.isNotEmpty ?? false)
+          ? authState.driverNumber
+          : '—';
 
-    if (driverName == null || driverName.isEmpty) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
+    final driverName = (authState.driverName?.isNotEmpty ?? false)
+      ? authState.driverName
+      : '—'; 
     return Scaffold(
       appBar: AppBar(
         iconTheme: const IconThemeData(color: mainColor),
@@ -109,7 +112,7 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
                           children: [
                             // Space between label and value
                             Text(
-                              driverName,
+                              driverName!,
                               style: AppTextStyles.subtitle.copyWith(
                                 color: Colors.white,
                               ),
@@ -133,8 +136,7 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
                           children: [
                             // Space between label and value
                             Text(
-                            (widget.transaction?.origin.isNotEmpty ?? false)
-                            ? widget.transaction!.origin : '—',
+                          driverContactNumber!,
                               // Use the originPort variable here
                               style: AppTextStyles.subtitle.copyWith(
                                 color: Colors.white,

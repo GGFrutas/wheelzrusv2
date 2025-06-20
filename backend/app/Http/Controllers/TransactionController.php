@@ -12,13 +12,13 @@ use PhpXmlRpc\Client;
 use PhpXmlRpc\Value;
 use PhpXmlRpc\Request as XmlRpcRequest;
 use Ripcord\Ripcord; 
+use Illuminate\Support\Facades\Http;
 
 class TransactionController extends Controller
 {
     protected $url = "https://jralejandria-beta-dev-yxe.odoo.com";
     protected $db = 'jralejandria-beta-dev-yxe-production-beta-20996469';
     protected $odoo_url = "https://jralejandria-beta-dev-yxe.odoo.com/jsonrpc";
-   
 
     public function getBooking(Request $request)
     {
@@ -26,178 +26,150 @@ class TransactionController extends Controller
         $db = $this->db;
       
         $uid = $request->query('uid') ;
+        $login = $request->header('login'); 
         $odooPassword = $request->header('password');
-        Log::info("UID is {$uid}, Password is {$odooPassword}");
+        Log::info('🔐 Login request', [
+            'uid' => $request->query('uid'),
+            'headers' => [
+                'login' => $request->header('login'),
+                'password' => $request->header('password'), // ⚠️ don't log in production
+            ],
+            'body' => $request->all(), // This shows form or JSON body content
+        ]);
+        
+        Log::info("Login is {$login}, UID is {$uid}, Password is {$odooPassword}");
         
         if (!$uid) {
             return response()->json(['success' => false, 'message' => 'UID is required'], 400);
         }
 
-        $odooUrl = $this->odoo_url;
-      
-
-        $jsonRequest = [
-            "jsonrpc" => "2.0",
-            "method" => "call",
-            "params" => [
-                "service" => "object",
-                "method" => "execute_kw",
-                "args" => [
-                    $db, 
-                    $uid, 
-                    $odooPassword, 
-                    "dispatch.manager", 
-                    "check_access_rights",
-                    ["read"],  // Search by UID
-                    ["raise_exception" => false] // Don't raise exception if access is denied]
-                ]
+        $odooUrl = $this->odoo_url; 
+        $response = Http::withHeaders([
+        'Content-Type' => 'application/json',
+        ])->withBody(json_encode([
+            'jsonrpc' => '2.0',
+            'method' => 'call',
+            'params' => [
+                'service' => 'common',
+                'method' => 'login',
+                'args' => [$db, $login, $odooPassword],
             ],
-            "id" => 1
-        ];
+            'id' => 1
+        ]), 'application/json')->post("$url/jsonrpc");
 
-        $option = [
-            "http" => [
-                "header" => "Content-Type: application/json",
-                "method" => "POST",
-                "content" => json_encode($jsonRequest),
-                "ignore_errors" => true,
-            ],
-        ];
-
-        $context = stream_context_create($option);
-        $jsonresponse = file_get_contents($odooUrl, false, $context);
-
-        if($jsonresponse === false) {
-            Log::error("❌ Failed to connect to Odoo API", ["response" => $jsonresponse]);
-            return response()->json(['error' => 'Access Denied'], 403);
+        if ($response->failed() || !is_numeric($response->json('result'))) {
+            Log::error('❌ Auth failed', [
+                'login' => $login,
+                'db' => $db,
+                'response' => $response->json()
+            ]);
+            return response()->json(['success' => false, 'message' => 'Login failed'], 403);
         }
 
-        $jsonResult = json_decode($jsonresponse, true);
+        $cookie = $response->header('Set-Cookie');
+        $uid = $response->json('result');
 
-        Log::info("JSON Raw response: ", ["response" => $jsonresponse]);
-
-        if(!isset($jsonResult['result']) || $jsonResult['result'] === false) {
-            Log::error("🚨 UID {$uid} cannot read `dispatch.manager`.");
-            return response()->json(["error" => "Access Denied"], 403);
-        } else {
-            Log::info("✅ UID {$uid} can read 'dispatch.manager`.");
-        }
-        
-        
-        $userData = [
-            "jsonrpc" => "2.0",
-            "method" => "call",
-            "params" => [
-                "service" => "object",
-                "method" => "execute_kw",
-                "args" => [
-                    $db, 
-                    $uid, 
-                    $odooPassword, 
-                    "res.users", 
-                    "search_read",
-                    [[["id", "=", $uid]]],  // Search by UID
-                    ["fields" => ["id", "login", "partner_id"]]
-                ]
-            ],
-            "id" => 1
-        ];
-    
-        $userResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
-            "http" => [
-                "header" => "Content-Type: application/json",
-                "method" => "POST",
-                "content" => json_encode($userData),
-            ],
-        ])), true);
-    
-        if (!isset($userResponse['result']) || empty($userResponse['result'])) {
-            Log::error("❌ No user found for UID: $uid", ["response" => $userResponse]);
-            return response()->json(['success' => false, 'message' => 'User not found'], 404);
-        }
-    
-        $user = $userResponse['result'][0];
-        $partnerId = $user['partner_id'][0] ?? null;
-    
-        if (!$partnerId) {
-            Log::error("❌ No Partner ID found for user $uid");
-            return response()->json(['success' => false, 'message' => 'No partner linked'], 404);
-        }
-    
-        Log::info("✅ Found Partner ID: $partnerId for User $uid");
-    
-        // 🔍 Check Partner's Driver Access
-        $partnerData = [
-            "jsonrpc" => "2.0",
-            "method" => "call",
-            "params" => [
-                "service" => "object",
-                "method" => "execute_kw",
-                "args" => [
+        // Step 2: Get res.users to find partner_id
+        $userRes = Http::withHeaders([
+            'Content-Type' => 'application/json',
+            'Cookie' => $cookie,
+        ])->post("$url/jsonrpc", [
+            'jsonrpc' => '2.0',
+            'method' => 'call',
+            'params' => [
+                'service' => 'object',
+                'method' => 'execute_kw',
+                'args' => [
                     $db,
                     $uid,
                     $odooPassword,
-                    "res.partner",
-                    "search_read",
-                    [[["id", "=", $partnerId]]],
-                    ["fields" => ["id", "name", "driver_access"]]
+                    'res.users',
+                    'search_read',
+                    [[['id', '=', $uid]]],
+                    ['fields' => ['partner_id', 'login']]
                 ]
             ],
-            "id" => 2
-        ];
-    
-        $partnerResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
-            "http" => [
-                "header" => "Content-Type: application/json",
-                "method" => "POST",
-                "content" => json_encode($partnerData),
-            ],
-        ])), true);
-    
-        $isDriver = false;
-        if (isset($partnerResponse['result']) && !empty($partnerResponse['result'])) {
-            $partner = $partnerResponse['result'][0];
-            $isDriver = $partner['driver_access'] ?? false;
-            Log::info($isDriver ? "✅ Partner {$partner['name']} is a driver." : "❌ Partner {$partner['name']} is NOT a driver.");
-        } else {
-            Log::error("❌ No partner record found for ID: $partnerId");
+            'id' => 2
+        ]);
+
+        $userData = $userRes->json('result')[0] ?? null;
+        if (!$userData || !isset($userData['partner_id'][0])) {
+            Log::error("❌ No partner_id for user $uid");
+            return response()->json(['success' => false, 'message' => 'No partner found'], 404);
         }
-    
-        // 🔍 Fetch Pending Transactions
-        $transactionData = [
-            "jsonrpc" => "2.0",
-            "method" => "call",
-            "params" => [
-                "service" => "object",
-                "method" => "execute_kw",
-                "args" => [
+
+        $partnerId = $userData['partner_id'][0];
+        $partnerName = $userData['partner_id'][1] ?? '';
+        $user = [
+            'id' => $uid,
+            'login' => $login
+        ];
+
+        // Step 3: Get res.partner to check driver_access
+        $partnerRes = Http::withHeaders([
+            'Content-Type' => 'application/json',
+            'Cookie' => $cookie,
+        ])->post("$url/jsonrpc", [
+            'jsonrpc' => '2.0',
+            'method' => 'call',
+            'params' => [
+                'service' => 'object',
+                'method' => 'execute_kw',
+                'args' => [
                     $db,
                     $uid,
                     $odooPassword,
-                    "dispatch.manager",
-                    "search_read",
+                    'res.partner',
+                    'search_read',
+                    [[['id', '=', $partnerId]]],
+                    ['fields' => ['name', 'driver_access']]
+                ]
+            ],
+            'id' => 3
+        ]);
+
+        $isDriver = $partnerRes->json('result')[0]['driver_access'] ?? false;
+        if (!$isDriver) {
+            Log::warning("❌ Partner $partnerId is not a driver");
+            return response()->json(['success' => false, 'message' => 'Not a driver'], 403);
+        }
+
+        
+        // Step 4: Find all dispatch.manager records where driver name matches
+        $dispatchRes = Http::withHeaders([
+            'Content-Type' => 'application/json',
+            'Cookie' => $cookie,
+        ])->post("$url/jsonrpc", [
+            'jsonrpc' => '2.0',
+            'method' => 'call',
+            'params' => [
+                'service' => 'object',
+                'method' => 'execute_kw',
+                'args' => [
+                    $db,
+                    $uid,
+                    $odooPassword,
+                    'dispatch.manager',
+                    'search_read',
                     [[
-                        "&",
-                        "|", "|", "|", "|",
+                    
+                        "|", "|", "|",
                         ["de_truck_driver_name", "=", $partnerId],
                         ["dl_truck_driver_name", "=", $partnerId],
                         ["pe_truck_driver_name", "=", $partnerId],
                         ["pl_truck_driver_name", "=", $partnerId],
-
-                        "|", "|", "|", "|", "|", "|", "|",
-                        ["de_request_status", "=", "Pending"],
-                        ["de_request_status", "=", "Accepted"],
-                        ["pl_request_status", "=", "Pending"],
-                        ["pl_request_status", "=", "Accepted"],
-                        ["dl_request_status", "=", "Pending"],
-                        ["dl_request_status", "=", "Accepted"],
-                        ["pe_request_status", "=", "Pending"],
-                        ["pe_request_status", "=", "Accepted"],
-
-                        ["dispatch_type", "!=", "ff"],
-
-                        ["stage_id" , "!=" , 6]
-                    ]], // <-- this was missing an extra ]
+                    
+                        // ["de_request_status", "=", "Pending"],
+                        // ["de_request_status", "=", "Accepted"],
+                        // ["pl_request_status", "=", "Pending"],
+                        // ["pl_request_status", "=", "Accepted"],
+                        // ["dl_request_status", "=", "Pending"],
+                        // ["dl_request_status", "=", "Accepted"],
+                        // ["pe_request_status", "=", "Pending"],
+                        // ["pe_request_status", "=", "Accepted"],
+                    
+                        ["dispatch_type", "!=", "ff"]
+                    ]],
                     ["fields" => [
                         "id", "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
                         "dispatch_type", "de_truck_driver_name", "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name",
@@ -210,59 +182,344 @@ class TransactionController extends Controller
                     ]],
                 ]
             ],
-            "id" => 3
-        ];
+            'id' => 4
+        ]);
 
-    
-        $transactionResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
-            "http" => [
-                "header" => "Content-Type: application/json",
-                "method" => "POST",
-                "content" => json_encode($transactionData, JSON_UNESCAPED_SLASHES),
-                "timeout" => 10, // seconds
-            ],
-        ])), true);
-    
-        // 🚨 Error Handling for Missing Response
-        if (!isset($transactionResponse['result'])) {
-            Log::error("❌ Invalid response for transactions", ["response" => $transactionResponse]);
-            return response()->json(['success' => false, 'message' => 'Error fetching transactions', 'error_details' => $transactionResponse], 500);
+        $dispatchManagers = $dispatchRes->json('result');
+
+        if (empty($dispatchManagers)) {
+            Log::warning("❌ No dispatch.manager records found for driver $partnerName");
+            return response()->json(['success' => false, 'message' => 'No dispatch manager records found'], 404);
         }
 
-        // ✅ Filter Transactions (Ensure Correct Partner Matching)
-        $filteredTransactions = array_filter($transactionResponse['result'], function ($transaction) use ($partnerId) {
+        $filteredManagers = array_filter($dispatchManagers, function ($manager) use ($partnerName) {
             foreach (["de_truck_driver_name", "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name"] as $field) {
-                if (isset($transaction[$field][0]) && $transaction[$field][0] == $partnerId) { 
-                    return true; // ✅ Partner ID matches truck driver field
+                if (
+                    isset($manager[$field][1]) && $manager[$field][1] == $partnerName
+                ) {
+                    return true;
                 }
             }
             return false;
         });
 
-        // ✅ Replace `false` or `null` with an empty string
-        foreach ($filteredTransactions as &$transaction) {
-            foreach (["de_truck_driver_name", "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name", "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
-            "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no","origin","destination","arrival_date","delivery_date",
-            "container_number","seal_number","booking_reference_no","origin_forwarder_name","freight_booking_number", "origin_container_location", "freight_bl_number",
-            "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature","freight_forwarder_name","shipper_phone", "consignee_phone",
-            "dl_truck_plate_no","pe_truck_plate_no","de_truck_plate_no","pl_truck_plate_no","de_truck_type","dl_truck_type","pe_truck_type","pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
-            "pickup_date", "departure_date",] as $field) {
-                if ($transaction[$field] === false || $transaction[$field] === null) {
-                    $transaction[$field] = ""; 
+        $filteredManagers = array_values($filteredManagers);
+
+        // Step 5: Queue a job for each dispatch.manager record
+        $fieldsToString = [
+            "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
+            "dispatch_type", 
+            "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", "origin", "destination", "arrival_date", "delivery_date",
+            "container_number", "seal_number", "booking_reference_no", "origin_forwarder_name", "destination_forwarder_name", "freight_booking_number",
+            "origin_container_location", "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
+            "freight_forwarder_name", "shipper_phone", "consignee_phone", "dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", "pl_truck_plate_no",
+            "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
+            "pickup_date", "departure_date",
+        ];
+
+        $jobResponses = [];
+
+        foreach ($filteredManagers  as $manager) {
+
+            foreach ($fieldsToString as $field){
+                if (!isset($manager[$field]) || $manager[$field] === null || $manager[$field] === false) {
+                    $manager[$field] = "";
+                } elseif (is_array($manager[$field]) && count($manager[$field]) > 1 && is_string($manager[$field][1])) {
+                    $manager[$field] = $manager[$field][1]; // ✅ convert [id, name] to name
+                } elseif (is_bool($manager[$field])) {
+                    $manager[$field] = $manager[$field] ? "true" : "false";
+                } else {
+                    $manager[$field] = (string) $manager[$field];
                 }
             }
+
+            $jobRes = Http::withHeaders([
+                'Content-Type' => 'application/json',
+                'Cookie' => $cookie,
+            ])->post("$url/job_dispatcher/queue_job", [
+                'jsonrpc' => '2.0',
+                'method' => 'call',
+                'params' => [
+                    'model' => 'dispatch.manager',
+                    'id' => $manager['id'],
+                    'method' => 'run_laravel_job',
+                ],
+                'id' => 5
+            ]);
+
+            if ($jobRes->failed()) {
+                Log::error("❌ Job failed for dispatch.manager ID {$manager['id']}", [
+                    'response' => $jobRes->json()
+                ]);
+                continue;
+            }
+
+            $jobResponses[] = $manager;
         }
 
-        // ✅ Return Filtered Data
+        // ✅ Final return
         return response()->json([
-            "success" => true,
-            "data" => [
-                "user" => ["id" => $user['id'], "login" => $user['login']],
-                "partner" => ["id" => $partnerId, "driver_access" => $isDriver],
-                "transactions" => array_values($filteredTransactions) // ✅ Ensure clean index
+            'data' => [
+                'transactions' => $jobResponses
             ]
         ]);
     }
+   
+
+    // public function getBooking(Request $request)
+    // {
+    //     $url = $this->url;
+    //     $db = $this->db;
+      
+    //     $uid = $request->query('uid') ;
+    //     $login = $request->header('login'); 
+    //     $odooPassword = $request->header('password');
+    //     Log::info('🔐 Login request', [
+    //         'uid' => $request->query('uid'),
+    //         'headers' => [
+    //             'login' => $request->header('login'),
+    //             'password' => $request->header('password'), // ⚠️ don't log in production
+    //         ],
+    //         'body' => $request->all(), // This shows form or JSON body content
+    //     ]);
+        
+    //     Log::info("Login is {$login}, UID is {$uid}, Password is {$odooPassword}");
+        
+    //     if (!$uid) {
+    //         return response()->json(['success' => false, 'message' => 'UID is required'], 400);
+    //     }
+
+    //     $odooUrl = $this->odoo_url;
+      
+
+    //     $jsonRequest = [
+    //         "jsonrpc" => "2.0",
+    //         "method" => "call",
+    //         "params" => [
+    //             "service" => "object",
+    //             "method" => "execute_kw",
+    //             "args" => [
+    //                 $db, 
+    //                 $uid, 
+    //                 $odooPassword, 
+    //                 "dispatch.manager", 
+    //                 "check_access_rights",
+    //                 ["read"],  // Search by UID
+    //                 ["raise_exception" => false] // Don't raise exception if access is denied]
+    //             ]
+    //         ],
+    //         "id" => 1
+    //     ];
+
+    //     $option = [
+    //         "http" => [
+    //             "header" => "Content-Type: application/json",
+    //             "method" => "POST",
+    //             "content" => json_encode($jsonRequest),
+    //             "ignore_errors" => true,
+    //         ],
+    //     ];
+
+    //     $context = stream_context_create($option);
+    //     $jsonresponse = file_get_contents($odooUrl, false, $context);
+
+    //     if($jsonresponse === false) {
+    //         Log::error("❌ Failed to connect to Odoo API", ["response" => $jsonresponse]);
+    //         return response()->json(['error' => 'Access Denied'], 403);
+    //     }
+
+    //     $jsonResult = json_decode($jsonresponse, true);
+
+    //     Log::info("JSON Raw response: ", ["response" => $jsonresponse]);
+
+    //     if(!isset($jsonResult['result']) || $jsonResult['result'] === false) {
+    //         Log::error("🚨 UID {$uid} cannot read `dispatch.manager`.");
+    //         return response()->json(["error" => "Access Denied"], 403);
+    //     } else {
+    //         Log::info("✅ UID {$uid} can read 'dispatch.manager`.");
+    //     }
+        
+        
+    //     $userData = [
+    //         "jsonrpc" => "2.0",
+    //         "method" => "call",
+    //         "params" => [
+    //             "service" => "object",
+    //             "method" => "execute_kw",
+    //             "args" => [
+    //                 $db, 
+    //                 $uid, 
+    //                 $odooPassword, 
+    //                 "res.users", 
+    //                 "search_read",
+    //                 [[["id", "=", $uid]]],  // Search by UID
+    //                 ["fields" => ["id", "login", "partner_id"]]
+    //             ]
+    //         ],
+    //         "id" => 1
+    //     ];
+    
+    //     $userResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
+    //         "http" => [
+    //             "header" => "Content-Type: application/json",
+    //             "method" => "POST",
+    //             "content" => json_encode($userData),
+    //         ],
+    //     ])), true);
+    
+    //     if (!isset($userResponse['result']) || empty($userResponse['result'])) {
+    //         Log::error("❌ No user found for UID: $uid", ["response" => $userResponse]);
+    //         return response()->json(['success' => false, 'message' => 'User not found'], 404);
+    //     }
+    
+    //     $user = $userResponse['result'][0];
+    //     $partnerId = $user['partner_id'][0] ?? null;
+    
+    //     if (!$partnerId) {
+    //         Log::error("❌ No Partner ID found for user $uid");
+    //         return response()->json(['success' => false, 'message' => 'No partner linked'], 404);
+    //     }
+    
+    //     Log::info("✅ Found Partner ID: $partnerId for User $uid");
+    
+    //     // 🔍 Check Partner's Driver Access
+    //     $partnerData = [
+    //         "jsonrpc" => "2.0",
+    //         "method" => "call",
+    //         "params" => [
+    //             "service" => "object",
+    //             "method" => "execute_kw",
+    //             "args" => [
+    //                 $db,
+    //                 $uid,
+    //                 $odooPassword,
+    //                 "res.partner",
+    //                 "search_read",
+    //                 [[["id", "=", $partnerId]]],
+    //                 ["fields" => ["id", "name", "driver_access","mobile"]]
+    //             ]
+    //         ],
+    //         "id" => 2
+    //     ];
+    
+    //     $partnerResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
+    //         "http" => [
+    //             "header" => "Content-Type: application/json",
+    //             "method" => "POST",
+    //             "content" => json_encode($partnerData),
+    //         ],
+    //     ])), true);
+    
+    //     $isDriver = false;
+    //     if (isset($partnerResponse['result']) && !empty($partnerResponse['result'])) {
+    //         $partner = $partnerResponse['result'][0];
+    //         $isDriver = $partner['driver_access'] ?? false;
+    //         $mobile = $partner['mobile'] ?? null;
+    //         Log::info($isDriver ? "✅ Partner {$partner['name']} is a driver." : "❌ Partner {$partner['name']} is NOT a driver.");
+    //         Log::info("📞 Mobile: $mobile");
+    //     } else {
+    //         Log::error("❌ No partner record found for ID: $partnerId");
+    //     }
+    
+    //     // 🔍 Fetch Pending Transactions
+    //     $transactionData = [
+    //         "jsonrpc" => "2.0",
+    //         "method" => "call",
+    //         "params" => [
+    //             "service" => "object",
+    //             "method" => "execute_kw",
+    //             "args" => [
+    //                 $db,
+    //                 $uid,
+    //                 $odooPassword,
+    //                 "dispatch.manager",
+    //                 "search_read",
+    //                 [[
+    //                     "&",
+    //                     "|", "|", "|", "|",
+    //                     ["de_truck_driver_name", "=", $partnerId],
+    //                     ["dl_truck_driver_name", "=", $partnerId],
+    //                     ["pe_truck_driver_name", "=", $partnerId],
+    //                     ["pl_truck_driver_name", "=", $partnerId],
+
+    //                     "|", "|", "|", "|", "|", "|", "|",
+    //                     ["de_request_status", "=", "Pending"],
+    //                     ["de_request_status", "=", "Accepted"],
+    //                     ["pl_request_status", "=", "Pending"],
+    //                     ["pl_request_status", "=", "Accepted"],
+    //                     ["dl_request_status", "=", "Pending"],
+    //                     ["dl_request_status", "=", "Accepted"],
+    //                     ["pe_request_status", "=", "Pending"],
+    //                     ["pe_request_status", "=", "Accepted"],
+
+    //                     ["dispatch_type", "!=", "ff"],
+
+    //                 ]], // <-- this was missing an extra ]
+    //                 ["fields" => [
+    //                     "id", "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
+    //                     "dispatch_type", "de_truck_driver_name", "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name",
+    //                     "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", "origin", "destination", "arrival_date", "delivery_date",
+    //                     "container_number", "seal_number", "booking_reference_no", "origin_forwarder_name", "destination_forwarder_name", "freight_booking_number",
+    //                     "origin_container_location", "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
+    //                     "freight_forwarder_name", "shipper_phone", "consignee_phone", "dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", "pl_truck_plate_no",
+    //                     "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
+    //                     "pickup_date", "departure_date",
+    //                 ]],
+    //             ]
+    //         ],
+    //         "id" => 3
+    //     ];
+
+    
+    //     $transactionResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
+    //         "http" => [
+    //             "header" => "Content-Type: application/json",
+    //             "method" => "POST",
+    //             "content" => json_encode($transactionData, JSON_UNESCAPED_SLASHES),
+    //             "timeout" => 10, // seconds
+    //         ],
+    //     ])), true);
+    
+    //     // 🚨 Error Handling for Missing Response
+    //     if (!isset($transactionResponse['result'])) {
+    //         Log::error("❌ Invalid response for transactions", ["response" => $transactionResponse]);
+    //         return response()->json(['success' => false, 'message' => 'Error fetching transactions', 'error_details' => $transactionResponse], 500);
+    //     }
+
+    //     // ✅ Filter Transactions (Ensure Correct Partner Matching)
+    //     $filteredTransactions = array_filter($transactionResponse['result'], function ($transaction) use ($partnerId) {
+    //         foreach (["de_truck_driver_name", "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name"] as $field) {
+    //             if (isset($transaction[$field][0]) && $transaction[$field][0] == $partnerId) { 
+    //                 return true; // ✅ Partner ID matches truck driver field
+    //             }
+    //         }
+    //         return false;
+    //     });
+
+    //     // ✅ Replace `false` or `null` with an empty string
+    //     foreach ($filteredTransactions as &$transaction) {
+    //         foreach (["de_truck_driver_name", "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name", "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
+    //         "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no","origin","destination","arrival_date","delivery_date",
+    //         "container_number","seal_number","booking_reference_no","origin_forwarder_name","freight_booking_number", "origin_container_location", "freight_bl_number",
+    //         "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature","freight_forwarder_name","shipper_phone", "consignee_phone",
+    //         "dl_truck_plate_no","pe_truck_plate_no","de_truck_plate_no","pl_truck_plate_no","de_truck_type","dl_truck_type","pe_truck_type","pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
+    //         "pickup_date", "departure_date",] as $field) {
+    //             if ($transaction[$field] === false || $transaction[$field] === null) {
+    //                 $transaction[$field] = ""; 
+    //             }
+    //         }
+    //     }
+
+    //     // ✅ Return Filtered Data
+    //     return response()->json([
+    //         "success" => true,
+    //         "data" => [
+    //             "user" => ["id" => $user['id'], "login" => $user['login']],
+    //             "partner" => ["id" => $partnerId, "driver_access" => $isDriver],
+    //             "transactions" => array_values($filteredTransactions) // ✅ Ensure clean index
+    //         ]
+    //     ]);
+    // }
 
     public function getRejectionReason(Request $request)
     {
