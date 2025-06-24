@@ -96,7 +96,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
             : partnerFullName;
 
         
-        final String driverNumber = data['mobile']?.toString() ?? '';
+        final String rawDriverNumber = data['mobile']?.toString().trim().toLowerCase() ?? '';
+        final String driverNumber =  (rawDriverNumber.isNotEmpty && rawDriverNumber != 'false')
+            ? rawDriverNumber
+            : '—';
+
 
         final String login = user['login'].toString();
 

@@ -136,7 +136,15 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
           final expandedTransactions = transaction.expand((item) {
             print("🆔 Current driverId: $driverId");
             print("🟨 DE: ${item.deTruckDriverName}, PL: ${item.plTruckDriverName}, DL: ${item.dlTruckDriverName}, PE: ${item.peTruckDriverName}");
-           
+
+            String cleanAddress(String address) {
+              return address
+                .split(',') // splits the string by commas
+                .map((e) => e.trim()) //removes extra spaces
+                .where((e) => e.isNotEmpty && e.toLowerCase() != 'ph') //filters out empty strings and 'ph'
+                .join(', '); // joins the remaining parts back together
+            }
+            
             if (item.dispatchType == "ot") {
               return [
                 // First instance: Deliver to Shipper
@@ -144,8 +152,8 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                   // Check if the truck driver is the same as the authPartnerId
                    item.copyWith(
                     name: "Deliver to Shipper",
-                    destination: item.destination,
-                    origin: item.origin,
+                    destination: cleanAddress(item.destination),
+                    origin: cleanAddress(item.origin),
                     requestNumber: item.deRequestNumber,
                     requestStatus: item.deRequestStatus,
                     // truckPlateNumber: item.deTruckPlateNumber,
@@ -155,8 +163,8 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                   // if (item.plTruckDriverName == authPartnerId)
                     item.copyWith(
                     name: "Pickup from Shipper",
-                    destination: item.origin,
-                    origin: item.destination,
+                    destination: cleanAddress(item.origin),
+                    origin: cleanAddress(item.destination),
                     requestNumber: item.plRequestNumber,
                     requestStatus: item.plRequestStatus,
                     // truckPlateNumber: item.plTruckPlateNumber,
@@ -167,9 +175,9 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                 // First instance: Deliver to Consignee
                 if (item.dlTruckDriverName == driverId) // Filter out if accepted
                   item.copyWith(
-                    name: "Delivers to Consignee",
-                    origin: item.destination,
-                    destination: item.origin,
+                    name: "Deliver to Consignee",
+                    origin: cleanAddress(item.destination),
+                    destination: cleanAddress(item.origin),
                     requestNumber: item.dlRequestNumber,
                     requestStatus: item.dlRequestStatus,
                     // truckPlateNumber: item.dlTruckPlateNumber,
@@ -178,6 +186,8 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                 if (item.peTruckDriverName == driverId) // Filter out if accepted
                   item.copyWith(
                     name: "Pickup from Consignee",
+                    origin: cleanAddress(item.origin),
+                    destination: cleanAddress(item.destination),
                     requestNumber: item.peRequestNumber,
                     requestStatus: item.peRequestStatus,
                     // truckPlateNumber: item.peTruckPlateNumber,

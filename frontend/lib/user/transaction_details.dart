@@ -518,6 +518,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                           canPop: false, // Prevent default pop behavior
                           onPopInvoked: (didPop) {
                             if (!didPop) {
+                              ref.read(navigationNotifierProvider.notifier).setSelectedIndex(0);
                               // Navigate to home if system back button is pressed
                               Navigator.of(context).popUntil((route) => route.isFirst);
                             }
@@ -574,7 +575,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                           ),
                           ),
                         );
-
+                      
 
                         // showDialog(
                         //   context: context,
@@ -912,7 +913,6 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                               onPressed: () async {
                                 final uid = ref.read(authNotifierProvider).uid;
                                 final transactionId = widget.transaction!;
-                                final baseUrl = ref.watch(baseUrlProvider);
                                 // Handle Reject Action here (using _selectedValue and controller.text)
                                 final selectedReason = ref.read(selectedReasonsProvider);
                                 final feedback = controller.text;
@@ -986,65 +986,6 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                                     );
                                   },
                                 );
-
-                                try{
-                                  final password = ref.watch(authNotifierProvider).password ?? '';
-                                  final login = ref.watch(authNotifierProvider).login ?? '';
-                                  final response = await http.post(
-                                    Uri.parse('$baseUrl/api/odoo/reject-booking'),
-                                    headers:{
-                                      'Content-Type': 'application/json',
-                                      'Accept': 'application/json',
-                                      'password': password,
-                                      'login': login
-                                    },
-                                    body: jsonEncode({
-                                      'uid': uid,
-                                      'transaction_id': transactionId.id,
-                                      'reason': selectedReason,
-                                      'feedback': feedback
-                                    }),
-                                  );
-                                  Navigator.of(context, rootNavigator: true).pop(); // close loading
-
-                                  if (response.statusCode == 200) {
-                                    final rejectedTransactionNotifier = ref.read(accepted_transaction.acceptedTransactionProvider.notifier);
-                                    rejectedTransactionNotifier.updateStatus(transactionId.id.toString(), transactionId.requestNumber.toString(),'Rejected',ref, context);
-
-                                    final updated = await fetchTransactionStatus(ref, transactionId.id.toString());
-                                    print('Updated Status: ${updated.requestStatus}');
-
-                                    if(updated.requestStatus == "Rejected") {
-                                      print('Rejection Successful');
-                                      ref.read(selectedReasonsProvider.notifier).state = null; // Clear the selected reason
-                                      controller.clear(); // Clear the text field
-
-                                      print('🔁 Redirecting to HistoryScreen with UID: $uid');
-
-                                      Navigator.of(rootContext).pushReplacement(
-                                        MaterialPageRoute(
-                                          builder: (context) => HistoryScreen(user: {'uid': uid}),
-                                        ),
-                                      );
-
-                                      
-                                    } else {
-                                      print('Rejection Failed');
-                                    }
-                                   
-                                  } else {
-                                    print('Button Rejection Failed');
-                                  }
-                                }catch (e){
-                                  print('Error: $e');
-                                  Navigator.of(rootContext).pushReplacement(
-                                    MaterialPageRoute(
-                                      builder: (context) => HistoryScreen(user: {'uid': uid}),
-                                    ),
-                                  );
-                                }
-
-                                
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color.fromARGB(255, 236, 162, 55),
@@ -1057,6 +998,32 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                                 'Confirm',
                                 style: AppTextStyles.subtitle.copyWith(
                                   color: Colors.black, // White text color
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: () async {
+                                Navigator.of(context).pop(); // Close the dialog
+                                
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 20),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(30.0),
+                                ),  
+                              ),
+                              child: Text(
+                                'Cancel',
+                                style: AppTextStyles.subtitle.copyWith(
+                                  color: Colors.white, // White text color
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
                                 ),

@@ -74,14 +74,12 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authNotifierProvider);
   
-    final driverContactNumber = (authState.driverNumber?.isNotEmpty ?? false)
-      ? authState.driverNumber
-      : (authState.driverNumber?.isNotEmpty ?? false)
-          ? authState.driverNumber
+    final driverContactNumber = (authState.driverNumber != null && authState.driverNumber!.trim().isNotEmpty)
+      ? authState.driverNumber!
           : '—';
 
     final driverName = (authState.driverName?.isNotEmpty ?? false)
-      ? authState.driverName
+      ? authState.driverName!
       : '—'; 
     return Scaffold(
       appBar: AppBar(
@@ -112,7 +110,7 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
                           children: [
                             // Space between label and value
                             Text(
-                              driverName!,
+                              driverName,
                               style: AppTextStyles.subtitle.copyWith(
                                 color: Colors.white,
                               ),
@@ -136,7 +134,7 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
                           children: [
                             // Space between label and value
                             Text(
-                          driverContactNumber!,
+                              driverContactNumber,
                               // Use the originPort variable here
                               style: AppTextStyles.subtitle.copyWith(
                                 color: Colors.white,

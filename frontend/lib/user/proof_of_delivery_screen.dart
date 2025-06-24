@@ -235,7 +235,7 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
             Signature(
               controller: _controller,
               width: MediaQuery.of(context).size.width * 0.9,
-              height: 200,
+              height: 150,
               backgroundColor: Colors.white,
             ),
             const SizedBox(height: 20),
