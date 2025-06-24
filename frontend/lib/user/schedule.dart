@@ -52,7 +52,7 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
     }
 
     try {
-      DateTime datetime = DateTime.parse(dateTime);
+      DateTime datetime = DateTime.parse("${dateTime}Z").toLocal();
 
       return {
         "date": DateFormat(' MMMM dd, yyyy').format(datetime),
@@ -119,45 +119,7 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
                 ),
                 child: Column(
                   children:[
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: List.generate(6, (index) { // Example: 7 squares
-                          return Container(
-                            width: 50, // Adjust for square size
-                            height: 50,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(2.0),
-                            ),
-                            alignment: Alignment.center,
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  '${16 + index}', // Example dates (17, 18, 19...)
-                                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                                ),
-                                Text(
-                                  'March', // You can make this dynamic too
-                                  style: AppTextStyles.caption.copyWith(
-                                    fontWeight: FontWeight.bold
-                                  ),
-                                ),
-                                const SizedBox(height: 5), // Small space before the line
-                                Container(
-                                  width: 50, // Match the square width
-                                  height: 2, // Thin line height
-                                  color: Colors.black26, // Line color
-                                  constraints: const BoxConstraints(
-                                    maxWidth: 50, // Ensure it doesn't exceed the square width
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }),
-                      ),
-                      const SizedBox(height: 16),
+                   
                       Row(
                         children: [
                           const SizedBox(width: 8),

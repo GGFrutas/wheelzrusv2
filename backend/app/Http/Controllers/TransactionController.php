@@ -7,12 +7,39 @@ use Illuminate\Support\Facades\Storage;
 use App\Models\Transaction;
 use App\Models\RejectionReason;
 use App\Models\TransactionImage;
-use PhpXmlRpc\PhpXmlRpcClient;
 use PhpXmlRpc\Client;
 use PhpXmlRpc\Value;
 use PhpXmlRpc\Request as XmlRpcRequest;
 use Ripcord\Ripcord; 
 use Illuminate\Support\Facades\Http;
+use GuzzleHttp\Guzzle;
+
+function jsonRpcRequest($url, $payload){
+    
+    try {
+
+        $client = new \GuzzleHttp\Client([
+            'verify' => false,
+            'headers' => [
+                'Content-Type' => 'application/json',
+            ]
+        ]);
+        
+        $response = $client->post($url, [
+            'body' => json_encode($payload)
+        ]);
+
+        return json_decode($response->getBody(), true );
+
+    } catch (\Exception $e) {
+        Log::error('X JSON_RPC Request Failed', [
+            'url' => $url,
+            'payload' => $payload,
+            'error' => $e->getMessage(),
+        ]);
+        return [];
+    }
+}
 
 class TransactionController extends Controller
 {
@@ -44,10 +71,10 @@ class TransactionController extends Controller
             return response()->json(['success' => false, 'message' => 'UID is required'], 400);
         }
 
-        $odooUrl = $this->odoo_url; 
-        $response = Http::withHeaders([
-        'Content-Type' => 'application/json',
-        ])->withBody(json_encode([
+        $odooUrl = "{$this->url}/jsonrpc"; 
+       
+        
+        $response = jsonRpcRequest("$odooUrl", [
             'jsonrpc' => '2.0',
             'method' => 'call',
             'params' => [
@@ -56,25 +83,23 @@ class TransactionController extends Controller
                 'args' => [$db, $login, $odooPassword],
             ],
             'id' => 1
-        ]), 'application/json')->post("$url/jsonrpc");
+        ]);
+      
 
-        if ($response->failed() || !is_numeric($response->json('result'))) {
+        if (!isset($response['result']) || !is_numeric($response['result'])) {
             Log::error('❌ Auth failed', [
                 'login' => $login,
                 'db' => $db,
-                'response' => $response->json()
+                'response' => $response
             ]);
             return response()->json(['success' => false, 'message' => 'Login failed'], 403);
         }
 
-        $cookie = $response->header('Set-Cookie');
-        $uid = $response->json('result');
+      
+        $uid = $response['result'];
 
         // Step 2: Get res.users to find partner_id
-        $userRes = Http::withHeaders([
-            'Content-Type' => 'application/json',
-            'Cookie' => $cookie,
-        ])->post("$url/jsonrpc", [
+        $userRes = jsonRpcRequest("$odooUrl", [
             'jsonrpc' => '2.0',
             'method' => 'call',
             'params' => [
@@ -93,7 +118,7 @@ class TransactionController extends Controller
             'id' => 2
         ]);
 
-        $userData = $userRes->json('result')[0] ?? null;
+        $userData = $userRes['result'][0] ?? null;
         if (!$userData || !isset($userData['partner_id'][0])) {
             Log::error("❌ No partner_id for user $uid");
             return response()->json(['success' => false, 'message' => 'No partner found'], 404);
@@ -107,10 +132,7 @@ class TransactionController extends Controller
         ];
 
         // Step 3: Get res.partner to check driver_access
-        $partnerRes = Http::withHeaders([
-            'Content-Type' => 'application/json',
-            'Cookie' => $cookie,
-        ])->post("$url/jsonrpc", [
+        $partnerRes = jsonRpcRequest("$odooUrl", [
             'jsonrpc' => '2.0',
             'method' => 'call',
             'params' => [
@@ -129,7 +151,7 @@ class TransactionController extends Controller
             'id' => 3
         ]);
 
-        $isDriver = $partnerRes->json('result')[0]['driver_access'] ?? false;
+        $isDriver = $partnerRes['result'][0]['driver_access'] ?? false;
         if (!$isDriver) {
             Log::warning("❌ Partner $partnerId is not a driver");
             return response()->json(['success' => false, 'message' => 'Not a driver'], 403);
@@ -137,10 +159,7 @@ class TransactionController extends Controller
 
         
         // Step 4: Find all dispatch.manager records where driver name matches
-        $dispatchRes = Http::withHeaders([
-            'Content-Type' => 'application/json',
-            'Cookie' => $cookie,
-        ])->post("$url/jsonrpc", [
+        $dispatchRes =jsonRpcRequest("$odooUrl", [
             'jsonrpc' => '2.0',
             'method' => 'call',
             'params' => [
@@ -160,33 +179,26 @@ class TransactionController extends Controller
                         ["pe_truck_driver_name", "=", $partnerId],
                         ["pl_truck_driver_name", "=", $partnerId],
                     
-                        // ["de_request_status", "=", "Pending"],
-                        // ["de_request_status", "=", "Accepted"],
-                        // ["pl_request_status", "=", "Pending"],
-                        // ["pl_request_status", "=", "Accepted"],
-                        // ["dl_request_status", "=", "Pending"],
-                        // ["dl_request_status", "=", "Accepted"],
-                        // ["pe_request_status", "=", "Pending"],
-                        // ["pe_request_status", "=", "Accepted"],
+                        
                     
                         ["dispatch_type", "!=", "ff"]
                     ]],
                     ["fields" => [
                         "id", "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
                         "dispatch_type", "de_truck_driver_name", "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name",
-                        "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", "origin", "destination", "arrival_date", "delivery_date",
+                        "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", "origin_port_terminal_address", "destination_port_terminal_address", "arrival_date", "delivery_date",
                         "container_number", "seal_number", "booking_reference_no", "origin_forwarder_name", "destination_forwarder_name", "freight_booking_number",
                         "origin_container_location", "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
                         "freight_forwarder_name", "shipper_phone", "consignee_phone", "dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", "pl_truck_plate_no",
                         "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
-                        "pickup_date", "departure_date",
+                        "pickup_date", "departure_date","origin", "destination", 
                     ]],
                 ]
             ],
             'id' => 4
         ]);
 
-        $dispatchManagers = $dispatchRes->json('result');
+        $dispatchManagers = $dispatchRes['result'];
 
         if (empty($dispatchManagers)) {
             Log::warning("❌ No dispatch.manager records found for driver $partnerName");
@@ -210,12 +222,12 @@ class TransactionController extends Controller
         $fieldsToString = [
             "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
             "dispatch_type", 
-            "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", "origin", "destination", "arrival_date", "delivery_date",
+            "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", "origin_port_terminal_address", "destination_port_terminal_address", "arrival_date", "delivery_date",
             "container_number", "seal_number", "booking_reference_no", "origin_forwarder_name", "destination_forwarder_name", "freight_booking_number",
             "origin_container_location", "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
             "freight_forwarder_name", "shipper_phone", "consignee_phone", "dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", "pl_truck_plate_no",
             "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
-            "pickup_date", "departure_date",
+            "pickup_date", "departure_date","origin", "destination", 
         ];
 
         $jobResponses = [];
@@ -234,10 +246,7 @@ class TransactionController extends Controller
                 }
             }
 
-            $jobRes = Http::withHeaders([
-                'Content-Type' => 'application/json',
-                'Cookie' => $cookie,
-            ])->post("$url/job_dispatcher/queue_job", [
+            $jobRes = jsonRpcRequest("$url/job_dispatcher/queue_job", [
                 'jsonrpc' => '2.0',
                 'method' => 'call',
                 'params' => [
@@ -248,12 +257,7 @@ class TransactionController extends Controller
                 'id' => 5
             ]);
 
-            if ($jobRes->failed()) {
-                Log::error("❌ Job failed for dispatch.manager ID {$manager['id']}", [
-                    'response' => $jobRes->json()
-                ]);
-                continue;
-            }
+            
 
             $jobResponses[] = $manager;
         }
@@ -1072,6 +1076,7 @@ class TransactionController extends Controller
                 "pe_proof" => $images,
                 "pe_signature" => $signature,
                 "pe_release_by" => $enteredName,
+                "stage_id" => 5,
             ];
         } elseif ($type['dispatch_type'] == "ot" && $type['pl_request_no'] == $requestNumber) {
             Log::info("Updating PL proof and signature for request number: {$requestNumber}");
@@ -1088,6 +1093,7 @@ class TransactionController extends Controller
                 "pl_proof" => $images,
                 "pl_signature" => $signature,
                 "pe_release_by" => $enteredName,
+                "stage_id" => 5,
             ];
         } elseif ($type['dispatch_type'] == "dt" && $type['pe_request_no'] == $requestNumber) {
             Log::info("Updating PE proof and signature for request number: {$requestNumber}");
@@ -1167,7 +1173,7 @@ class TransactionController extends Controller
             }
 
             $milestoneResult = $fcl_code_response['result'][0];
-            Log::info("🎯 Milestone result list", ['result' => $milestoneResult]);
+            // Log::info("🎯 Milestone result list", ['result' => $milestoneResult]);
 
             $serviceType = is_array($type['service_type']) ? $type['service_type'][0] : $type['service_type'];
 
@@ -1222,6 +1228,7 @@ class TransactionController extends Controller
                                     [$milestoneIdToUpdate],
                                     [
                                         'actual_datetime' => $actualTime,
+                                        'button_readonly' => true, 
                                     ]
                                 ]
                             ]
@@ -1238,7 +1245,7 @@ class TransactionController extends Controller
                     ])), true);
 
                     if (isset($updateActualResponse['result']) && $updateActualResponse['result']) {
-                        Log::info("✅ Actual time updated successfully for milestone ID: {$milestoneIdToUpdate}");
+                        // Log::info("✅ Actual time updated successfully for milestone ID: {$milestoneIdToUpdate}");
                         return response()->json(['success' => true, 'message' => 'POD and milestome updated'], 200);
                     } else {
                         Log::error("⚠️ POD updated but failed to update milestone", ['response' => $updateActualResponse]);
@@ -1353,6 +1360,7 @@ class TransactionController extends Controller
                 "dl_proof" => $images,
                 "dl_signature" => $signature,
                 "dl_receive_by" => $enteredName,
+                "stage_id" => 7,
             ];
         }
 
@@ -1369,6 +1377,7 @@ class TransactionController extends Controller
                 "de_proof" => $images,
                 "de_signature" => $signature,
                 "dl_receive_by" => $enteredName,
+                "stage_id" => 7,
             ];
         }
 
@@ -1440,7 +1449,7 @@ class TransactionController extends Controller
             }
 
             $milestoneResult = $fcl_code_response['result'][0];
-            Log::info("🎯 Milestone result list", ['result' => $milestoneResult]);
+            // Log::info("🎯 Milestone result list", ['result' => $milestoneResult]);
 
             $serviceType = is_array($type['service_type']) ? $type['service_type'][0] : $type['service_type'];
 
@@ -1495,6 +1504,7 @@ class TransactionController extends Controller
                                     [$milestoneIdToUpdate],
                                     [
                                         'actual_datetime' => $actualTime,
+                                        'button_readonly' => true,
                                     ]
                                 ]
                             ]
@@ -1511,7 +1521,7 @@ class TransactionController extends Controller
                     ])), true);
 
                     if (isset($updateActualResponse['result']) && $updateActualResponse['result']) {
-                        Log::info("✅ Actual time updated successfully for milestone ID: {$milestoneIdToUpdate}");
+                        // Log::info("✅ Actual time updated successfully for milestone ID: {$milestoneIdToUpdate}");
                         return response()->json(['success' => true, 'message' => 'POD and milestome updated'], 200);
                     } else {
                         Log::error("⚠️ POD updated but failed to update milestone", ['response' => $updateActualResponse]);

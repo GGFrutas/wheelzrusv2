@@ -3,6 +3,8 @@ class Transaction {
   final String name;
   final String origin;
   final String destination;
+  final String originAddress;
+  final String destinationAddress;
   final String arrivalDate;
   final String deliveryDate;
   final String pickupDate;
@@ -65,6 +67,8 @@ class Transaction {
     required this.name,
     required this.origin,
     required this.destination,
+    required this.originAddress,
+    required this.destinationAddress,
     required this.arrivalDate,
     required this.deliveryDate,
     required this.status,
@@ -154,6 +158,9 @@ class Transaction {
                         ? _extractName(json['consignee_contact_id'])
                         : _extractName(json['consignee_id'])),
 
+      originAddress: json['origin_port_terminal_address'] ?? 'Unknown Origin Address',  // Provide a default value
+      destinationAddress: json['destination_port_terminal_address'] ?? 'Unknown Destination Address',  // Provide a
+
                  
       originContainerYard: json['origin_container_location'].toString(),
       requestNumber: json['de_request_no'].toString(),
@@ -220,7 +227,7 @@ class Transaction {
 }
 
 
-  Transaction copyWith({String? name, String? destination,String? requestNumber,String? origin,String? requestStatus,status, bool? isAccepted, String? truckPlateNumber}) {
+  Transaction copyWith({String? name, String? destination,String? requestNumber,String? origin,String? requestStatus,status, bool? isAccepted, String? truckPlateNumber, String? destinationAddress, String? originAddress}) {
     return Transaction(
       id: id,
       name: name ?? this.name,
@@ -279,6 +286,8 @@ class Transaction {
 
       pickupDate: pickupDate,
       departureDate: departureDate,
+      originAddress: originAddress ?? this.originAddress,
+      destinationAddress: destinationAddress ?? this.destinationAddress,
 
       login: login,
 

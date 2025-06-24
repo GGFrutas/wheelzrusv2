@@ -127,8 +127,10 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
                             children: [
                               // Space between label and value
                               Text(
+                              // (widget.transaction?.originAddress.isNotEmpty ?? false)
+                              // ? widget.transaction!.originAddress.toUpperCase() : '—',
                               (widget.transaction?.origin.isNotEmpty ?? false)
-                              ? widget.transaction!.origin : '—',
+                              ? widget.transaction!.origin.toUpperCase() : '—',
                                 // Use the originPort variable here
                                 style: AppTextStyles.subtitle.copyWith(
                                   color: mainColor,
@@ -163,7 +165,7 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
                               // Space between label and value
                               Text(
                               (widget.transaction?.freightForwarderName?.isNotEmpty ?? false)
-                              ? widget.transaction!.freightForwarderName! : '—',
+                              ? widget.transaction!.freightForwarderName!.toUpperCase() : '—',
                                 // Use the originPort variable here
                                 style: AppTextStyles.subtitle.copyWith(
                                   color: mainColor,

@@ -131,7 +131,7 @@ class _HistoryPageState extends ConsumerState<HistoryScreen> {
                 // First instance: Deliver to Consignee
                 if (item.dlTruckDriverName == driverId) // Filter out if accepted
                   item.copyWith(
-                    name: "Delivers to Consignee",
+                    name: "Deliver to Consignee",
                     origin: item.destination,
                     destination: item.origin,
                     requestNumber: item.dlRequestNumber,
@@ -191,18 +191,32 @@ class _HistoryPageState extends ConsumerState<HistoryScreen> {
                         )
                       ]
                     ),
-                      
+                    
                     child: InkWell(
                       onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => HistoryDetailScreen(
+                        Navigator.of(context).push(
+                          PageRouteBuilder(
+                            pageBuilder: (context, animation, secondaryAnimation) => HistoryDetailScreen(
                               transaction: item,
                               uid: uid ?? '',
                             ),
+                            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                              const begin = Offset(1.0, 0.0); // from right
+                              const end = Offset.zero;
+                              const curve = Curves.ease;
+
+                              final tween =
+                                  Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+                              final offsetAnimation = animation.drive(tween);
+
+                              return SlideTransition(
+                                position: offsetAnimation,
+                                child: child,
+                              );
+                            },
                           ),
                         );
+
                       },
                       child: Container(
                         padding: const EdgeInsets.all(16),
