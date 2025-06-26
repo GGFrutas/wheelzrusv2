@@ -48,404 +48,425 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
   
   @override
   Widget build(BuildContext context) {
-     
-    return Scaffold(
-      appBar: AppBar(
-        iconTheme: const IconThemeData(color: mainColor),
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(14.0),
-          child: ListView(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8.0),
-                child: Text(
-                  getNullableValue(widget.transaction?.name).toUpperCase(),
-                  style:AppTextStyles.body.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: mainColor,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              progressRow(1),
-              const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.all(16.0), // Add padding inside the container
-                
-                decoration: BoxDecoration(
-                  color: bgColor,
-                  borderRadius: BorderRadius.circular(20.0), // Rounded edges
-                ),
-                
-                child: Column( // Use a Column to arrange the widgets vertically
-                  crossAxisAlignment: CrossAxisAlignment.start, // Align text to the left
-                  children: [
-                    Row(
-                      children: [
-                        const SizedBox(width: 8),
-                        const Icon(
-                          Icons.check_circle,
-                          color: mainColor,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 20), // Space between icon and text
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Space between label and value
-                            Text(
-                              widget.transaction?.requestNumber ?? 'N/A',
-                              style: AppTextStyles.subtitle.copyWith(
-                                color: mainColor,
-                              ),
-                            ),
-                             Text(
-                              "Request Number",
-                              style: AppTextStyles.caption.copyWith(
-                                color: mainColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        const SizedBox(width: 8),
-                        const Icon(
-                          Icons.circle_rounded,
-                          color: mainColor,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 20), // Space between icon and text
-                        Expanded (
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Space between label and value
-                              Text(
-                              // (widget.transaction?.originAddress.isNotEmpty ?? false)
-                              // ? widget.transaction!.originAddress.toUpperCase() : '—',
-                              (widget.transaction?.origin.isNotEmpty ?? false)
-                              ? widget.transaction!.origin.toUpperCase() : '—',
-                                // Use the originPort variable here
-                                style: AppTextStyles.subtitle.copyWith(
-                                  color: mainColor,
-                                ),
-                              ),
-                              Text(
-                                "Port of Origin",
-                                style: AppTextStyles.caption.copyWith(
-                                  color: mainColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                        
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        const SizedBox(width: 8),
-                        const Icon(
-                          Icons.circle_rounded,
-                          color: mainColor,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 20), // Space between icon and text
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Space between label and value
-                              Text(
-                              (widget.transaction?.freightForwarderName?.isNotEmpty ?? false)
-                              ? widget.transaction!.freightForwarderName!.toUpperCase() : '—',
-                                // Use the originPort variable here
-                                style: AppTextStyles.subtitle.copyWith(
-                                  color: mainColor,
-                                ),
-                              ),
-                              Text(
-                                "Service Provider",
-                                style: AppTextStyles.caption.copyWith(
-                                  color: mainColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                        
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        const SizedBox(width: 8),
-                        const Icon(
-                          Icons.circle_rounded,
-                          color: mainColor,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 20), // Space between icon and text
-                        Expanded(
-                          child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                              (widget.transaction?.contactPerson?.isNotEmpty ?? false)
-                              ? widget.transaction!.contactPerson! : '—',
-                              style: AppTextStyles.subtitle.copyWith(
-                                  color: mainColor,
-                                ),
-                              ),
-                              Text(
-                                "Contact Person",
-                                style: AppTextStyles.caption.copyWith(
-                                  color: mainColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        const SizedBox(width: 8),
-                        const Icon(
-                          Icons.circle_rounded,
-                          color: mainColor,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 20), // Space between icon and text
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Space between label and value
-                            Text(
-                            (widget.transaction?.contactNumber?.isNotEmpty ?? false)
-                            ? widget.transaction!.contactNumber! : '—',
-                              // Use the originPort variable here
-                              style: AppTextStyles.subtitle.copyWith(
-                                color: mainColor,
-                              ),
-                            ),
-                            Text(
-                              "Contact Number",
-                              style: AppTextStyles.caption.copyWith(
-                                color: mainColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ), // ⬅️ Added progress indicator above content
-              Container(
-                // color: Colors.green[500], // Set background color for this section
-                padding: const EdgeInsets.all(8.0),
-                child: Text(
-                  "Freight and Container Info", // Section Title
-                  style: AppTextStyles.body.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: const Color.fromARGB(255, 128, 137, 145),
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.all(16.0), // Add padding inside the container
-                decoration: BoxDecoration(
-                  color: bgColor,
-                  borderRadius: BorderRadius.circular(20.0), // Rounded edges
-                ),
-            
-                child: Column( // Use a Column to arrange the widgets vertically
-                  crossAxisAlignment: CrossAxisAlignment.start, // Align text to the left
-                  children: [
-                    Row(
-                      children: [
-                        const SizedBox(width: 8),
-                        const Icon(
-                          Icons.check_circle,
-                          color: mainColor,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 20), // Space between icon and text
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Space between label and value
-                            Text(
-                              (widget.transaction?.freightBookingNumber?.isNotEmpty ?? false)
-                              ? widget.transaction!.freightBookingNumber! : '—',
-                              style: AppTextStyles.subtitle.copyWith(
-                                color: mainColor,
-                              ),
-                            ),
-                            Text(
-                              "Freight Booking Number",
-                              style: AppTextStyles.caption.copyWith(
-                                color: mainColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        const SizedBox(width: 8),
-                        const Icon(
-                          Icons.circle_rounded,
-                          color: mainColor,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 20), // Space between icon and text
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Space between label and value
-                            Text(
-                              (widget.transaction?.freightBlNumber?.isNotEmpty ?? false)
-                              ? widget.transaction!.freightBlNumber! : '—',
-                              style: AppTextStyles.subtitle.copyWith(
-                                color: mainColor,
-                              ),
-                            ),
-                            Text(
-                              "Bill of Lading Number",
-                              style: AppTextStyles.caption.copyWith(
-                                color: mainColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        const SizedBox(width: 8),
-                        const Icon(
-                          Icons.circle_rounded,
-                          color: mainColor,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 20), // Space between icon and text
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Space between label and value
-                            Text(
-                            (widget.transaction?.containerNumber?.isNotEmpty ?? false)
-                            ? widget.transaction!.containerNumber! : '—',
-                              // Use the originPort variable here
-                              style: AppTextStyles.subtitle.copyWith(
-                                color: mainColor,
-                              ),
-                            ),
-                            Text(
-                              "Container Number",
-                              style: AppTextStyles.caption.copyWith(
-                                color: mainColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        const SizedBox(width: 8),
-                        const Icon(
-                          Icons.circle_rounded,
-                          color: mainColor,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 20), // Space between icon and text
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Space between label and value
-                            Text(
-                            (widget.transaction?.sealNumber?.isNotEmpty ?? false)
-                              ? widget.transaction!.sealNumber!
-                              : '—',
-                              // Use the originPort variable here
-                              style: AppTextStyles.subtitle.copyWith(
-                                color: mainColor,
-                              ),
-                            ),
-                            Text(
-                              "Container Seal Number",
-                              style: AppTextStyles.caption.copyWith(
-                                color: mainColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
+    return PopScope(
+      canPop: true,
+      onPopInvoked: (didPop) {
+        if(didPop) {
+          ref.invalidate(pendingTransactionProvider);
+            ref.invalidate(acceptedTransactionProvider);
+            ref.invalidate(bookingProvider);
+            ref.invalidate(filteredItemsProvider);
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          iconTheme: const IconThemeData(color: mainColor),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              ref.invalidate(pendingTransactionProvider);
+              ref.invalidate(acceptedTransactionProvider);
+              ref.invalidate(bookingProvider);
+              ref.invalidate(filteredItemsProvider);
+              Navigator.pop(context);
+            },
           ),
-          
         ),
-        
-      ),
-      bottomNavigationBar: Padding(
-        padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-          top: 0,
-          left: 16,
-          right: 16,
-        ),
-        child: ElevatedButton(
-        onPressed: () {
-          
-          print("uid: ${widget.uid}");
-      
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ScheduleScreen(uid: widget.uid, transaction: widget.transaction),
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(14.0),
+            child: ListView(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text(
+                    getNullableValue(widget.transaction?.name).toUpperCase(),
+                    style:AppTextStyles.body.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: mainColor,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                progressRow(1),
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.all(16.0), // Add padding inside the container
+                  
+                  decoration: BoxDecoration(
+                    color: bgColor,
+                    borderRadius: BorderRadius.circular(20.0), // Rounded edges
+                  ),
+                  
+                  child: Column( // Use a Column to arrange the widgets vertically
+                    crossAxisAlignment: CrossAxisAlignment.start, // Align text to the left
+                    children: [
+                      Row(
+                        children: [
+                          const SizedBox(width: 8),
+                          const Icon(
+                            Icons.check_circle,
+                            color: mainColor,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 20), // Space between icon and text
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Space between label and value
+                              Text(
+                                widget.transaction?.requestNumber ?? 'N/A',
+                                style: AppTextStyles.subtitle.copyWith(
+                                  color: mainColor,
+                                ),
+                              ),
+                              Text(
+                                "Request Number",
+                                style: AppTextStyles.caption.copyWith(
+                                  color: mainColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          const SizedBox(width: 8),
+                          const Icon(
+                            Icons.circle_rounded,
+                            color: mainColor,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 20), // Space between icon and text
+                          Expanded (
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Space between label and value
+                                Text(
+                                // (widget.transaction?.originAddress.isNotEmpty ?? false)
+                                // ? widget.transaction!.originAddress.toUpperCase() : '—',
+                                (widget.transaction?.origin.isNotEmpty ?? false)
+                                ? widget.transaction!.origin.toUpperCase() : '—',
+                                  // Use the originPort variable here
+                                  style: AppTextStyles.subtitle.copyWith(
+                                    color: mainColor,
+                                  ),
+                                ),
+                                Text(
+                                  "Port of Origin",
+                                  style: AppTextStyles.caption.copyWith(
+                                    color: mainColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                          
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          const SizedBox(width: 8),
+                          const Icon(
+                            Icons.circle_rounded,
+                            color: mainColor,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 20), // Space between icon and text
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Space between label and value
+                                Text(
+                                (widget.transaction?.freightForwarderName?.isNotEmpty ?? false)
+                                ? widget.transaction!.freightForwarderName!.toUpperCase() : '—',
+                                  // Use the originPort variable here
+                                  style: AppTextStyles.subtitle.copyWith(
+                                    color: mainColor,
+                                  ),
+                                ),
+                                Text(
+                                  "Service Provider",
+                                  style: AppTextStyles.caption.copyWith(
+                                    color: mainColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                          
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          const SizedBox(width: 8),
+                          const Icon(
+                            Icons.circle_rounded,
+                            color: mainColor,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 20), // Space between icon and text
+                          Expanded(
+                            child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                (widget.transaction?.contactPerson?.isNotEmpty ?? false)
+                                ? widget.transaction!.contactPerson! : '—',
+                                style: AppTextStyles.subtitle.copyWith(
+                                    color: mainColor,
+                                  ),
+                                ),
+                                Text(
+                                  "Contact Person",
+                                  style: AppTextStyles.caption.copyWith(
+                                    color: mainColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          const SizedBox(width: 8),
+                          const Icon(
+                            Icons.circle_rounded,
+                            color: mainColor,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 20), // Space between icon and text
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Space between label and value
+                              Text(
+                              (widget.transaction?.contactNumber?.isNotEmpty ?? false)
+                              ? widget.transaction!.contactNumber! : '—',
+                                // Use the originPort variable here
+                                style: AppTextStyles.subtitle.copyWith(
+                                  color: mainColor,
+                                ),
+                              ),
+                              Text(
+                                "Contact Number",
+                                style: AppTextStyles.caption.copyWith(
+                                  color: mainColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ), // ⬅️ Added progress indicator above content
+                Container(
+                  // color: Colors.green[500], // Set background color for this section
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text(
+                    "Freight and Container Info", // Section Title
+                    style: AppTextStyles.body.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: const Color.fromARGB(255, 128, 137, 145),
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(16.0), // Add padding inside the container
+                  decoration: BoxDecoration(
+                    color: bgColor,
+                    borderRadius: BorderRadius.circular(20.0), // Rounded edges
+                  ),
+              
+                  child: Column( // Use a Column to arrange the widgets vertically
+                    crossAxisAlignment: CrossAxisAlignment.start, // Align text to the left
+                    children: [
+                      Row(
+                        children: [
+                          const SizedBox(width: 8),
+                          const Icon(
+                            Icons.check_circle,
+                            color: mainColor,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 20), // Space between icon and text
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Space between label and value
+                              Text(
+                                (widget.transaction?.freightBookingNumber?.isNotEmpty ?? false)
+                                ? widget.transaction!.freightBookingNumber! : '—',
+                                style: AppTextStyles.subtitle.copyWith(
+                                  color: mainColor,
+                                ),
+                              ),
+                              Text(
+                                "Freight Booking Number",
+                                style: AppTextStyles.caption.copyWith(
+                                  color: mainColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          const SizedBox(width: 8),
+                          const Icon(
+                            Icons.circle_rounded,
+                            color: mainColor,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 20), // Space between icon and text
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Space between label and value
+                              Text(
+                                (widget.transaction?.freightBlNumber?.isNotEmpty ?? false)
+                                ? widget.transaction!.freightBlNumber! : '—',
+                                style: AppTextStyles.subtitle.copyWith(
+                                  color: mainColor,
+                                ),
+                              ),
+                              Text(
+                                "Bill of Lading Number",
+                                style: AppTextStyles.caption.copyWith(
+                                  color: mainColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          const SizedBox(width: 8),
+                          const Icon(
+                            Icons.circle_rounded,
+                            color: mainColor,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 20), // Space between icon and text
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Space between label and value
+                              Text(
+                              (widget.transaction?.containerNumber?.isNotEmpty ?? false)
+                              ? widget.transaction!.containerNumber! : '—',
+                                // Use the originPort variable here
+                                style: AppTextStyles.subtitle.copyWith(
+                                  color: mainColor,
+                                ),
+                              ),
+                              Text(
+                                "Container Number",
+                                style: AppTextStyles.caption.copyWith(
+                                  color: mainColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          const SizedBox(width: 8),
+                          const Icon(
+                            Icons.circle_rounded,
+                            color: mainColor,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 20), // Space between icon and text
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Space between label and value
+                              Text(
+                              (widget.transaction?.sealNumber?.isNotEmpty ?? false)
+                                ? widget.transaction!.sealNumber!
+                                : '—',
+                                // Use the originPort variable here
+                                style: AppTextStyles.subtitle.copyWith(
+                                  color: mainColor,
+                                ),
+                              ),
+                              Text(
+                                "Container Seal Number",
+                                style: AppTextStyles.caption.copyWith(
+                                  color: mainColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          );
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: mainColor,
-          padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 20),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30.0),
+            
+          ),
+          
+        ),
+        bottomNavigationBar: Padding(
+          padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+            top: 0,
+            left: 16,
+            right: 16,
+          ),
+          child: ElevatedButton(
+            onPressed: () {
+              
+              print("uid: ${widget.uid}");
+          
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ScheduleScreen(uid: widget.uid, transaction: widget.transaction),
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: mainColor,
+              padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 20),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(30.0),
+              ),
+            ),
+            child: Text(
+              "Next",
+              style: AppTextStyles.body.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+            ),
           ),
         ),
-        child: Text(
-          "Next",
-          style: AppTextStyles.body.copyWith(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-          textAlign: TextAlign.center,
-          overflow: TextOverflow.ellipsis,
-          maxLines: 1,
-        ),
-      ),
-      ),
-      // bottomNavigationBar: const NavigationMenu(),
+        // bottomNavigationBar: const NavigationMenu(),
+      )
     );
+   
   }
 
    /// Progress Indicator Row

@@ -52,7 +52,7 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
     }
 
     try {
-      DateTime datetime = DateTime.parse(dateTime);
+      DateTime datetime = DateTime.parse("${dateTime}Z").toLocal();
 
       return {
         "date": DateFormat(' MMMM dd, yyyy').format(datetime),

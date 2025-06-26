@@ -95,11 +95,8 @@ class _HistoryPageState extends ConsumerState<HistoryScreen> {
           final authPartnerId = ref.watch(authNotifierProvider).partnerId;
           final driverId = authPartnerId?.toString();
 
-          print("Driver: $authPartnerId");
-
+         
           final expandedTransactions = transaction.expand((item) {
-            print("🆔 Current driverId: $driverId");
-            print("🟨 DE: ${item.deTruckDriverName}, PL: ${item.plTruckDriverName}, DL: ${item.dlTruckDriverName}, PE: ${item.peTruckDriverName}");
            
             if (item.dispatchType == "ot") {
               return [
