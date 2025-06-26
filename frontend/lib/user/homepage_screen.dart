@@ -131,12 +131,10 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
           final authPartnerId = ref.watch(authNotifierProvider).partnerId;
           final driverId = authPartnerId?.toString();
 
-          print("Driver: $authPartnerId");
+      
 
           final expandedTransactions = transaction.expand((item) {
-            print("🆔 Current driverId: $driverId");
-            print("🟨 DE: ${item.deTruckDriverName}, PL: ${item.plTruckDriverName}, DL: ${item.dlTruckDriverName}, PE: ${item.peTruckDriverName}");
-
+            
             String cleanAddress(String address) {
               return address
                 .split(',') // splits the string by commas

@@ -14,6 +14,7 @@ import 'package:frontend/provider/accepted_transaction.dart' as accepted_transac
 import 'package:frontend/provider/accepted_transaction.dart' as transaction_list;
 import 'package:frontend/provider/base_url_provider.dart';
 import 'package:frontend/provider/reject_provider.dart';
+import 'package:frontend/provider/transaction_list_notifier.dart';
 import 'package:frontend/provider/transaction_provider.dart';
 import 'package:frontend/screen/homepage_screen.dart';
 import 'package:frontend/screen/navigation_menu.dart';
@@ -496,8 +497,24 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                         context,
                       );
 
+                      final updatedState = ref.read(transaction_list.acceptedTransactionProvider);
+
+                      // final updatedTransaction = updatedState.firstWhere(
+                      //   (transaction) => transaction.id == transaction.id,
+                      //   orElse: () => widget.transaction!, // Return the original if not found
+                      // );
+                      final updatedTransaction = updatedState.firstWhere(
+                        (t) =>
+                            t.id == widget.transaction!.id &&
+                            t.requestNumber == widget.transaction!.requestNumber,
+                        orElse: () => widget.transaction!, // fallback if not founds
+                      );
+                     
+                    
+                      print('✅ Update Status: ${updatedTransaction.requestStatus}'); // Should now be 'Accepted'
+
                       if (success) {
-                        acceptedTransactionNotifier.addProduct(widget.transaction!); //Add to accepted 
+                        acceptedTransactionNotifier.addProduct(updatedTransaction); //Add to accepted 
                         showDialog(
                           context:context,
                           barrierDismissible: false,
@@ -518,6 +535,10 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                           canPop: false, // Prevent default pop behavior
                           onPopInvoked: (didPop) {
                             if (!didPop) {
+                              ref.invalidate(pendingTransactionProvider);
+                              ref.invalidate(acceptedTransactionProvider);
+                              ref.invalidate(bookingProvider);
+                              ref.invalidate(filteredItemsProvider);
                               ref.read(navigationNotifierProvider.notifier).setSelectedIndex(0);
                               // Navigate to home if system back button is pressed
                               Navigator.of(context).popUntil((route) => route.isFirst);
@@ -551,10 +572,14 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                                       onPressed: () {
                                         Navigator.pop(context);
                                         // Navigator.of(context).popUntil((route) => route.isFirst);
+                                        ref.invalidate(pendingTransactionProvider);
+                                        ref.invalidate(acceptedTransactionProvider);
+                                        ref.invalidate(bookingProvider);
+                                        ref.invalidate(filteredItemsProvider);
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
-                                            builder: (context) => DetailedDetailScreen(uid: widget.uid, transaction: widget.transaction),
+                                            builder: (context) => DetailedDetailScreen(uid: widget.uid, transaction: updatedTransaction),
                                           ),
                                         );
                                       },
@@ -575,99 +600,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                           ),
                           ),
                         );
-                      
-
-                        // showDialog(
-                        //   context: context,
-                        //   barrierDismissible: false,
-                        //   builder: (context) {
-                        //     return AlertDialog(
-                        //       title: Text(
-                        //         'Success!', 
-                        //         style: AppTextStyles.subtitle.copyWith(
-                        //           fontWeight: FontWeight.bold
-                        //         ),
-                        //         textAlign: TextAlign.center,
-                        //       ),
-                        //       content: Column(
-                        //         mainAxisSize: MainAxisSize.min,
-                        //         crossAxisAlignment: CrossAxisAlignment.center,
-                        //         children: [
-                        //           Text(
-                        //             'Booking has been accepted',
-                        //             style: AppTextStyles.body.copyWith(
-                        //               color: Colors.black87
-                        //             ),
-                        //             textAlign: TextAlign.center,
-                        //           ),
-                        //           const SizedBox(height: 16),
-                        //           const Icon (
-                        //             Icons.check_circle,
-                        //             color: mainColor,
-                        //             size: 100
-                        //           )
-                        //         ],
-                        //       ),
-                        //       actions: [
-                        //         Padding(
-                        //           padding: const EdgeInsets.only(bottom: 12.0),
-                        //           child: Center(
-                        //             child: SizedBox(
-                        //               width: 200,
-                        //               child: ElevatedButton(
-                        //               onPressed: () {
-                        //                 Navigator.pop(context);
-                        //                 Navigator.push(
-                        //                   context,
-                        //                   MaterialPageRoute(
-                        //                     builder: (context) => DetailedDetailScreen(uid: widget.uid, transaction: widget.transaction),
-                        //                   ),
-                        //                 );
-                        //               }, 
-                        //               style: ElevatedButton.styleFrom(
-                        //                 backgroundColor: mainColor,
-                        //                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                        //                 shape: RoundedRectangleBorder(
-                        //                   borderRadius: BorderRadius.circular(25),
-                        //                 ),
-                        //               ),
-                        //               child: Text(
-                        //                 "Continue",
-                        //                 style: AppTextStyles.body.copyWith(
-                        //                   color: Colors.white,
-                        //                 )
-                        //               )
-                        //             ),
-                        //             )
-                        //           )
-                        //         )
-                        //       ],
-                        //     );
-                        //   }
-                        // );
                       }
-                      acceptedTransactionNotifier.updateStatus(
-                        widget.transaction!.id.toString(),
-                        widget.transaction!.requestNumber.toString(),
-                        'Accepted', ref, context// Pass both ID and RequestNumber
-                      );
-                        
-                          // transaction?.removeWhere((t) => t.id == transaction?.id);
-                        // ref.read(filteredItemsProvider.notifier).removeTransaction(transaction?);
-                        // ref.refresh(acceptedTransactionProvider);
-                      
-
-                      // Find and display the updated transaction
-                        final updatedState = ref.read(transaction_list.acceptedTransactionProvider);
-                        final updatedTransaction = updatedState.firstWhere(
-                          (transaction) => transaction.id == transaction.id,
-                          orElse: () => widget.transaction!, // Return the original if not found
-                        );
-
-                        //Print the updated status
-                      print('ID: ${widget.transaction?.id}');
-                      print('Request Number: ${updatedTransaction.requestNumber}');
-                      print('Updated Status: ${updatedTransaction.requestStatus}');
                     }
                   },
                   style: ElevatedButton.styleFrom(
@@ -913,6 +846,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                               onPressed: () async {
                                 final uid = ref.read(authNotifierProvider).uid;
                                 final transactionId = widget.transaction!;
+                                final baseUrl = ref.watch(baseUrlProvider);
                                 // Handle Reject Action here (using _selectedValue and controller.text)
                                 final selectedReason = ref.read(selectedReasonsProvider);
                                 final feedback = controller.text;
@@ -986,6 +920,111 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                                     );
                                   },
                                 );
+
+                                try{
+                                  final password = ref.watch(authNotifierProvider).password ?? '';
+                                  final login = ref.watch(authNotifierProvider).login ?? '';
+                                  final response = await http.post(
+                                    Uri.parse('$baseUrl/api/odoo/reject-booking'),
+                                    headers:{
+                                      'Content-Type': 'application/json',
+                                      'Accept': 'application/json',
+                                      'password': password,
+                                      'login': login
+                                    },
+                                    body: jsonEncode({
+                                      'uid': uid,
+                                      'transaction_id': transactionId.id,
+                                      'reason': selectedReason,
+                                      'feedback': feedback
+                                    }),
+                                  );
+                                  // Navigator.of(context, rootNavigator: true).pop(); // close loading
+                                  print('Response Status Code: ${response.statusCode}');
+                                
+                                  if (response.statusCode == 200) {
+                                    print("Rejection Successful");
+                                    final rejectedTransactionNotifier = ref.read(accepted_transaction.acceptedTransactionProvider.notifier);
+                                    rejectedTransactionNotifier.updateStatus(transactionId.id.toString(), transactionId.requestNumber.toString(),'Rejected',ref, context);
+
+                                    await Future.delayed(const Duration(seconds: 1));
+                                    final updated = await fetchTransactionStatus(ref,baseUrl, transactionId.id.toString());
+                                    print('Updated Status: ${updated.requestStatus}');
+
+                                    if(updated.requestStatus == "Rejected") {
+                                      print('Rejection Successful');
+                                      ref.read(selectedReasonsProvider.notifier).state = null; // Clear the selected reason
+                                      controller.clear(); // Clear the text field
+
+                                      print('🔁 Redirecting to HistoryScreen with UID: $uid');
+
+                                      await Future.delayed(const Duration(seconds: 2));
+                                      ref.invalidate(bookingProvider);
+                                      ref.invalidate(filteredItemsProvider);
+                                      Navigator.of(context, rootNavigator: true).popUntil((route) => route.isFirst);
+                                      ref.read(navigationNotifierProvider.notifier).setSelectedIndex(2);
+                                     
+
+                                    } else {
+                                      print('Rejection Failed');
+                                      showDialog(
+                                        context: context,
+                                        builder: (context) {
+                                          return AlertDialog(
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                            title: Text (
+                                              "Rejection Failed!",
+                                              style: AppTextStyles.body.copyWith(color: Colors.red, fontWeight: FontWeight.bold),
+                                              textAlign: TextAlign.center,
+                                            ),
+                                            content: Text (
+                                              'An error occurred while rejecting the booking. Please try again later.',
+                                              style: AppTextStyles.body,
+                                              textAlign: TextAlign.center,
+                                            ),
+                                            actions: [
+                                              Padding(
+                                                padding: const EdgeInsets.only(bottom: 12.0),
+                                                child: Center(
+                                                  child: SizedBox(
+                                                    width: 200,
+                                                    child: ElevatedButton(
+                                                    onPressed: () {
+                                                      Navigator.of(context).pop();
+                                                    }, 
+                                                    style: ElevatedButton.styleFrom(
+                                                      backgroundColor: Colors.red,
+                                                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                                                      shape: RoundedRectangleBorder(
+                                                        borderRadius: BorderRadius.circular(25),
+                                                      ),
+                                                    ),
+                                                    child: Text(
+                                                      "OK",
+                                                      style: AppTextStyles.body.copyWith(
+                                                        color: Colors.white,
+                                                      )
+                                                    )
+                                                  ),
+                                                  )
+                                                )
+                                              )
+                                            ],
+                                          );
+                                        }
+                                      );
+                                      return;
+                                    }
+                                   
+                                  } else {
+                                    print('Button Rejection Failed');
+                                    
+                                  }
+                                }catch (e){
+                                  print('Error: $e');
+                                }
+
+                                
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color.fromARGB(255, 236, 162, 55),
