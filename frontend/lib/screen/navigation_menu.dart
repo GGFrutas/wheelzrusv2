@@ -42,8 +42,6 @@ class NavigationMenu extends ConsumerWidget {
         child: NavigationBar(
           selectedIndex: index,
           onDestinationSelected: (value) {
-            ref.invalidate(bookingProvider);
-            ref.invalidate(filteredItemsProvider);
             ref.read(navigationNotifierProvider.notifier).setSelectedIndex(value);
           },
           destinations: const [
