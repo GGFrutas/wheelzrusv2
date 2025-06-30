@@ -68,246 +68,476 @@ class _HistoryPageState extends ConsumerState<HistoryScreen> {
     
     final acceptedTransaction = ref.watch(accepted_transaction.acceptedTransactionProvider);
 
-    return RefreshIndicator(
-      onRefresh: _refreshTransaction,
-      child: transactionold.when(
-        data: (transactionList) {
-          // If transactionList is null, we ensure it's an empty list to prevent errors
-          if (transactionList.isNotEmpty) {
-            for (var transaction in transactionList) {
-              print("Booking ID: ${transaction.id}");
-            }
-          } else {
-            print("No transactions found.");
-          }
-          final validTransactionList = transactionList;
-
-          // If acceptedTransaction is a list, convert it to a Set of IDs for faster lookup
-          final acceptedTransactionIds = acceptedTransaction;
-
-          // Filtered list excluding transactions with IDs in acceptedTransaction
-          final transaction = validTransactionList.where((t) {
-            final key = "${t.id}-${t.requestNumber}";
-              return !acceptedTransactionIds.contains(key);
-          }).toList();
-
-         
-          final authPartnerId = ref.watch(authNotifierProvider).partnerId;
-          final driverId = authPartnerId?.toString();
-
-         
-          final expandedTransactions = transaction.expand((item) {
-           
-            if (item.dispatchType == "ot") {
-              return [
-                // First instance: Deliver to Shipper
-                if (item.deTruckDriverName == driverId) // Filter out if accepted
-                  // Check if the truck driver is the same as the authPartnerId
-                   item.copyWith(
-                    name: "Deliver to Shipper",
-                    destination: item.destination,
-                    origin: item.origin,
-                    requestNumber: item.deRequestNumber,
-                    requestStatus: item.deRequestStatus,
-                    truckPlateNumber: item.deTruckPlateNumber,
-                  ),
-                  // Second instance: Pickup from Shipper
-                if ( item.plTruckDriverName == driverId) // Filter out if accepted
-                  // if (item.plTruckDriverName == authPartnerId)
-                    item.copyWith(
-                    name: "Pickup from Shipper",
-                    destination: item.origin,
-                    origin: item.destination,
-                    requestNumber: item.plRequestNumber,
-                    requestStatus: item.plRequestStatus,
-                    truckPlateNumber: item.plTruckPlateNumber,
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Header card covering full top area
+            SizedBox(
+              height: 200, // You can adjust height as needed
+              width: double.infinity,
+              child: Card(
+                margin: const EdgeInsets.all(16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: Image.asset(
+                        'assets/New YXE Drive.jpg',
+                        fit: BoxFit.cover,
+                      ),
                     ),
-              ];
-            } else if (item.dispatchType == "dt") {
-              return [
-                // First instance: Deliver to Consignee
-                if (item.dlTruckDriverName == driverId) // Filter out if accepted
-                  item.copyWith(
-                    name: "Deliver to Consignee",
-                    origin: item.destination,
-                    destination: item.origin,
-                    requestNumber: item.dlRequestNumber,
-                    requestStatus: item.dlRequestStatus,
-                    truckPlateNumber: item.dlTruckPlateNumber,
-                  ),
-                // Second instance: Pickup from Consignee
-                if (item.peTruckDriverName == driverId) // Filter out if accepted
-                  item.copyWith(
-                    name: "Pickup from Consignee",
-                    requestNumber: item.peRequestNumber,
-                    requestStatus: item.peRequestStatus,
-                    truckPlateNumber: item.peTruckPlateNumber,
-                  ),
-              ]; 
-            }
-            // Return as-is if no match
-            return [item];
-          }).toList();
-
-          expandedTransactions.sort((a,b){
-            DateTime dateA = DateTime.tryParse(a.deliveryDate) ?? DateTime(0);
-            DateTime dateB = DateTime.tryParse(b.deliveryDate) ?? DateTime(0);
-            return dateB.compareTo(dateA);
-          });
-
-          final ongoingTransactions = expandedTransactions
-            .where((tx) => tx.requestStatus == 'Rejected' || tx.requestStatus == "Completed")
-            .toList();
-
-          if (ongoingTransactions.isEmpty){
-            return Center(
-              child: Text(
-                'No history yet.',
-                style: AppTextStyles.subtitle,
-              ),
-            );
-          }
-
-          return Scaffold(
-             body: Padding(
-              padding: const EdgeInsets.all(16),
-              child: ListView.builder(
-                itemCount: ongoingTransactions.length,
-                itemBuilder: (context, index) {
-                  final item = ongoingTransactions[index];
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 20),
-                    decoration: BoxDecoration(
-                      color: bgColor,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: darkerBgColor,
-                          blurRadius: 6,
-                          offset: Offset(0, 3)
-                        )
-                      ]
+                    Container(
+                      color: Colors.black.withOpacity(0.4),
+                    ),
+                    Positioned(
+                      left: 24,
+                      top: 26,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Delivery\nTransactions',
+                            style: AppTextStyles.title.copyWith(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Text (
+                            'Records of completed or\nscheduled deliveries',
+                            style: AppTextStyles.caption.copyWith(
+                              color: Colors.white,
+                            
+                            )
+                          )
+                        ],
+                      )
                     ),
                     
-                    child: InkWell(
-                      onTap: () {
-                        Navigator.of(context).push(
-                          PageRouteBuilder(
-                            pageBuilder: (context, animation, secondaryAnimation) => HistoryDetailScreen(
-                              transaction: item,
-                              uid: uid ?? '',
+                  ],
+                ),
+              ),
+            ),
+           
+            Expanded (
+              child: RefreshIndicator(
+                onRefresh: _refreshTransaction,
+                child: transactionold.when(
+                  data: (transactionList) {
+                    // If transactionList is null, we ensure it's an empty list to prevent errors
+                    
+                    final validTransactionList = transactionList;
+
+                    print("Valid Transaction List: ${validTransactionList.length}");
+
+                    // If there are no transactions, show a message
+                    if (validTransactionList.isEmpty) {
+                      return SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(), // Allow scrolling even if the list is empty
+                        child: SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.8, // Adjust height as needed
+                          child: Center(
+                            child: Text(
+                              'No history yet.',
+                              style: AppTextStyles.subtitle,
                             ),
-                            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                              const begin = Offset(1.0, 0.0); // from right
-                              const end = Offset.zero;
-                              const curve = Curves.ease;
+                          ),
+                        ),
+                      );
+                    }
 
-                              final tween =
-                                  Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-                              final offsetAnimation = animation.drive(tween);
+                    // If acceptedTransaction is a list, convert it to a Set of IDs for faster lookup
+                    final acceptedTransactionIds = acceptedTransaction;
 
-                              return SlideTransition(
-                                position: offsetAnimation,
-                                child: child,
+                    // Filtered list excluding transactions with IDs in acceptedTransaction
+                    final transaction = validTransactionList.where((t) {
+                      final key = "${t.id}-${t.requestNumber}";
+                        return !acceptedTransactionIds.contains(key);
+                    }).toList();
+
+                      // If no filtered transactions, show a message
+                    if (transaction.isEmpty) {
+                      return const Center(child: Text('No transactions available that have not been accepted.'));
+                    }
+                    final authPartnerId = ref.watch(authNotifierProvider).partnerId;
+                    final driverId = authPartnerId?.toString();
+
+                   
+
+
+
+                    final expandedTransactions = transaction.expand((item) {
+                      
+                      String cleanAddress(String address) {
+                        return address
+                          .split(',') // splits the string by commas
+                          .map((e) => e.trim()) //removes extra spaces
+                          .where((e) => e.isNotEmpty && e.toLowerCase() != 'ph') //filters out empty strings and 'ph'
+                          .join(', '); // joins the remaining parts back together
+                      }
+    
+                      if (item.dispatchType == "ot") {
+                        return [
+                          // First instance: Deliver to Shipper
+                          if (item.deTruckDriverName == driverId) // Filter out if accepted
+                            // Check if the truck driver is the same as the authPartnerId
+                            item.copyWith(
+                              name: "Deliver to Shipper",
+                              destination: cleanAddress(item.destination),
+                              origin: cleanAddress(item.origin),
+                              requestNumber: item.deRequestNumber,
+                              requestStatus: item.deRequestStatus,
+                              // truckPlateNumber: item.deTruckPlateNumber,
+                            ),
+                            // Second instance: Pickup from Shipper
+                          if ( item.plTruckDriverName == driverId) // Filter out if accepted
+                            // if (item.plTruckDriverName == authPartnerId)
+                              item.copyWith(
+                              name: "Pickup from Shipper",
+                              destination: cleanAddress(item.origin),
+                              origin: cleanAddress(item.destination),
+                              requestNumber: item.plRequestNumber,
+                              requestStatus: item.plRequestStatus,
+                              // truckPlateNumber: item.plTruckPlateNumber,
+                              ),
+                        ];
+                      } else if (item.dispatchType == "dt") {
+                        return [
+                          // First instance: Deliver to Consignee
+                          if (item.dlTruckDriverName == driverId) // Filter out if accepted
+                            item.copyWith(
+                              name: "Deliver to Consignee",
+                              origin: cleanAddress(item.destination),
+                              destination: cleanAddress(item.origin),
+                              requestNumber: item.dlRequestNumber,
+                              requestStatus: item.dlRequestStatus,
+                              // truckPlateNumber: item.dlTruckPlateNumber,
+                            ),
+                          // Second instance: Pickup from Consignee
+                          if (item.peTruckDriverName == driverId) // Filter out if accepted
+                            item.copyWith(
+                              name: "Pickup from Consignee",
+                              origin: cleanAddress(item.origin),
+                              destination: cleanAddress(item.destination),
+                              requestNumber: item.peRequestNumber,
+                              requestStatus: item.peRequestStatus,
+                              // truckPlateNumber: item.peTruckPlateNumber,
+                            ),
+                        ]; 
+                      }
+                      // Return as-is if no match
+                      return [item];
+                    }).toList();
+
+                    expandedTransactions.sort((a,b){
+                      DateTime dateA = DateTime.tryParse(a.deliveryDate) ?? DateTime(0);
+                      DateTime dateB = DateTime.tryParse(b.deliveryDate) ?? DateTime(0);
+                      return dateB.compareTo(dateA);
+                    });
+
+                    final ongoingTransactions = expandedTransactions
+                      .where((tx) => tx.requestStatus == "Rejected" || tx.requestStatus == "Completed")
+                      .toList();
+
+                  
+                    if (ongoingTransactions.isEmpty) {
+                      return ListView(
+                        physics: const AlwaysScrollableScrollPhysics(), // Allow scrolling even if the list is empty
+                        children: [
+                          SizedBox(
+                            height: MediaQuery.of(context).size.height * 0.8, // Adjust height as needed
+                            child: Center(
+                              child: Text(
+                                'No history transactions yet.',
+                                style: AppTextStyles.subtitle,
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+                    return ListView.builder(
+                      itemCount: ongoingTransactions.length,
+                      itemBuilder: (context, index) {
+                        final item = ongoingTransactions[index];
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 20),
+                          decoration: BoxDecoration(
+                            color: bgColor,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: darkerBgColor,
+                                blurRadius: 6,
+                                offset: Offset(0, 3)
+                              )
+                            ]
+                          ),
+                          child: InkWell(
+                            onTap: () {
+                              Navigator.of(context).push(
+                                PageRouteBuilder(
+                                  pageBuilder: (context, animation, secondaryAnimation) => HistoryDetailScreen(
+                                    transaction: item,
+                                    uid: uid ?? '',
+                                  ),
+                                  transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                                    const begin = Offset(1.0, 0.0); // from right
+                                    const end = Offset.zero;
+                                    const curve = Curves.ease;
+
+                                    final tween =
+                                        Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+                                    final offsetAnimation = animation.drive(tween);
+
+                                    return SlideTransition(
+                                      position: offsetAnimation,
+                                      child: child,
+                                    );
+                                  },
+                                ),
                               );
                             },
-                          ),
-                        );
-
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            
-                            Row(
-                              children: [
-                                const SizedBox(width: 20), // Space between icon and text
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // Space between label and value
-                                    Text(
-                                      "Request Number",
-                                      style: AppTextStyles.caption.copyWith(
-                                        color: darkerBgColor,
-                                      ),
-                                    ),
-                                    Text(
-                                      (item.requestNumber?.toString() ?? 'No Request Number Available'),
-                                      style: AppTextStyles.body.copyWith(
-                                        color: mainColor,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 20),
-                            Row(
-                              children: [
-                                const SizedBox(width: 20), // Space between icon and text
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
                                     children: [
-                                      // Space between label and value
-                                      Text(
-                                        "Date Delivered",
-                                        style: AppTextStyles.caption.copyWith(
-                                          color: darkerBgColor,
+                                      const SizedBox(width: 20), // Space between icon and text
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          // Space between label and value
+                                          Text(
+                                            "Request Number",
+                                            style: AppTextStyles.caption.copyWith(
+                                              color: darkerBgColor,
+                                            ),
+                                          ),
+                                          Text(
+                                            (item.requestNumber?.toString() ?? 'No Request Number Available'),
+                                            style: AppTextStyles.body.copyWith(
+                                              color: mainColor,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 20),
+                                  Row(
+                                    children: [
+                                      const SizedBox(width: 20), // Space between icon and text
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            // Space between label and value
+                                            Text(
+                                              "Date Delivered",
+                                              style: AppTextStyles.caption.copyWith(
+                                                color: darkerBgColor,
+                                              ),
+                                            ),
+                                            Text(
+                                              formatDateTime(item.deliveryDate),
+                                              style: AppTextStyles.body.copyWith(
+                                                color: mainColor,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                      Text(
-                                        formatDateTime(item.deliveryDate),
-                                        style: AppTextStyles.body.copyWith(
-                                          color: mainColor,
-                                          fontWeight: FontWeight.bold,
+                                      Container(
+                                        constraints: const BoxConstraints(
+                                          minWidth: 150,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(20),
+                                          color: getStatusColor(item.requestStatus ?? ''),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                        child: Text(
+                                          item.requestStatus ?? '',
+                                          style: AppTextStyles.caption.copyWith(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold
+                                          ),
+                                          textAlign: TextAlign.center,
                                         ),
                                       ),
                                     ],
                                   ),
-                                ),
-                                Container(
-                                  constraints: const BoxConstraints(
-                                    minWidth: 150,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(20),
-                                    color: getStatusColor(item.requestStatus ?? ''),
-                                  ),
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                  child: Text(
-                                    item.requestStatus ?? '',
-                                    style: AppTextStyles.caption.copyWith(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                           
-                         ],
-                      ),
-                    ),
-                  ),
-                );
-                    
-              },
-             
-            ),
-          ),
-        );
-
-      },
-      loading: () => const Center(child: CircularProgressIndicator()),  // Show loading spinner while fetching data
-      error: (e, stack) => Center(child: Text('Error: $e')),  // Display error message if an error occurs
-      ),
+                          ),
+                        );
+                      },
+                    );
+                  }, 
+                  loading: () => const Center(child: CircularProgressIndicator()),  // Show loading spinner while fetching data
+                  error: (e, stack) => Center(child: Text('Error: $e')),  
+                ),  
+              )
+            )
+              
+          ],
+        )
+      ) 
     );
+   
+
+   
+    //       return Scaffold(
+    //          body: Padding(
+    //           padding: const EdgeInsets.all(16),
+    //           child: ListView.builder(
+    //             itemCount: ongoingTransactions.length,
+    //             itemBuilder: (context, index) {
+    //               final item = ongoingTransactions[index];
+    //               return Container(
+    //                 margin: const EdgeInsets.only(bottom: 20),
+    //                 decoration: BoxDecoration(
+    //                   color: bgColor,
+    //                   borderRadius: BorderRadius.circular(12),
+    //                   boxShadow: const [
+    //                     BoxShadow(
+    //                       color: darkerBgColor,
+    //                       blurRadius: 6,
+    //                       offset: Offset(0, 3)
+    //                     )
+    //                   ]
+    //                 ),
+                    
+    //                 child: InkWell(
+    //                   onTap: () {
+    //                     Navigator.of(context).push(
+    //                       PageRouteBuilder(
+    //                         pageBuilder: (context, animation, secondaryAnimation) => HistoryDetailScreen(
+    //                           transaction: item,
+    //                           uid: uid ?? '',
+    //                         ),
+    //                         transitionsBuilder: (context, animation, secondaryAnimation, child) {
+    //                           const begin = Offset(1.0, 0.0); // from right
+    //                           const end = Offset.zero;
+    //                           const curve = Curves.ease;
+
+    //                           final tween =
+    //                               Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+    //                           final offsetAnimation = animation.drive(tween);
+
+    //                           return SlideTransition(
+    //                             position: offsetAnimation,
+    //                             child: child,
+    //                           );
+    //                         },
+    //                       ),
+    //                     );
+
+    //                   },
+    //                   child: Container(
+    //                     padding: const EdgeInsets.all(16),
+    //                     child: Column(
+    //                       crossAxisAlignment: CrossAxisAlignment.start,
+    //                       children: [
+                            
+    //                         Row(
+    //                           children: [
+    //                             const SizedBox(width: 20), // Space between icon and text
+    //                             Column(
+    //                               crossAxisAlignment: CrossAxisAlignment.start,
+    //                               children: [
+    //                                 // Space between label and value
+    //                                 Text(
+    //                                   "Request Number",
+    //                                   style: AppTextStyles.caption.copyWith(
+    //                                     color: darkerBgColor,
+    //                                   ),
+    //                                 ),
+    //                                 Text(
+    //                                   (item.requestNumber?.toString() ?? 'No Request Number Available'),
+    //                                   style: AppTextStyles.body.copyWith(
+    //                                     color: mainColor,
+    //                                     fontWeight: FontWeight.bold,
+    //                                   ),
+    //                                 ),
+    //                               ],
+    //                             ),
+    //                           ],
+    //                         ),
+    //                         const SizedBox(height: 20),
+    //                         Row(
+    //                           children: [
+    //                             const SizedBox(width: 20), // Space between icon and text
+    //                             Expanded(
+    //                               child: Column(
+    //                                 crossAxisAlignment: CrossAxisAlignment.start,
+    //                                 children: [
+    //                                   // Space between label and value
+    //                                   Text(
+    //                                     "Date Delivered",
+    //                                     style: AppTextStyles.caption.copyWith(
+    //                                       color: darkerBgColor,
+    //                                     ),
+    //                                   ),
+    //                                   Text(
+    //                                     formatDateTime(item.deliveryDate),
+    //                                     style: AppTextStyles.body.copyWith(
+    //                                       color: mainColor,
+    //                                       fontWeight: FontWeight.bold,
+    //                                     ),
+    //                                   ),
+    //                                 ],
+    //                               ),
+    //                             ),
+    //                             Container(
+    //                               constraints: const BoxConstraints(
+    //                                 minWidth: 150,
+    //                               ),
+    //                               decoration: BoxDecoration(
+    //                                 borderRadius: BorderRadius.circular(20),
+    //                                 color: getStatusColor(item.requestStatus ?? ''),
+    //                               ),
+    //                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    //                               child: Text(
+    //                                 item.requestStatus ?? '',
+    //                                 style: AppTextStyles.caption.copyWith(
+    //                                   color: Colors.white,
+    //                                   fontWeight: FontWeight.bold
+    //                                 ),
+    //                                 textAlign: TextAlign.center,
+    //                               ),
+    //                             ),
+    //                           ],
+    //                         ),
+                           
+    //                      ],
+    //                   ),
+    //                 ),
+    //               ),
+    //             );
+                    
+    //           },
+             
+    //         ),
+    //       ),
+    //     );
+
+    //   },
+    //   loading: () => const Center(child: CircularProgressIndicator()),  // Show loading spinner while fetching data
+    //   error: (e, stack) => Center(child: Text('Error: $e')),  // Display error message if an error occurs
+    //   ),
+    // );
     
   }
 

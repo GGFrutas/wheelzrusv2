@@ -271,7 +271,7 @@ class TransactionController extends Controller
     }
 
 
-    public function getBookingDetails(Request $request)
+    public function getHistory(Request $request)
     {
         $url = $this->url;
         $db = $this->db;
@@ -398,12 +398,26 @@ class TransactionController extends Controller
                     'dispatch.manager',
                     'search_read',
                     [[
-                        ["id", "=", (int)$bookingId], // Ensure we are looking for a specific booking ID
+                    
+                        "|", "|", "|",
+                        ["de_truck_driver_name", "=", $partnerId],
+                        ["dl_truck_driver_name", "=", $partnerId],
+                        ["pe_truck_driver_name", "=", $partnerId],
+                        ["pl_truck_driver_name", "=", $partnerId],
+                    
+                        
+                    
+                        ["dispatch_type", "!=", "ff"]
                     ]],
                     ["fields" => [
-                        "id", "container_number", "seal_number", "booking_reference_no", "origin_forwarder_name", "destination_forwarder_name", "freight_booking_number",
+                        "id", "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
+                        "dispatch_type", "de_truck_driver_name", "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name",
+                        "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", "origin_port_terminal_address", "destination_port_terminal_address", "arrival_date", "delivery_date",
+                        "container_number", "seal_number", "booking_reference_no", "origin_forwarder_name", "destination_forwarder_name", "freight_booking_number",
                         "origin_container_location", "freight_bl_number",
-                        "freight_forwarder_name", "shipper_phone", "consignee_phone", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id",
+                        "freight_forwarder_name", "shipper_phone", "consignee_phone", "dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", "pl_truck_plate_no",
+                        "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
+                        "pickup_date", "departure_date","origin", "destination", 
                     ]],
                 ]
             ],
@@ -424,9 +438,14 @@ class TransactionController extends Controller
 
         // Step 5: Queue a job for each dispatch.manager record
         $fieldsToString = [
-           "container_number", "seal_number", "booking_reference_no", "origin_forwarder_name", "destination_forwarder_name", "freight_booking_number",
-            "origin_container_location", "freight_bl_number", 
-            "freight_forwarder_name", "shipper_phone", "consignee_phone", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id",
+           "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
+            "dispatch_type", 
+            "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", "origin_port_terminal_address", "destination_port_terminal_address", "arrival_date", "delivery_date",
+            "container_number", "seal_number", "booking_reference_no", "origin_forwarder_name", "destination_forwarder_name", "freight_booking_number",
+            "origin_container_location", "freight_bl_number",
+            "freight_forwarder_name", "shipper_phone", "consignee_phone", "dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", "pl_truck_plate_no",
+            "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
+            "pickup_date", "departure_date","origin", "destination", 
         ];
 
         $jobResponses = [];

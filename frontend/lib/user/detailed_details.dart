@@ -48,6 +48,53 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
   
   @override
   Widget build(BuildContext context) {
+    // final transaction = widget.transaction;
+    // final dispatchType = transaction?.dispatchType;
+    // final serviceType = transaction?.serviceType;
+    // final bookingNumber = transaction?.freightBookingNumber;
+
+    // /// Helper to check if a value is null or empty
+    // bool isNullOrEmpty(dynamic value) {
+    //   return value == null || value.toString().trim().isEmpty;
+    // }
+
+    // /// Determine if the button should be hidden
+    // final showButton = (dispatchType == 'ot' && (isNullOrEmpty(transaction?.deProof) || isNullOrEmpty(transaction?.deSign))&& widget.transaction?.plRequestNumber == widget.transaction?.requestNumber) ||
+    //                   (dispatchType == 'dt' && (isNullOrEmpty(transaction?.dlProof) || isNullOrEmpty(transaction?.dlSign))  && widget.transaction?.peRequestNumber == widget.transaction?.requestNumber);
+    final transaction = widget.transaction;
+final dispatchType = transaction?.dispatchType;
+final requestNumber = transaction?.requestNumber;
+final plRequestNumber = transaction?.plRequestNumber;
+final peRequestNumber = transaction?.peRequestNumber;
+final bookingNumber = transaction?.bookingRefNo;
+
+/// Helper
+bool isNullOrEmpty(dynamic value) {
+  return value == null || value.toString().trim().isEmpty;
+}
+
+/// Base conditions (ot and dt)
+bool hideForCurrentDispatch = 
+  (dispatchType == 'ot' &&
+    (isNullOrEmpty(transaction?.deProof) || isNullOrEmpty(transaction?.deSign)) &&
+     plRequestNumber == requestNumber) ||
+
+  (dispatchType == 'dt' &&
+    (isNullOrEmpty(transaction?.dlProof) || isNullOrEmpty(transaction?.dlSign)) &&
+    peRequestNumber == requestNumber);
+
+
+final relatedFF = (widget.transaction?.dispatchType == 'ff' &&
+                   widget.transaction?.bookingRefNo == bookingNumber)
+                  ? widget.transaction
+                  : null;
+
+bool ffNotComplete = relatedFF != null && relatedFF.stageId != '7';
+
+/// Final decision: if any rule to hide the button is true, we hide it
+final showButton = hideForCurrentDispatch || ffNotComplete;
+
+        
     return PopScope(
       canPop: true,
       onPopInvoked: (didPop) {
@@ -425,7 +472,7 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
           ),
           
         ),
-        bottomNavigationBar: Padding(
+        bottomNavigationBar: showButton ? null : Padding(
           padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom + 16,
             top: 0,

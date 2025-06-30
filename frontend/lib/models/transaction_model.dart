@@ -60,6 +60,8 @@ class Transaction {
   final String? dlSign;
   final String? peSign;
   final String? login;
+  final String? serviceType;
+  final String? stageId;
 
 
   const Transaction({
@@ -117,7 +119,9 @@ class Transaction {
     required this.dlSign,   
     required this.peSign,  
     required this.pickupDate,   
-    required this.departureDate,    
+    required this.departureDate,   
+    required this.serviceType, 
+    required this.stageId,
     this.isAccepted = false,
     required this.login,
   });
@@ -202,7 +206,10 @@ class Transaction {
       pickupDate: json['pickup_date'] ?? 'Unknown Pick Up Date',  // Provide a default value
       departureDate: json['departure_date'] ?? 'Unknown DEparture Date',  // Provide a default value
 
+      serviceType: json['service_type']?.toString() ?? 'Unknown Service Type',  // Provide a default value
+
       login: json['login'].toString(),
+      stageId: json['stage_id']?.toString() ?? '0',  // Provide a default value
      
 
       isAccepted: false,  // set default or map from API
@@ -288,6 +295,8 @@ class Transaction {
       departureDate: departureDate,
       originAddress: originAddress ?? this.originAddress,
       destinationAddress: destinationAddress ?? this.destinationAddress,
+      serviceType: serviceType,
+      stageId: stageId,
 
       login: login,
 

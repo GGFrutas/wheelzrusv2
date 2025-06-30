@@ -83,328 +83,335 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
     final transactionold = ref.watch(filteredItemsProvider);
     
     final acceptedTransaction = ref.watch(accepted_transaction.acceptedTransactionProvider);
-     final uid = ref.read(authNotifierProvider).uid;
-
-    return RefreshIndicator(
-      onRefresh: _refreshTransaction,
-      child: transactionold.when(
-        data: (transactionList) {
-          // If transactionList is null, we ensure it's an empty list to prevent errors
-          if (transactionList.isNotEmpty) {
-            for (var transaction in transactionList) {
-              print("Booking ID: ${transaction.id}");
-            }
-          } else {
-            print("No transactions found.");
-          }
-          final validTransactionList = transactionList;
-
-          // If there are no transactions, show a message
-          if (validTransactionList.isEmpty) {
-            return SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(), // Allow scrolling even if the list is empty
-              child: SizedBox(
-                height: MediaQuery.of(context).size.height * 0.8, // Adjust height as needed
-                child: Center(
-                  child: Text(
-                    'No pending transactions available.',
-                    style: AppTextStyles.subtitle,
-                  ),
-                ),
-              ),
-            );
-          }
-
-          // If acceptedTransaction is a list, convert it to a Set of IDs for faster lookup
-          final acceptedTransactionIds = acceptedTransaction;
-
-          // Filtered list excluding transactions with IDs in acceptedTransaction
-          final transaction = validTransactionList.where((t) {
-            final key = "${t.id}-${t.requestNumber}";
-              return !acceptedTransactionIds.contains(key);
-          }).toList();
-
-            // If no filtered transactions, show a message
-          if (transaction.isEmpty) {
-            return const Center(child: Text('No transactions available that have not been accepted.'));
-          }
-          final authPartnerId = ref.watch(authNotifierProvider).partnerId;
-          final driverId = authPartnerId?.toString();
-
-      
-
-          final expandedTransactions = transaction.expand((item) {
-            
-            String cleanAddress(String address) {
-              return address
-                .split(',') // splits the string by commas
-                .map((e) => e.trim()) //removes extra spaces
-                .where((e) => e.isNotEmpty && e.toLowerCase() != 'ph') //filters out empty strings and 'ph'
-                .join(', '); // joins the remaining parts back together
-            }
-            
-            if (item.dispatchType == "ot") {
-              return [
-                // First instance: Deliver to Shipper
-                if (item.deTruckDriverName == driverId) // Filter out if accepted
-                  // Check if the truck driver is the same as the authPartnerId
-                   item.copyWith(
-                    name: "Deliver to Shipper",
-                    destination: cleanAddress(item.destination),
-                    origin: cleanAddress(item.origin),
-                    requestNumber: item.deRequestNumber,
-                    requestStatus: item.deRequestStatus,
-                    // truckPlateNumber: item.deTruckPlateNumber,
-                  ),
-                  // Second instance: Pickup from Shipper
-                if ( item.plTruckDriverName == driverId) // Filter out if accepted
-                  // if (item.plTruckDriverName == authPartnerId)
-                    item.copyWith(
-                    name: "Pickup from Shipper",
-                    destination: cleanAddress(item.origin),
-                    origin: cleanAddress(item.destination),
-                    requestNumber: item.plRequestNumber,
-                    requestStatus: item.plRequestStatus,
-                    // truckPlateNumber: item.plTruckPlateNumber,
+    final uid = ref.read(authNotifierProvider).uid;
+    return Scaffold(
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              CarouselSlider(
+                items: carouselItems.map((item) {
+                  return Card(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
                     ),
-              ];
-            } else if (item.dispatchType == "dt") {
-              return [
-                // First instance: Deliver to Consignee
-                if (item.dlTruckDriverName == driverId) // Filter out if accepted
-                  item.copyWith(
-                    name: "Deliver to Consignee",
-                    origin: cleanAddress(item.destination),
-                    destination: cleanAddress(item.origin),
-                    requestNumber: item.dlRequestNumber,
-                    requestStatus: item.dlRequestStatus,
-                    // truckPlateNumber: item.dlTruckPlateNumber,
-                  ),
-                // Second instance: Pickup from Consignee
-                if (item.peTruckDriverName == driverId) // Filter out if accepted
-                  item.copyWith(
-                    name: "Pickup from Consignee",
-                    origin: cleanAddress(item.origin),
-                    destination: cleanAddress(item.destination),
-                    requestNumber: item.peRequestNumber,
-                    requestStatus: item.peRequestStatus,
-                    // truckPlateNumber: item.peTruckPlateNumber,
-                  ),
-              ]; 
-            }
-            // Return as-is if no match
-            return [item];
-          }).toList();
-
-          expandedTransactions.sort((a,b){
-            DateTime dateA = DateTime.tryParse(a.deliveryDate) ?? DateTime(0);
-            DateTime dateB = DateTime.tryParse(b.deliveryDate) ?? DateTime(0);
-            return dateB.compareTo(dateA);
-          });
-
-          final ongoingTransactions = expandedTransactions
-            .where((tx) => tx.requestStatus == "Pending")
-            .toList();
-
-          return Scaffold(
-            body: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: CustomScrollView(
-                  slivers: [
-                    SliverToBoxAdapter(
-                      child: Column(
+                    margin: const EdgeInsets.symmetric(horizontal: 8),
+                    color: Color(int.parse(item['color']!.replaceFirst('#', '0xff'))),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
                         children: [
-                          // 🚚 Carousel
-                          CarouselSlider(
-                            items: carouselItems.map((item) {
-                              return Card(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                margin: const EdgeInsets.symmetric(horizontal: 8),
-                                color: Color(int.parse(item['color']!.replaceFirst('#', '0xff'))),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(16),
-                                  child: Row(
-                                    children: [
-                                      // 📝 Text column — don't constrain title
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Text(
-                                              item['title']!,
-                                              style: AppTextStyles.subtitle.copyWith(
-                                                color: Colors.white,
-                                                fontSize: 18,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 10),
-                                            Flexible(
-                                              child: Text(
-                                                item['subtitle']!,
-                                                style: AppTextStyles.caption.copyWith(
-                                                  color: Colors.white70,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                                maxLines: 2,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      Container(
-                                        height: 50,
-                                        width: 100,
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(12),
-                                          image: DecorationImage(
-                                            image: AssetImage(item['image']!),
-                                            fit: BoxFit.cover,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
+                          // 📝 Text column — don't constrain title
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  item['title']!,
+                                  style: AppTextStyles.subtitle.copyWith(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                              );
-                            }).toList(),
-                            options: CarouselOptions(
-                              height: 150,
-                              enlargeCenterPage: true,
-                              autoPlay: true,
-                              viewportFraction: 0.85,
-                              autoPlayInterval: const Duration(seconds: 4),
+                                const SizedBox(height: 10),
+                                Flexible(
+                                  child: Text(
+                                    item['subtitle']!,
+                                    style: AppTextStyles.caption.copyWith(
+                                      color: Colors.white70,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-
-                          const SizedBox(height: 20),
+                          Container(
+                            height: 50,
+                            width: 100,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              image: DecorationImage(
+                              image: AssetImage(item['image']!),
+                              fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                   
-                    // 📦 Grid wrapped in SliverList
-                    SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final item = ongoingTransactions[index];
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 20),
-                            child: Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => TransactionDetails(
-                                        transaction: item,
-                                        id: item.id,
-                                        uid: uid ?? '',
-                                      ),
-                                    ),
-                                  );
-                                },
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                                  child: Container(
-                                    padding: const EdgeInsets.all(16),
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(15),
-                                      boxShadow: const [
-                                        BoxShadow(
-                                          color: mainColor,
-                                          spreadRadius: 2,
-                                          offset: Offset(0, 3),
-                                        ),
-                                      ],
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          crossAxisAlignment: CrossAxisAlignment.center,
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
+                  );
+                }).toList(),
+                options: CarouselOptions(
+                  height: 150,
+                  enlargeCenterPage: true,
+                  autoPlay: true,
+                  viewportFraction: 0.85,
+                  autoPlayInterval: const Duration(seconds: 4),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              Expanded(
+                child: RefreshIndicator (
+                  onRefresh: _refreshTransaction,
+                  child: transactionold.when(
+                    data: (transactionList) {
+                      // If transactionList is null, we ensure it's an empty list to prevent errors
+                      if (transactionList.isNotEmpty) {
+                        for (var transaction in transactionList) {
+                          print("Booking ID: ${transaction.id}");
+                        }
+                      } else {
+                        print("No transactions found.");
+                      }
+                      final validTransactionList = transactionList;
+
+                      // If there are no transactions, show a message
+                      if (validTransactionList.isEmpty) {
+                        return SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(), // Allow scrolling even if the list is empty
+                          child: SizedBox(
+                            height: MediaQuery.of(context).size.height * 0.8, // Adjust height as needed
+                            child: Center(
+                              child: Text(
+                                'No pending transactions available.',
+                                style: AppTextStyles.subtitle,
+                              ),
+                            ),
+                          ),
+                        );
+                      }
+
+                      // If acceptedTransaction is a list, convert it to a Set of IDs for faster lookup
+                      final acceptedTransactionIds = acceptedTransaction;
+
+                      // Filtered list excluding transactions with IDs in acceptedTransaction
+                      final transaction = validTransactionList.where((t) {
+                        final key = "${t.id}-${t.requestNumber}";
+                          return !acceptedTransactionIds.contains(key);
+                      }).toList();
+
+                        // If no filtered transactions, show a message
+                      if (transaction.isEmpty) {
+                        return const Center(child: Text('No transactions available that have not been accepted.'));
+                      }
+                      final authPartnerId = ref.watch(authNotifierProvider).partnerId;
+                      final driverId = authPartnerId?.toString();
+
+
+
+                      final expandedTransactions = transaction.expand((item) {
+                        
+                        String cleanAddress(String address) {
+                          return address
+                            .split(',') // splits the string by commas
+                            .map((e) => e.trim()) //removes extra spaces
+                            .where((e) => e.isNotEmpty && e.toLowerCase() != 'ph') //filters out empty strings and 'ph'
+                            .join(', '); // joins the remaining parts back together
+                        }
+      
+                        if (item.dispatchType == "ot") {
+                          return [
+                            // First instance: Deliver to Shipper
+                            if (item.deTruckDriverName == driverId) // Filter out if accepted
+                              // Check if the truck driver is the same as the authPartnerId
+                              item.copyWith(
+                                name: "Deliver to Shipper",
+                                destination: cleanAddress(item.destination),
+                                origin: cleanAddress(item.origin),
+                                requestNumber: item.deRequestNumber,
+                                requestStatus: item.deRequestStatus,
+                                // truckPlateNumber: item.deTruckPlateNumber,
+                              ),
+                              // Second instance: Pickup from Shipper
+                            if ( item.plTruckDriverName == driverId) // Filter out if accepted
+                              // if (item.plTruckDriverName == authPartnerId)
+                                item.copyWith(
+                                name: "Pickup from Shipper",
+                                destination: cleanAddress(item.origin),
+                                origin: cleanAddress(item.destination),
+                                requestNumber: item.plRequestNumber,
+                                requestStatus: item.plRequestStatus,
+                                // truckPlateNumber: item.plTruckPlateNumber,
+                                ),
+                          ];
+                        } else if (item.dispatchType == "dt") {
+                          return [
+                            // First instance: Deliver to Consignee
+                            if (item.dlTruckDriverName == driverId) // Filter out if accepted
+                              item.copyWith(
+                                name: "Deliver to Consignee",
+                                origin: cleanAddress(item.destination),
+                                destination: cleanAddress(item.origin),
+                                requestNumber: item.dlRequestNumber,
+                                requestStatus: item.dlRequestStatus,
+                                // truckPlateNumber: item.dlTruckPlateNumber,
+                              ),
+                            // Second instance: Pickup from Consignee
+                            if (item.peTruckDriverName == driverId) // Filter out if accepted
+                              item.copyWith(
+                                name: "Pickup from Consignee",
+                                origin: cleanAddress(item.origin),
+                                destination: cleanAddress(item.destination),
+                                requestNumber: item.peRequestNumber,
+                                requestStatus: item.peRequestStatus,
+                                // truckPlateNumber: item.peTruckPlateNumber,
+                              ),
+                          ]; 
+                        }
+                        // Return as-is if no match
+                        return [item];
+                      }).toList();
+
+                      expandedTransactions.sort((a,b){
+                        DateTime dateA = DateTime.tryParse(a.deliveryDate) ?? DateTime(0);
+                        DateTime dateB = DateTime.tryParse(b.deliveryDate) ?? DateTime(0);
+                        return dateB.compareTo(dateA);
+                      });
+
+                      final ongoingTransactions = expandedTransactions
+                        .where((tx) => tx.requestStatus == "Pending")
+                        .toList();
+                     
+
+                      return CustomScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        slivers: [
+                          if (ongoingTransactions.isEmpty) 
+                          SliverFillRemaining(
+                            hasScrollBody: false,
+                            child: Center(
+                              child: Text(
+                                'No pending transactions available.',
+                                style: AppTextStyles.subtitle,
+                              ),
+                            ),
+                          )
+                          else
+                          SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) {
+                                final item = ongoingTransactions[index];
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 20),
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => TransactionDetails(
+                                              transaction: item,
+                                              id: item.id,
+                                              uid: uid ?? '',
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                                        child: Container(
+                                          padding: const EdgeInsets.all(16),
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(15),
+                                            boxShadow: const [
+                                              BoxShadow(
+                                                color: mainColor,
+                                                spreadRadius: 2,
+                                                offset: Offset(0, 3),
+                                              ),
+                                            ],
+                                          ),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                crossAxisAlignment: CrossAxisAlignment.center,
+                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                                 children: [
-                                                  Text (
-                                                    item.name,
-                                                    style: AppTextStyles.body.copyWith(
-                                                      fontSize: 14,
-                                                      fontWeight: FontWeight.bold,
-                                                      letterSpacing: 0.9,
-                                                      color: Colors.white,
-                                                    ),
-                                                    overflow: TextOverflow.ellipsis,
-                                                    maxLines: 2,
-                                                  ),
-                                                  const SizedBox(height: 8),
-                                                  Row(
-                                                    children: [
-                                                      Text(
-                                                        "Request Number: ",
-                                                        style: AppTextStyles.caption.copyWith(
-                                                          fontWeight: FontWeight.bold,
-                                                          fontSize: 12,
-                                                          color: Colors.white,
-                                                        ),
-                                                      ),
-                                                      Flexible(
-                                                        child: Text(
-                                                          (item.requestNumber?.toString() ?? 'No Request Number Available'),
-                                                          style: AppTextStyles.caption.copyWith(
-                                                            color: Colors.white
+                                                  Expanded(
+                                                    child: Column(
+                                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                                      children: [
+                                                        Text (
+                                                          item.name,
+                                                          style: AppTextStyles.body.copyWith(
+                                                            fontSize: 14,
+                                                            fontWeight: FontWeight.bold,
+                                                            letterSpacing: 0.9,
+                                                            color: Colors.white,
                                                           ),
-                                                          softWrap: true, // Text will wrap if it's too long
+                                                          overflow: TextOverflow.ellipsis,
+                                                          maxLines: 2,
                                                         ),
-                                                      ),
-                                                    ],
+                                                        const SizedBox(height: 8),
+                                                        Row(
+                                                          children: [
+                                                            Text(
+                                                              "Request Number: ",
+                                                              style: AppTextStyles.caption.copyWith(
+                                                                fontWeight: FontWeight.bold,
+                                                                fontSize: 12,
+                                                                color: Colors.white,
+                                                              ),
+                                                            ),
+                                                            Flexible(
+                                                              child: Text(
+                                                                (item.requestNumber?.toString() ?? 'No Request Number Available'),
+                                                                style: AppTextStyles.caption.copyWith(
+                                                                  color: Colors.white
+                                                                ),
+                                                                softWrap: true, // Text will wrap if it's too long
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                
+                                                  const SizedBox(width: 8),
+                                                  const Icon(
+                                                    Icons.chevron_right,
+                                                    color: Color.fromARGB(255, 255, 255, 255),
+                                                    size: 40,
                                                   ),
                                                 ],
                                               ),
-                                            ),
-                                           
-                                            const SizedBox(width: 8),
-                                            const Icon(
-                                              Icons.chevron_right,
-                                              color: Color.fromARGB(255, 255, 255, 255),
-                                              size: 40,
-                                            ),
-                                          ],
+                                            ],
+                                          ),
                                         ),
-                                      ],
+                                      )
                                     ),
                                   ),
-                                )
-                              ),
+                                );
+                              },
+                              childCount: ongoingTransactions.length,
                             ),
-                          );
-                        },
-                        childCount: ongoingTransactions.length,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-
-        },
-       loading: () => const Center(child: CircularProgressIndicator()),  // Show loading spinner while fetching data
-        error: (e, stack) => Center(child: Text('Error: $e')),  // Display error message if an error occurs
+                          ),
+                        ],
+                      );
+                    }, 
+                    loading: () => const Center(child: CircularProgressIndicator()),  // Show loading spinner while fetching data
+                    error: (e, stack) => Center(child: Text('Error: $e')),  // Display error message if an error occur
+                  ),
+                )
+              )
+            ],
+          )
+          
+        ),
       ),
     );
-    
   }
-
-  
 }
 
 

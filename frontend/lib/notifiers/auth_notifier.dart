@@ -105,14 +105,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
         final String login = user['login'].toString();
 
 
-        
-        print('🧾 Partner Name: $partnerFullName');
-        print('👤 Driver Name: $driverName');
-
-        print('👤 Driver Contact Number: $driverNumber');
-        print('👤 Login: $login');
-
-
         if (user == null) {
           throw Exception('User or uid is null');
         }
@@ -153,8 +145,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
     final storedLogin = prefs.getString('login') ?? ''; 
 
     if (storedUid != null && storedUid.isNotEmpty && storedPassword != null) {
-      print('✅ Loaded UID: $storedUid');
-      print('✅ Loaded Partner ID: $storedPartnerId'); 
+      // print('✅ Loaded UID: $storedUid');
+      // print('✅ Loaded Partner ID: $storedPartnerId'); 
 
       state = state.copyWith(uid: storedUid, password: storedPassword, partnerId:storedPartnerId, driverName: storedDriverName, driverNumber: storedDriverNumber, login: storedLogin); // ✅ Store both
     } else {

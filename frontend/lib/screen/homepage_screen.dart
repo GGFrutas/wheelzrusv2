@@ -22,6 +22,7 @@ import 'package:frontend/user/transaction_screen.dart';
 import 'package:frontend/user/updateuser_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class HomePage extends ConsumerWidget {
   final Map<String, dynamic> user;
@@ -160,7 +161,7 @@ class HomePage extends ConsumerWidget {
                       },
                     ),
                     ListTile(
-                      leading: const Icon(Icons.bookmark_border_rounded),
+                      leading: const FaIcon(FontAwesomeIcons.bookmark),
                       iconColor: mainColor,
                       title: Text(
                         'Ongoing Delivery',
@@ -201,7 +202,7 @@ class HomePage extends ConsumerWidget {
                     const Divider(), // Add a divider for better separation
 
                     ListTile(
-                      leading: const Icon(Icons.settings_outlined),
+                      leading: const FaIcon(FontAwesomeIcons.gear),
                       iconColor: mainColor,
                       title: Text(
                         'Settings',
@@ -219,7 +220,40 @@ class HomePage extends ConsumerWidget {
                       },
                     ),
                     ListTile(
-                      leading: const Icon(Icons.pie_chart_outline_rounded),
+                      leading: const FaIcon(FontAwesomeIcons.paperPlane),
+                      iconColor: mainColor,
+                      title: Text(
+                        'Dispatch',
+                        style: AppTextStyles.body.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      onTap: () {},
+                    ),
+                    ListTile(
+                      leading: const FaIcon(FontAwesomeIcons.ban),
+                      iconColor: mainColor,
+                      title: Text(
+                        'Declined',
+                        style: AppTextStyles.body.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      onTap: () {},
+                    ),
+                    ListTile(
+                      leading: const FaIcon(FontAwesomeIcons.circleCheck),
+                      iconColor: mainColor,
+                      title: Text(
+                        'Completed',
+                        style: AppTextStyles.body.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      onTap: () {},
+                    ),
+                    ListTile(
+                      leading: const Icon(FontAwesomeIcons.chartPie),
                       iconColor: mainColor,
                       title: Text(
                         'Analytics',
