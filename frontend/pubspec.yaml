@@ -68,6 +68,7 @@ dependencies:
   line_awesome_flutter: ^3.0.1
   carousel_slider: ^5.0.0
   flutter_custom_clippers: ^2.1.0
+  font_awesome_flutter: ^10.8.0
   # camera: ^0.11.0+2
 
 dev_dependencies:
@@ -107,6 +108,8 @@ flutter:
     - assets/delivery-truck-boxes-with-isometric-style.png
     - assets/Freight Forwarding.jpg
     - assets/Yello X white.png
+    - assets/New YXE Drive.jpg
+    - assets/New YXE Drive 2.jpg
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see

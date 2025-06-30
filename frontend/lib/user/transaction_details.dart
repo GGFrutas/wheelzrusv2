@@ -39,7 +39,7 @@ class TransactionDetails extends ConsumerStatefulWidget {
   final String uid; // Add a field for uid
 
   // Constructor to accept the nullable Transaction object
-  TransactionDetails({super.key, required this.transaction, required int id, String? requestNumber, required this.uid});
+  const TransactionDetails({super.key, required this.transaction, required int id, String? requestNumber, required this.uid});
 
   // Helper function to handle null values and provide fallback
   String getNullableValue(String? value, {String fallback = ''}) {
@@ -967,57 +967,104 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
 
                                     } else {
                                       print('Rejection Failed');
-                                      showDialog(
-                                        context: context,
-                                        builder: (context) {
-                                          return AlertDialog(
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                                            title: Text (
-                                              "Rejection Failed!",
-                                              style: AppTextStyles.body.copyWith(color: Colors.red, fontWeight: FontWeight.bold),
-                                              textAlign: TextAlign.center,
-                                            ),
-                                            content: Text (
-                                              'An error occurred while rejecting the booking. Please try again later.',
-                                              style: AppTextStyles.body,
-                                              textAlign: TextAlign.center,
-                                            ),
-                                            actions: [
-                                              Padding(
-                                                padding: const EdgeInsets.only(bottom: 12.0),
-                                                child: Center(
-                                                  child: SizedBox(
-                                                    width: 200,
-                                                    child: ElevatedButton(
-                                                    onPressed: () {
-                                                      Navigator.of(context).pop();
-                                                    }, 
-                                                    style: ElevatedButton.styleFrom(
-                                                      backgroundColor: Colors.red,
-                                                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                                                      shape: RoundedRectangleBorder(
-                                                        borderRadius: BorderRadius.circular(25),
-                                                      ),
-                                                    ),
-                                                    child: Text(
-                                                      "OK",
-                                                      style: AppTextStyles.body.copyWith(
-                                                        color: Colors.white,
-                                                      )
-                                                    )
-                                                  ),
-                                                  )
-                                                )
-                                              )
-                                            ],
-                                          );
-                                        }
-                                      );
-                                      return;
+                                      // showDialog(
+                                      //   context: context,
+                                      //   builder: (context) {
+                                      //     return AlertDialog(
+                                      //       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                      //       title: Text (
+                                      //         "Rejection Failed!",
+                                      //         style: AppTextStyles.body.copyWith(color: Colors.red, fontWeight: FontWeight.bold),
+                                      //         textAlign: TextAlign.center,
+                                      //       ),
+                                      //       content: Text (
+                                      //         'An error occurred while rejecting the booking. Please try again later.',
+                                      //         style: AppTextStyles.body,
+                                      //         textAlign: TextAlign.center,
+                                      //       ),
+                                      //       actions: [
+                                      //         Padding(
+                                      //           padding: const EdgeInsets.only(bottom: 12.0),
+                                      //           child: Center(
+                                      //             child: SizedBox(
+                                      //               width: 200,
+                                      //               child: ElevatedButton(
+                                      //               onPressed: () {
+                                      //                 Navigator.of(context).pop();
+                                      //               }, 
+                                      //               style: ElevatedButton.styleFrom(
+                                      //                 backgroundColor: Colors.red,
+                                      //                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                                      //                 shape: RoundedRectangleBorder(
+                                      //                   borderRadius: BorderRadius.circular(25),
+                                      //                 ),
+                                      //               ),
+                                      //               child: Text(
+                                      //                 "OK",
+                                      //                 style: AppTextStyles.body.copyWith(
+                                      //                   color: Colors.white,
+                                      //                 )
+                                      //               )
+                                      //             ),
+                                      //             )
+                                      //           )
+                                      //         )
+                                      //       ],
+                                      //     );
+                                      //   }
+                                      // );
+                                      // return;
                                     }
                                    
                                   } else {
                                     print('Button Rejection Failed');
+                                    // showDialog(
+                                    //   context: context,
+                                    //   builder: (context) {
+                                    //     return AlertDialog(
+                                    //       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                    //       title: Text (
+                                    //         "Rejection Failed!",
+                                    //         style: AppTextStyles.body.copyWith(color: Colors.red, fontWeight: FontWeight.bold),
+                                    //         textAlign: TextAlign.center,
+                                    //       ),
+                                    //       content: Text (
+                                    //         'An error occurred while rejecting the booking. Please try again later.',
+                                    //         style: AppTextStyles.body,
+                                    //         textAlign: TextAlign.center,
+                                    //       ),
+                                    //       actions: [
+                                    //         Padding(
+                                    //           padding: const EdgeInsets.only(bottom: 12.0),
+                                    //           child: Center(
+                                    //             child: SizedBox(
+                                    //               width: 200,
+                                    //               child: ElevatedButton(
+                                    //               onPressed: () {
+                                    //                 Navigator.of(context).pop();
+                                    //               }, 
+                                    //               style: ElevatedButton.styleFrom(
+                                    //                 backgroundColor: Colors.red,
+                                    //                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                                    //                 shape: RoundedRectangleBorder(
+                                    //                   borderRadius: BorderRadius.circular(25),
+                                    //                 ),
+                                    //               ),
+                                    //               child: Text(
+                                    //                 "OK",
+                                    //                 style: AppTextStyles.body.copyWith(
+                                    //                   color: Colors.white,
+                                    //                 )
+                                    //               )
+                                    //             ),
+                                    //             )
+                                    //           )
+                                    //         )
+                                    //       ],
+                                    //     );
+                                    //   }
+                                    // );
+                                    // return;
                                     
                                   }
                                 }catch (e){

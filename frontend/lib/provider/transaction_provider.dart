@@ -64,15 +64,15 @@ Future<List<Transaction>> fetchTransactions(FutureProviderRef<List<Transaction>>
           final transactions = data["transactions"];
 
           // Check what type "transactions" actually is
-          print("🔍 Type of 'transactions': ${transactions.runtimeType}");
+          // print("🔍 Type of 'transactions': ${transactions.runtimeType}");
 
           if (transactions is Map<String, dynamic>) {
             final transactionsList = transactions.values.toList();
-            print("✅ Parsed transactions count: ${transactionsList.length}");
+            // print("✅ Parsed transactions count: ${transactionsList.length}");
             return transactionsList.map((json) => Transaction.fromJson(json)).toList();
           } 
           else if (transactions is List) {
-            print("✅ Transactions is a List with ${transactions.length} items.");
+            // print("✅ Transactions is a List with ${transactions.length} items.");
             return transactions.map((json) => Transaction.fromJson(json)).toList();
           } 
           
@@ -92,9 +92,9 @@ final transactionDetailProvider = FutureProvider.family<Transaction, Map<String,
   final uid = args['uid'];
   final bookingId = args['bookingId'];
 
-  print('📤 Calling API with UID: $uid, BookingID: $bookingId');
-  print('🔐 Headers -> login: $login | password: $password');
-  print('🌐 URL: $baseUrl/api/odoo/booking_details?uid=$uid&booking_id=$bookingId');
+  // print('📤 Calling API with UID: $uid, BookingID: $bookingId');
+  // print('🔐 Headers -> login: $login | password: $password');
+  // print('🌐 URL: $baseUrl/api/odoo/booking_details?uid=$uid&booking_id=$bookingId');
 
   final response = await http.get(
     Uri.parse('$baseUrl/api/odoo/booking_details?uid=$uid&booking_id=$bookingId'),
@@ -106,8 +106,6 @@ final transactionDetailProvider = FutureProvider.family<Transaction, Map<String,
     },
   );
 
-  print('📥 Response status: ${response.statusCode}');
-  print('📥 Response body: ${response.body}');
 
   if (response.statusCode == 200) {
     final decoded = json.decode(response.body);
@@ -174,9 +172,7 @@ Future<Transaction> fetchTransactionStatus(WidgetRef ref, String baseUrl, String
     }
 
     final url = '$baseUrl/api/odoo/booking?uid=$uid&transaction_id=$transactionId';
-    print('🔸 Fetching: $url');
-    print('🔸 Transaction ID: $transactionId');
-
+   
     final response = await http.get(
       Uri.parse(url),
       headers: {

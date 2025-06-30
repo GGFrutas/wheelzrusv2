@@ -131,7 +131,18 @@ class _SettingPageState extends ConsumerState<SettingScreen>{
             ),
           ),
         ],
-      )
+      ),
+      bottomNavigationBar: SizedBox(
+        height:40,
+        child: Center(
+          child: Text(
+            'DA.17.01.007',
+            style: AppTextStyles.caption.copyWith(
+              color: Colors.black87,
+            ),
+          ),
+        ),
+      ),
     );
   }
   Widget _buildSectionHeader(String title){
