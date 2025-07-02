@@ -69,7 +69,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Text(
-                  'Invalid email or password. Please try again.',
+                  'Invalid email or password.\nPlease try again.',
                   style: AppTextStyles.body.copyWith(
                     color: Colors.black87
                   ),

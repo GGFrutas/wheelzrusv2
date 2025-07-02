@@ -62,37 +62,41 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
     // final showButton = (dispatchType == 'ot' && (isNullOrEmpty(transaction?.deProof) || isNullOrEmpty(transaction?.deSign))&& widget.transaction?.plRequestNumber == widget.transaction?.requestNumber) ||
     //                   (dispatchType == 'dt' && (isNullOrEmpty(transaction?.dlProof) || isNullOrEmpty(transaction?.dlSign))  && widget.transaction?.peRequestNumber == widget.transaction?.requestNumber);
     final transaction = widget.transaction;
-final dispatchType = transaction?.dispatchType;
-final requestNumber = transaction?.requestNumber;
-final plRequestNumber = transaction?.plRequestNumber;
-final peRequestNumber = transaction?.peRequestNumber;
-final bookingNumber = transaction?.bookingRefNo;
+    final dispatchType = transaction?.dispatchType;
+    final requestNumber = transaction?.requestNumber;
+    final plRequestNumber = transaction?.plRequestNumber;
+    final peRequestNumber = transaction?.peRequestNumber;
+    final bookingNumber = transaction?.bookingRefNo;
 
-/// Helper
-bool isNullOrEmpty(dynamic value) {
-  return value == null || value.toString().trim().isEmpty;
-}
+    /// Helper
+    bool isNullOrEmpty(dynamic value) {
+      return value == null || value.toString().trim().isEmpty;
+    }
 
-/// Base conditions (ot and dt)
-bool hideForCurrentDispatch = 
-  (dispatchType == 'ot' &&
-    (isNullOrEmpty(transaction?.deProof) || isNullOrEmpty(transaction?.deSign)) &&
-     plRequestNumber == requestNumber) ||
+    /// Base conditions (ot and dt)
+    bool hideForCurrentDispatch = 
+      (dispatchType == 'ot' &&
+        (isNullOrEmpty(transaction?.deProof) || isNullOrEmpty(transaction?.deSign)) &&
+        plRequestNumber == requestNumber) ||
 
-  (dispatchType == 'dt' &&
-    (isNullOrEmpty(transaction?.dlProof) || isNullOrEmpty(transaction?.dlSign)) &&
-    peRequestNumber == requestNumber);
+      (dispatchType == 'dt' &&
+        (isNullOrEmpty(transaction?.dlProof) || isNullOrEmpty(transaction?.dlSign)) &&
+        peRequestNumber == requestNumber);
 
+    final allTransactions = ref.read(acceptedTransactionProvider);
 
-final relatedFF = (widget.transaction?.dispatchType == 'ff' &&
-                   widget.transaction?.bookingRefNo == bookingNumber)
-                  ? widget.transaction
-                  : null;
+    print("All: $allTransactions");
+    final relatedFF = allTransactions.cast<Transaction?>().firstWhere(
+      (tx) => (tx?.bookingRefNo == bookingNumber) && (tx?.dispatchType == 'ff'),
+      orElse: () => null,
+    );
 
-bool ffNotComplete = relatedFF != null && relatedFF.stageId != '7';
+    print("Related FF: $relatedFF");
 
-/// Final decision: if any rule to hide the button is true, we hide it
-final showButton = hideForCurrentDispatch || ffNotComplete;
+    bool ffNotComplete = relatedFF != null && relatedFF.stageId != '7';
+
+    /// Final decision: if any rule to hide the button is true, we hide it
+    final showButton = hideForCurrentDispatch || ffNotComplete;
 
         
     return PopScope(

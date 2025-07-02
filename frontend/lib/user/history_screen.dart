@@ -137,18 +137,20 @@ class _HistoryPageState extends ConsumerState<HistoryScreen> {
 
                     // If there are no transactions, show a message
                     if (validTransactionList.isEmpty) {
-                      return SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(), // Allow scrolling even if the list is empty
-                        child: SizedBox(
-                          height: MediaQuery.of(context).size.height * 0.8, // Adjust height as needed
-                          child: Center(
-                            child: Text(
-                              'No history yet.',
-                              style: AppTextStyles.subtitle,
-                            ),
-                          ),
-                        ),
-                      );
+                      return CustomScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(), // Allow scrolling even if the list is empty
+                          slivers: [
+                            SliverFillRemaining(
+                              hasScrollBody: false,
+                              child: Center(
+                                child: Text(
+                                  'No history yet.',
+                                  style: AppTextStyles.subtitle,
+                                ),
+                              ),
+                            )
+                          ]
+                        );
                     }
 
                     // If acceptedTransaction is a list, convert it to a Set of IDs for faster lookup
@@ -246,20 +248,25 @@ class _HistoryPageState extends ConsumerState<HistoryScreen> {
 
                   
                     if (ongoingTransactions.isEmpty) {
-                      return ListView(
-                        physics: const AlwaysScrollableScrollPhysics(), // Allow scrolling even if the list is empty
-                        children: [
-                          SizedBox(
-                            height: MediaQuery.of(context).size.height * 0.8, // Adjust height as needed
-                            child: Center(
-                              child: Text(
-                                'No history transactions yet.',
-                                style: AppTextStyles.subtitle,
+                      return LayoutBuilder(
+                        builder: (context,constraints){
+                          return ListView(
+                            physics: const AlwaysScrollableScrollPhysics(), // Allow scrolling even if the list is empty
+                            children: [
+                              SizedBox(
+                                height: constraints.maxHeight, // Adjust height as needed
+                                child: Center(
+                                  child: Text(
+                                    'No history transactions yet.',
+                                    style: AppTextStyles.subtitle,
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
-                        ],
+                            ],
+                          );
+                        }
                       );
+                      
                     }
                     return ListView.builder(
                       itemCount: ongoingTransactions.length,
@@ -342,13 +349,18 @@ class _HistoryPageState extends ConsumerState<HistoryScreen> {
                                           children: [
                                             // Space between label and value
                                             Text(
-                                              "Date Delivered",
+                                              item.requestStatus == "Completed" 
+                                              ? "Date Completed"
+                                              : item.requestStatus == "Rejected" 
+                                              ? "Date Rejected"
+                                              : "Date Rejected",
                                               style: AppTextStyles.caption.copyWith(
                                                 color: darkerBgColor,
                                               ),
                                             ),
                                             Text(
-                                              formatDateTime(item.deliveryDate),
+                                              item.completedTime != null  ?
+                                              formatDateTime(item.completedTime) : '—',
                                               style: AppTextStyles.body.copyWith(
                                                 color: mainColor,
                                                 fontWeight: FontWeight.bold,

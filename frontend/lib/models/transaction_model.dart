@@ -62,6 +62,11 @@ class Transaction {
   final String? login;
   final String? serviceType;
   final String? stageId;
+  final String? completedTime;
+  final String? deCompletedTime;
+  final String? plCompletedTime;
+  final String? dlCompletedTime;
+  final String? peCompletedTime;
 
 
   const Transaction({
@@ -122,6 +127,11 @@ class Transaction {
     required this.departureDate,   
     required this.serviceType, 
     required this.stageId,
+    required this.completedTime,
+    required this.deCompletedTime,
+    required this.plCompletedTime,
+    required this.dlCompletedTime,
+    required this.peCompletedTime,
     this.isAccepted = false,
     required this.login,
   });
@@ -210,6 +220,12 @@ class Transaction {
 
       login: json['login'].toString(),
       stageId: json['stage_id']?.toString() ?? '0',  // Provide a default value
+
+      completedTime: json['de_completion_time']?.toString() ?? 'Unknown Completed Time',  // Provide a default value
+      deCompletedTime: json['de_completion_time']?.toString() ?? 'Unknown DE',
+      plCompletedTime: json['pl_completion_time']?.toString() ?? 'Unknown PL',
+      dlCompletedTime: json['dl_completion_time']?.toString() ?? 'Unknown DL',
+      peCompletedTime: json['pe_completion_time']?.toString() ?? 'Unknown PE',
      
 
       isAccepted: false,  // set default or map from API
@@ -297,6 +313,11 @@ class Transaction {
       destinationAddress: destinationAddress ?? this.destinationAddress,
       serviceType: serviceType,
       stageId: stageId,
+      completedTime: completedTime ?? completedTime,
+      deCompletedTime: deCompletedTime,
+      plCompletedTime: plCompletedTime,
+      dlCompletedTime: dlCompletedTime,
+      peCompletedTime: peCompletedTime,
 
       login: login,
 

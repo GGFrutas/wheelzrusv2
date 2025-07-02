@@ -191,18 +191,19 @@ class TransactionController extends Controller
                         "origin_container_location", "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
                         "freight_forwarder_name", "shipper_phone", "consignee_phone", "dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", "pl_truck_plate_no",
                         "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
-                        "pickup_date", "departure_date","origin", "destination", 
+                        "pickup_date", "departure_date","origin", "destination", "de_rejection_time", "pl_rejection_time", "dl_rejection_time", "pe_rejection_time", "de_completion_time", 
+                        "pl_completion_time", "dl_completion_time", "pe_completion_time",
                     ]],
                 ]
             ],
             'id' => 4
         ]);
 
-        $dispatchManagers = $dispatchRes['result'];
+        $dispatchManagers = $dispatchRes['result'] ?? [];
 
         if (empty($dispatchManagers)) {
             Log::warning("❌ No dispatch.manager records found for driver $partnerName");
-            return response()->json(['success' => false, 'message' => 'No dispatch manager records found'], 404);
+            // return response()->json(['success' => false, 'message' => 'No dispatch manager records found'], 404);
         }
 
         $filteredManagers = array_filter($dispatchManagers, function ($manager) use ($partnerName) {
@@ -227,7 +228,8 @@ class TransactionController extends Controller
             "origin_container_location", "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
             "freight_forwarder_name", "shipper_phone", "consignee_phone", "dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", "pl_truck_plate_no",
             "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
-            "pickup_date", "departure_date","origin", "destination", 
+            "pickup_date", "departure_date","origin", "destination","de_rejection_time", "pl_rejection_time", "dl_rejection_time", "pe_rejection_time", "de_completion_time", 
+                        "pl_completion_time", "dl_completion_time", "pe_completion_time",
         ];
 
         $jobResponses = [];
@@ -407,7 +409,7 @@ class TransactionController extends Controller
                     
                         
                     
-                        ["dispatch_type", "!=", "ff"]
+                        
                     ]],
                     ["fields" => [
                         "id", "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
@@ -425,7 +427,7 @@ class TransactionController extends Controller
         ]);
        
 
-        $dispatchManagers = $dispatchRes['result'];
+        $dispatchManagers = $dispatchRes['result'] ?? [];
 
         if (empty($dispatchManagers)) {
             Log::warning("❌ No dispatch.manager records found for driver $partnerName");
@@ -1325,6 +1327,7 @@ class TransactionController extends Controller
                 "de_proof" => $images,
                 "de_signature" => $signature,
                 "de_release_by" => $enteredName,
+                "de_completion_time" => $actualTime,
                 
             ];
         } elseif ($type['dispatch_type'] == "ot" && $type['pl_request_no'] == $requestNumber) {
@@ -1334,6 +1337,7 @@ class TransactionController extends Controller
                 "dl_signature" => $signature,
                 "dl_receive_by" => $enteredName,
                 "stage_id" => 7,
+                "dl_completion_time" => $actualTime,
             ];
         }
 
@@ -1343,6 +1347,7 @@ class TransactionController extends Controller
                 "dl_proof" => $images,
                 "dl_signature" => $signature,
                 "de_release_by" => $enteredName,
+                "dl_completion_time" => $actualTime,
             ];
         } elseif ($type['dispatch_type'] == "dt" && $type['pe_request_no'] == $requestNumber) {
             Log::info("Updating DE proof and signature for request number: {$requestNumber}");
@@ -1351,6 +1356,7 @@ class TransactionController extends Controller
                 "de_signature" => $signature,
                 "dl_receive_by" => $enteredName,
                 "stage_id" => 7,
+                "de_completion_time" => $actualTime,
             ];
         }
 

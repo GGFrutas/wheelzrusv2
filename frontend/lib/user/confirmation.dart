@@ -145,24 +145,7 @@ class _ConfirmationState extends ConsumerState<ConfirmationScreen> {
                   scrollDirection: Axis.horizontal,
                   child: Row (
                     children: [
-                      GestureDetector(
-                        onTap: () async {
-                          _pickImage();
-                        },
-                        child: Container (
-                          width: 100,
-                          height: 100,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey.shade400),
-                          ),
-                          child: const Icon(Icons.camera_alt_outlined,
-                            size: 40,
-                            color: mainColor
-                          ),
-                        ),
-                      ),
+                      
                       const SizedBox(width: 10),
                       ..._images.map((imageFile){
                         return Padding(
@@ -203,6 +186,28 @@ class _ConfirmationState extends ConsumerState<ConfirmationScreen> {
                 ),
                 
               ),
+              const SizedBox(height: 10),
+              Center(
+                child: GestureDetector(
+                  onTap: () async {
+                    _pickImage();
+                  },
+                  child: Container (
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade400),
+                    ),
+                    child: const Icon(Icons.camera_alt_outlined,
+                      size: 40,
+                      color: mainColor
+                    ),
+                  ),
+                )
+              ),
+          
             
               const SizedBox(height: 10),
               Center(

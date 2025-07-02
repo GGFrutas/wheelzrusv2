@@ -70,7 +70,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
   List<String> get tabTitles {
     final type = widget.transaction?.dispatchType;
     return [
-      'Freight',
+      'Yard/Port',
       type == 'dt' ? 'Consignee' : 'Shipper',
     ];
   }
@@ -631,7 +631,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                 ),
               ),
                 const SizedBox(height: 10), // Add some space between buttons
-                if (widget.transaction?.requestStatus == "Pending") // Show only if not accepted
+                
                 SizedBox(
                   width: double.infinity, // Make the button full width
                   child: OutlinedButton(
@@ -692,7 +692,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-        'Freight Documents',
+        'Yard/Port Documents',
           style: AppTextStyles.body.copyWith(
             color: mainColor,
           )
@@ -735,6 +735,20 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
   Widget _buildShipConsTab (){
     final isDT = widget.transaction?.dispatchType == 'dt';
 
+    Uint8List? _decodeBase64(String? data) {
+      if(data == null || data.isEmpty)  return null;
+      try{
+      
+        return base64Decode(data.trim());
+      } catch (e) {
+        debugPrint('Base64 error: $e');
+        return null;
+      }
+    }
+
+    final signBytes = isDT ? _decodeBase64(widget.transaction?.plSign) : _decodeBase64(widget.transaction?.peSign);
+    final proofBytes = isDT ? _decodeBase64(widget.transaction?.plProof) : _decodeBase64(widget.transaction?.peProof);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -744,6 +758,35 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
             color: mainColor,
           )
         ),
+         const SizedBox(height: 10),
+        if(proofBytes != null)
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => FullScreenImage(imageBytes: proofBytes),
+                ),
+              );
+            },
+            child: Image.memory(proofBytes, height: 100),
+          ),
+
+        const SizedBox(height: 10),
+
+        if(signBytes != null)
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => FullScreenImage(imageBytes: signBytes),
+                ),
+              );
+            },
+            child: Image.memory(signBytes, height: 100),
+          ),
+
        
       ],
     );
@@ -956,6 +999,8 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                                       ref.read(selectedReasonsProvider.notifier).state = null; // Clear the selected reason
                                       controller.clear(); // Clear the text field
 
+                                      Navigator.of(context, rootNavigator: true).pop(); // close loading
+
                                       print('🔁 Redirecting to HistoryScreen with UID: $uid');
 
                                       await Future.delayed(const Duration(seconds: 2));
@@ -967,53 +1012,54 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
 
                                     } else {
                                       print('Rejection Failed');
-                                      // showDialog(
-                                      //   context: context,
-                                      //   builder: (context) {
-                                      //     return AlertDialog(
-                                      //       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                                      //       title: Text (
-                                      //         "Rejection Failed!",
-                                      //         style: AppTextStyles.body.copyWith(color: Colors.red, fontWeight: FontWeight.bold),
-                                      //         textAlign: TextAlign.center,
-                                      //       ),
-                                      //       content: Text (
-                                      //         'An error occurred while rejecting the booking. Please try again later.',
-                                      //         style: AppTextStyles.body,
-                                      //         textAlign: TextAlign.center,
-                                      //       ),
-                                      //       actions: [
-                                      //         Padding(
-                                      //           padding: const EdgeInsets.only(bottom: 12.0),
-                                      //           child: Center(
-                                      //             child: SizedBox(
-                                      //               width: 200,
-                                      //               child: ElevatedButton(
-                                      //               onPressed: () {
-                                      //                 Navigator.of(context).pop();
-                                      //               }, 
-                                      //               style: ElevatedButton.styleFrom(
-                                      //                 backgroundColor: Colors.red,
-                                      //                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                                      //                 shape: RoundedRectangleBorder(
-                                      //                   borderRadius: BorderRadius.circular(25),
-                                      //                 ),
-                                      //               ),
-                                      //               child: Text(
-                                      //                 "OK",
-                                      //                 style: AppTextStyles.body.copyWith(
-                                      //                   color: Colors.white,
-                                      //                 )
-                                      //               )
-                                      //             ),
-                                      //             )
-                                      //           )
-                                      //         )
-                                      //       ],
-                                      //     );
-                                      //   }
-                                      // );
-                                      // return;
+                                      Navigator.of(context, rootNavigator: true).pop(); // close loading
+                                      showDialog(
+                                        context: context,
+                                        builder: (context) {
+                                          return AlertDialog(
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                            title: Text (
+                                              "Rejection Failed!",
+                                              style: AppTextStyles.body.copyWith(color: Colors.red, fontWeight: FontWeight.bold),
+                                              textAlign: TextAlign.center,
+                                            ),
+                                            content: Text (
+                                              'An error occurred while rejecting the booking. Please try again later.',
+                                              style: AppTextStyles.body,
+                                              textAlign: TextAlign.center,
+                                            ),
+                                            actions: [
+                                              Padding(
+                                                padding: const EdgeInsets.only(bottom: 12.0),
+                                                child: Center(
+                                                  child: SizedBox(
+                                                    width: 200,
+                                                    child: ElevatedButton(
+                                                    onPressed: () {
+                                                      Navigator.of(context).pop();
+                                                    }, 
+                                                    style: ElevatedButton.styleFrom(
+                                                      backgroundColor: Colors.red,
+                                                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                                                      shape: RoundedRectangleBorder(
+                                                        borderRadius: BorderRadius.circular(25),
+                                                      ),
+                                                    ),
+                                                    child: Text(
+                                                      "OK",
+                                                      style: AppTextStyles.body.copyWith(
+                                                        color: Colors.white,
+                                                      )
+                                                    )
+                                                  ),
+                                                  )
+                                                )
+                                              )
+                                            ],
+                                          );
+                                        }
+                                      );
+                                      return;
                                     }
                                    
                                   } else {
