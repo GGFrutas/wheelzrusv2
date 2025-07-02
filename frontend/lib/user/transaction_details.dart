@@ -746,8 +746,8 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
       }
     }
 
-    final signBytes = isDT ? _decodeBase64(widget.transaction?.plSign) : _decodeBase64(widget.transaction?.peSign);
-    final proofBytes = isDT ? _decodeBase64(widget.transaction?.plProof) : _decodeBase64(widget.transaction?.peProof);
+    final signBytes = isDT ? _decodeBase64(widget.transaction?.deSign) : _decodeBase64(widget.transaction?.dlSign);
+    final proofBytes = isDT ? _decodeBase64(widget.transaction?.deProof) : _decodeBase64(widget.transaction?.dlProof);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -967,6 +967,8 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                                 try{
                                   final password = ref.watch(authNotifierProvider).password ?? '';
                                   final login = ref.watch(authNotifierProvider).login ?? '';
+                                  final now = DateTime.now();
+                                  final timestamp = DateFormat("yyyy-MM-dd HH:mm:ss").format(now);
                                   final response = await http.post(
                                     Uri.parse('$baseUrl/api/odoo/reject-booking'),
                                     headers:{
@@ -979,11 +981,13 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                                       'uid': uid,
                                       'transaction_id': transactionId.id,
                                       'reason': selectedReason,
-                                      'feedback': feedback
+                                      'feedback': feedback,
+                                      'timestamp': timestamp,
+                                      'request_number': widget.transaction?.requestNumber,
                                     }),
                                   );
                                   // Navigator.of(context, rootNavigator: true).pop(); // close loading
-                                  print('Response Status Code: ${response.statusCode}');
+                                  
                                 
                                   if (response.statusCode == 200) {
                                     print("Rejection Successful");
@@ -992,7 +996,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
 
                                     await Future.delayed(const Duration(seconds: 1));
                                     final updated = await fetchTransactionStatus(ref,baseUrl, transactionId.id.toString());
-                                    print('Updated Status: ${updated.requestStatus}');
+                                    print('Updated Status: $updated.requestStatus');
 
                                     if(updated.requestStatus == "Rejected") {
                                       print('Rejection Successful');
@@ -1013,105 +1017,11 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                                     } else {
                                       print('Rejection Failed');
                                       Navigator.of(context, rootNavigator: true).pop(); // close loading
-                                      showDialog(
-                                        context: context,
-                                        builder: (context) {
-                                          return AlertDialog(
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                                            title: Text (
-                                              "Rejection Failed!",
-                                              style: AppTextStyles.body.copyWith(color: Colors.red, fontWeight: FontWeight.bold),
-                                              textAlign: TextAlign.center,
-                                            ),
-                                            content: Text (
-                                              'An error occurred while rejecting the booking. Please try again later.',
-                                              style: AppTextStyles.body,
-                                              textAlign: TextAlign.center,
-                                            ),
-                                            actions: [
-                                              Padding(
-                                                padding: const EdgeInsets.only(bottom: 12.0),
-                                                child: Center(
-                                                  child: SizedBox(
-                                                    width: 200,
-                                                    child: ElevatedButton(
-                                                    onPressed: () {
-                                                      Navigator.of(context).pop();
-                                                    }, 
-                                                    style: ElevatedButton.styleFrom(
-                                                      backgroundColor: Colors.red,
-                                                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                                                      shape: RoundedRectangleBorder(
-                                                        borderRadius: BorderRadius.circular(25),
-                                                      ),
-                                                    ),
-                                                    child: Text(
-                                                      "OK",
-                                                      style: AppTextStyles.body.copyWith(
-                                                        color: Colors.white,
-                                                      )
-                                                    )
-                                                  ),
-                                                  )
-                                                )
-                                              )
-                                            ],
-                                          );
-                                        }
-                                      );
-                                      return;
                                     }
                                    
                                   } else {
                                     print('Button Rejection Failed');
-                                    // showDialog(
-                                    //   context: context,
-                                    //   builder: (context) {
-                                    //     return AlertDialog(
-                                    //       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                                    //       title: Text (
-                                    //         "Rejection Failed!",
-                                    //         style: AppTextStyles.body.copyWith(color: Colors.red, fontWeight: FontWeight.bold),
-                                    //         textAlign: TextAlign.center,
-                                    //       ),
-                                    //       content: Text (
-                                    //         'An error occurred while rejecting the booking. Please try again later.',
-                                    //         style: AppTextStyles.body,
-                                    //         textAlign: TextAlign.center,
-                                    //       ),
-                                    //       actions: [
-                                    //         Padding(
-                                    //           padding: const EdgeInsets.only(bottom: 12.0),
-                                    //           child: Center(
-                                    //             child: SizedBox(
-                                    //               width: 200,
-                                    //               child: ElevatedButton(
-                                    //               onPressed: () {
-                                    //                 Navigator.of(context).pop();
-                                    //               }, 
-                                    //               style: ElevatedButton.styleFrom(
-                                    //                 backgroundColor: Colors.red,
-                                    //                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                                    //                 shape: RoundedRectangleBorder(
-                                    //                   borderRadius: BorderRadius.circular(25),
-                                    //                 ),
-                                    //               ),
-                                    //               child: Text(
-                                    //                 "OK",
-                                    //                 style: AppTextStyles.body.copyWith(
-                                    //                   color: Colors.white,
-                                    //                 )
-                                    //               )
-                                    //             ),
-                                    //             )
-                                    //           )
-                                    //         )
-                                    //       ],
-                                    //     );
-                                    //   }
-                                    // );
-                                    // return;
-                                    
+                                    Navigator.of(context, rootNavigator: true).pop(); // close loading
                                   }
                                 }catch (e){
                                   print('Error: $e');

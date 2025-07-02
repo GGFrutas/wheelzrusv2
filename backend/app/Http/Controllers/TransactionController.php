@@ -739,6 +739,8 @@ class TransactionController extends Controller
 
         $uid = $request->uid ;
         $odooPassword = $request->header('password');
+        $actualTime = $request->input('timestamp');
+        $requestNumber = $request->input('request_number');
         Log::info("UID is {$uid}, Password is {$odooPassword}");
         
         if (!$uid) {
@@ -746,9 +748,6 @@ class TransactionController extends Controller
         }
 
         $odooUrl = $this->odoo_url;
-
-       
-
 
         $checkAccessRequest = [
             "jsonrpc" => "2.0",
@@ -829,7 +828,119 @@ class TransactionController extends Controller
             Log::error("❌ No reject reasons", ["response" => $response]);
             return response()->json(['success' => false, 'message' => 'Reasons not found'], 404);
         }
-        return response()->json($response);
+
+        $proof_attach = [
+            "jsonrpc" => "2.0",
+            "method" => "call",
+            "params" => [
+                "service" => "object",
+                "method" => "execute_kw",
+                "args" => [
+                    $db, 
+                    $uid, 
+                    $odooPassword, 
+                    "dispatch.manager", 
+                    "search_read",
+                    [[["id", "=", $request->transaction_id]]],  // Search by Request Number
+                    ["fields" => ["dispatch_type","de_request_no", "pl_request_no", "dl_request_no", "pe_request_no","service_type" ]]
+                ]
+            ],
+            "id" => 3
+        ];
+        
+        $statusResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
+            "http" => [
+                "header" => "Content-Type: application/json",
+                "method" => "POST",
+                "content" => json_encode($proof_attach),
+            ],
+        ])), true);
+    
+        if (!isset($statusResponse['result']) || empty($statusResponse['result'])) {
+            Log::error("❌ No data on this ID", ["response" => $statusResponse]);
+            return response()->json(['success' => false, 'message' => 'Data not found'], 404);
+        }
+
+        $type = $statusResponse['result'][0] ?? null;
+      
+        if (!$type) {
+            Log::error("❌ Missing dispatch_type", ["response" => $statusResponse]);
+            return response()->json(['success' => false, 'message' => 'dispatch_type is missing or invalid'], 404);
+        }
+        
+        // Check that the type is valid before proceeding
+        if (!in_array($type['dispatch_type'], ['ot', 'dt'])) {
+            Log::error("Incorrect dispatch_type", ["dispatch_type" => $type, "response" => $statusResponse]);
+            return response()->json(['success' => false, 'message' => 'Invalid dispatch_type value'], 404);
+        }
+
+        $updateField = [];
+
+        if ($type['dispatch_type'] == "ot" && $type['de_request_no'] == $requestNumber) {
+            $updateField = [
+                "de_rejection_time" => $actualTime,
+            ];
+        } elseif ($type['dispatch_type'] == "ot" && $type['pl_request_no'] == $requestNumber) {
+            $updateField = [
+                "pl_rejection_time" => $actualTime,
+            ];
+        }
+
+        if ($type['dispatch_type'] == "dt" && $type['dl_request_no'] == $requestNumber) {
+            $updateField = [
+                "dl_rejection_time" => $actualTime,
+            ];
+        } elseif ($type['dispatch_type'] == "dt" && $type['pe_request_no'] == $requestNumber) {
+            $updateField = [
+                "pe_rejection_time" => $actualTime,
+            ];
+        }
+
+        $updatePOD = [
+            "jsonrpc" => "2.0",
+            "method" => "call",
+            "params" => [
+                "service" => "object",
+                "method" => "execute_kw",
+                "args" => [
+                    $db, 
+                    $uid, 
+                    $odooPassword, 
+                    "dispatch.manager", 
+                    "write",
+                    [
+                        [$request->transaction_id],
+                       
+                        $updateField,
+                        
+                    ]
+                ]
+            ],
+            "id" => 4
+        ];
+
+        $updateResponse = json_decode(file_get_contents($odooUrl,false,stream_context_create([
+            "http" => [
+                "header" => "Content-Type: application/json",
+                "method" => "POST",
+                "content" => json_encode($updatePOD),
+            ]
+        ])), true);
+
+
+        if (isset($updateResponse['result']) && $updateResponse['result']) {
+            Log::info("✅ POD uploaded. Proceeding with milestone update.");
+
+            
+            return response()->json(['success' => true, 'message' => 'POD uploaded, but no matching milestone found']);
+
+        }else{
+            Log::error("Failed to insert image", ["response" => $updateResponse]);
+            return response()->json(['success' => false,'message'=>'Failed to upload POD'], 500);
+        }
+    
+        return response()->json($statusResponse);
+       
 
     }
 

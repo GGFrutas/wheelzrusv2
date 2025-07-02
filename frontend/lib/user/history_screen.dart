@@ -237,10 +237,18 @@ class _HistoryPageState extends ConsumerState<HistoryScreen> {
                     }).toList();
 
                     expandedTransactions.sort((a,b){
-                      DateTime dateA = DateTime.tryParse(a.deliveryDate) ?? DateTime(0);
-                      DateTime dateB = DateTime.tryParse(b.deliveryDate) ?? DateTime(0);
-                      return dateB.compareTo(dateA);
+                      DateTime dateACompleted = DateTime.tryParse(a.completedTime ?? '') ?? DateTime(0);
+                      DateTime dateARejected = DateTime.tryParse(a.rejectedTime ?? '') ?? DateTime(0);
+                      DateTime dateBCompleted = DateTime.tryParse(b.completedTime ?? '') ?? DateTime(0);
+                      DateTime dateBRejected = DateTime.tryParse(b.rejectedTime ?? '') ?? DateTime(0);
+
+                      DateTime latestA = dateACompleted.isAfter(dateARejected) ? dateACompleted : dateARejected;
+                      DateTime latestB = dateBCompleted.isAfter(dateBRejected) ? dateBCompleted : dateBRejected;
+                      
+                      return latestB.compareTo(latestA);
+                      
                     });
+                    
 
                     final ongoingTransactions = expandedTransactions
                       .where((tx) => tx.requestStatus == "Rejected" || tx.requestStatus == "Completed")
@@ -359,8 +367,11 @@ class _HistoryPageState extends ConsumerState<HistoryScreen> {
                                               ),
                                             ),
                                             Text(
-                                              item.completedTime != null  ?
-                                              formatDateTime(item.completedTime) : '—',
+                                              item.requestStatus == 'Rejected'
+                                  ? formatDateTime(item.rejectedTime)
+                                  : item.requestStatus == 'Completed'
+                                    ? formatDateTime(item.completedTime)
+                                    : '—',
                                               style: AppTextStyles.body.copyWith(
                                                 color: mainColor,
                                                 fontWeight: FontWeight.bold,

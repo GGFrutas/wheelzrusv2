@@ -49,7 +49,7 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
       if (dateString == null || dateString.isEmpty) return "N/A"; // Handle null values
       
       try {
-        DateTime dateTime = DateTime.parse("${dateString}Z").toLocal(); // Convert string to DateTime
+        DateTime dateTime = DateTime.parse(dateString); // Convert string to DateTime
         return DateFormat('dd / MM / yyyy  - h:mm a').format(dateTime); // Format date-time
       } catch (e) {
         return "Invalid Date"; // Handle errors gracefully
@@ -68,6 +68,9 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
       }
     }
 
+   
+    
+
   
   @override
   Widget build(BuildContext context) {
@@ -80,6 +83,7 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
     final driverName = (authState.driverName?.isNotEmpty ?? false)
       ? authState.driverName!
       : '—'; 
+
     return Scaffold(
       appBar: AppBar(
         iconTheme: const IconThemeData(color: mainColor),
@@ -180,7 +184,11 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
                             children: [
                               // Space between label and value
                               Text(
-                                formatDateTime(widget.transaction?.deliveryDate),
+                                widget.transaction?.requestStatus == 'Rejected'
+                                  ? formatDateTime(widget.transaction?.rejectedTime)
+                                  : widget.transaction?.requestStatus == 'Completed'
+                                    ? formatDateTime(widget.transaction?.completedTime)
+                                    : '—',
                                 style: AppTextStyles.subtitle.copyWith(
                                   color: Colors.white,
                                 ),
@@ -250,27 +258,32 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
                     Row(
                       children: [
                         const SizedBox(width: 30), // Space between icon and text
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "Service Provider",
-                              style: AppTextStyles.subtitle.copyWith(
-                                color: Colors.black,
-                                fontWeight: FontWeight.bold
+                        Expanded
+                        (
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Service Provider",
+                                style: AppTextStyles.subtitle.copyWith(
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.bold
+                                ),
                               ),
-                            ),
-                            Text(
-                            (widget.transaction?.freightForwarderName?.isNotEmpty ?? false)
-                            ? widget.transaction!.freightForwarderName! : '—',
-                              // Use the originPort variable here
-                              style: AppTextStyles.body.copyWith(
-                                color: Colors.black,
+                              Text(
+                              (widget.transaction?.freightForwarderName?.isNotEmpty ?? false)
+                              ? widget.transaction!.freightForwarderName! : '—',
+                                // Use the originPort variable here
+                                style: AppTextStyles.body.copyWith(
+                                  color: Colors.black,
+                                ),
                               ),
-                            ),
-                            
-                          ],
-                        ),
+                              
+                            ],
+                          ),
+
+                        )
+                        
                       ],
                     ),
                     const SizedBox(height: 20),
