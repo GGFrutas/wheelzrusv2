@@ -137,18 +137,20 @@ class _HistoryPageState extends ConsumerState<HistoryScreen> {
 
                     // If there are no transactions, show a message
                     if (validTransactionList.isEmpty) {
-                      return SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(), // Allow scrolling even if the list is empty
-                        child: SizedBox(
-                          height: MediaQuery.of(context).size.height * 0.8, // Adjust height as needed
-                          child: Center(
-                            child: Text(
-                              'No history yet.',
-                              style: AppTextStyles.subtitle,
-                            ),
-                          ),
-                        ),
-                      );
+                      return CustomScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(), // Allow scrolling even if the list is empty
+                          slivers: [
+                            SliverFillRemaining(
+                              hasScrollBody: false,
+                              child: Center(
+                                child: Text(
+                                  'No history yet.',
+                                  style: AppTextStyles.subtitle,
+                                ),
+                              ),
+                            )
+                          ]
+                        );
                     }
 
                     // If acceptedTransaction is a list, convert it to a Set of IDs for faster lookup
@@ -235,10 +237,18 @@ class _HistoryPageState extends ConsumerState<HistoryScreen> {
                     }).toList();
 
                     expandedTransactions.sort((a,b){
-                      DateTime dateA = DateTime.tryParse(a.deliveryDate) ?? DateTime(0);
-                      DateTime dateB = DateTime.tryParse(b.deliveryDate) ?? DateTime(0);
-                      return dateB.compareTo(dateA);
+                      DateTime dateACompleted = DateTime.tryParse(a.completedTime ?? '') ?? DateTime(0);
+                      DateTime dateARejected = DateTime.tryParse(a.rejectedTime ?? '') ?? DateTime(0);
+                      DateTime dateBCompleted = DateTime.tryParse(b.completedTime ?? '') ?? DateTime(0);
+                      DateTime dateBRejected = DateTime.tryParse(b.rejectedTime ?? '') ?? DateTime(0);
+
+                      DateTime latestA = dateACompleted.isAfter(dateARejected) ? dateACompleted : dateARejected;
+                      DateTime latestB = dateBCompleted.isAfter(dateBRejected) ? dateBCompleted : dateBRejected;
+                      
+                      return latestB.compareTo(latestA);
+                      
                     });
+                    
 
                     final ongoingTransactions = expandedTransactions
                       .where((tx) => tx.requestStatus == "Rejected" || tx.requestStatus == "Completed")
@@ -246,20 +256,25 @@ class _HistoryPageState extends ConsumerState<HistoryScreen> {
 
                   
                     if (ongoingTransactions.isEmpty) {
-                      return ListView(
-                        physics: const AlwaysScrollableScrollPhysics(), // Allow scrolling even if the list is empty
-                        children: [
-                          SizedBox(
-                            height: MediaQuery.of(context).size.height * 0.8, // Adjust height as needed
-                            child: Center(
-                              child: Text(
-                                'No history transactions yet.',
-                                style: AppTextStyles.subtitle,
+                      return LayoutBuilder(
+                        builder: (context,constraints){
+                          return ListView(
+                            physics: const AlwaysScrollableScrollPhysics(), // Allow scrolling even if the list is empty
+                            children: [
+                              SizedBox(
+                                height: constraints.maxHeight, // Adjust height as needed
+                                child: Center(
+                                  child: Text(
+                                    'No history transactions yet.',
+                                    style: AppTextStyles.subtitle,
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
-                        ],
+                            ],
+                          );
+                        }
                       );
+                      
                     }
                     return ListView.builder(
                       itemCount: ongoingTransactions.length,
@@ -352,7 +367,11 @@ class _HistoryPageState extends ConsumerState<HistoryScreen> {
                                               ),
                                             ),
                                             Text(
-                                              formatDateTime(item.deliveryDate),
+                                              item.requestStatus == 'Rejected'
+                                  ? formatDateTime(item.rejectedTime)
+                                  : item.requestStatus == 'Completed'
+                                    ? formatDateTime(item.completedTime)
+                                    : '—',
                                               style: AppTextStyles.body.copyWith(
                                                 color: mainColor,
                                                 fontWeight: FontWeight.bold,

@@ -191,7 +191,8 @@ class TransactionController extends Controller
                         "origin_container_location", "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
                         "freight_forwarder_name", "shipper_phone", "consignee_phone", "dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", "pl_truck_plate_no",
                         "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
-                        "pickup_date", "departure_date","origin", "destination", 
+                        "pickup_date", "departure_date","origin", "destination", "de_rejection_time", "pl_rejection_time", "dl_rejection_time", "pe_rejection_time", "de_completion_time", 
+                        "pl_completion_time", "dl_completion_time", "pe_completion_time",
                     ]],
                 ]
             ],
@@ -227,7 +228,8 @@ class TransactionController extends Controller
             "origin_container_location", "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
             "freight_forwarder_name", "shipper_phone", "consignee_phone", "dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", "pl_truck_plate_no",
             "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
-            "pickup_date", "departure_date","origin", "destination", 
+            "pickup_date", "departure_date","origin", "destination","de_rejection_time", "pl_rejection_time", "dl_rejection_time", "pe_rejection_time", "de_completion_time", 
+                        "pl_completion_time", "dl_completion_time", "pe_completion_time",
         ];
 
         $jobResponses = [];
@@ -407,7 +409,7 @@ class TransactionController extends Controller
                     
                         
                     
-                        ["dispatch_type", "!=", "ff"]
+                        
                     ]],
                     ["fields" => [
                         "id", "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
@@ -425,7 +427,7 @@ class TransactionController extends Controller
         ]);
        
 
-        $dispatchManagers = $dispatchRes['result'];
+        $dispatchManagers = $dispatchRes['result'] ?? [];
 
         if (empty($dispatchManagers)) {
             Log::warning("❌ No dispatch.manager records found for driver $partnerName");
@@ -737,6 +739,8 @@ class TransactionController extends Controller
 
         $uid = $request->uid ;
         $odooPassword = $request->header('password');
+        $actualTime = $request->input('timestamp');
+        $requestNumber = $request->input('request_number');
         Log::info("UID is {$uid}, Password is {$odooPassword}");
         
         if (!$uid) {
@@ -744,9 +748,6 @@ class TransactionController extends Controller
         }
 
         $odooUrl = $this->odoo_url;
-
-       
-
 
         $checkAccessRequest = [
             "jsonrpc" => "2.0",
@@ -827,7 +828,119 @@ class TransactionController extends Controller
             Log::error("❌ No reject reasons", ["response" => $response]);
             return response()->json(['success' => false, 'message' => 'Reasons not found'], 404);
         }
-        return response()->json($response);
+
+        $proof_attach = [
+            "jsonrpc" => "2.0",
+            "method" => "call",
+            "params" => [
+                "service" => "object",
+                "method" => "execute_kw",
+                "args" => [
+                    $db, 
+                    $uid, 
+                    $odooPassword, 
+                    "dispatch.manager", 
+                    "search_read",
+                    [[["id", "=", $request->transaction_id]]],  // Search by Request Number
+                    ["fields" => ["dispatch_type","de_request_no", "pl_request_no", "dl_request_no", "pe_request_no","service_type" ]]
+                ]
+            ],
+            "id" => 3
+        ];
+        
+        $statusResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
+            "http" => [
+                "header" => "Content-Type: application/json",
+                "method" => "POST",
+                "content" => json_encode($proof_attach),
+            ],
+        ])), true);
+    
+        if (!isset($statusResponse['result']) || empty($statusResponse['result'])) {
+            Log::error("❌ No data on this ID", ["response" => $statusResponse]);
+            return response()->json(['success' => false, 'message' => 'Data not found'], 404);
+        }
+
+        $type = $statusResponse['result'][0] ?? null;
+      
+        if (!$type) {
+            Log::error("❌ Missing dispatch_type", ["response" => $statusResponse]);
+            return response()->json(['success' => false, 'message' => 'dispatch_type is missing or invalid'], 404);
+        }
+        
+        // Check that the type is valid before proceeding
+        if (!in_array($type['dispatch_type'], ['ot', 'dt'])) {
+            Log::error("Incorrect dispatch_type", ["dispatch_type" => $type, "response" => $statusResponse]);
+            return response()->json(['success' => false, 'message' => 'Invalid dispatch_type value'], 404);
+        }
+
+        $updateField = [];
+
+        if ($type['dispatch_type'] == "ot" && $type['de_request_no'] == $requestNumber) {
+            $updateField = [
+                "de_rejection_time" => $actualTime,
+            ];
+        } elseif ($type['dispatch_type'] == "ot" && $type['pl_request_no'] == $requestNumber) {
+            $updateField = [
+                "pl_rejection_time" => $actualTime,
+            ];
+        }
+
+        if ($type['dispatch_type'] == "dt" && $type['dl_request_no'] == $requestNumber) {
+            $updateField = [
+                "dl_rejection_time" => $actualTime,
+            ];
+        } elseif ($type['dispatch_type'] == "dt" && $type['pe_request_no'] == $requestNumber) {
+            $updateField = [
+                "pe_rejection_time" => $actualTime,
+            ];
+        }
+
+        $updatePOD = [
+            "jsonrpc" => "2.0",
+            "method" => "call",
+            "params" => [
+                "service" => "object",
+                "method" => "execute_kw",
+                "args" => [
+                    $db, 
+                    $uid, 
+                    $odooPassword, 
+                    "dispatch.manager", 
+                    "write",
+                    [
+                        [$request->transaction_id],
+                       
+                        $updateField,
+                        
+                    ]
+                ]
+            ],
+            "id" => 4
+        ];
+
+        $updateResponse = json_decode(file_get_contents($odooUrl,false,stream_context_create([
+            "http" => [
+                "header" => "Content-Type: application/json",
+                "method" => "POST",
+                "content" => json_encode($updatePOD),
+            ]
+        ])), true);
+
+
+        if (isset($updateResponse['result']) && $updateResponse['result']) {
+            Log::info("✅ POD uploaded. Proceeding with milestone update.");
+
+            
+            return response()->json(['success' => true, 'message' => 'POD uploaded, but no matching milestone found']);
+
+        }else{
+            Log::error("Failed to insert image", ["response" => $updateResponse]);
+            return response()->json(['success' => false,'message'=>'Failed to upload POD'], 500);
+        }
+    
+        return response()->json($statusResponse);
+       
 
     }
 
@@ -1325,6 +1438,7 @@ class TransactionController extends Controller
                 "de_proof" => $images,
                 "de_signature" => $signature,
                 "de_release_by" => $enteredName,
+                "de_completion_time" => $actualTime,
                 
             ];
         } elseif ($type['dispatch_type'] == "ot" && $type['pl_request_no'] == $requestNumber) {
@@ -1334,6 +1448,7 @@ class TransactionController extends Controller
                 "dl_signature" => $signature,
                 "dl_receive_by" => $enteredName,
                 "stage_id" => 7,
+                "dl_completion_time" => $actualTime,
             ];
         }
 
@@ -1343,6 +1458,7 @@ class TransactionController extends Controller
                 "dl_proof" => $images,
                 "dl_signature" => $signature,
                 "de_release_by" => $enteredName,
+                "dl_completion_time" => $actualTime,
             ];
         } elseif ($type['dispatch_type'] == "dt" && $type['pe_request_no'] == $requestNumber) {
             Log::info("Updating DE proof and signature for request number: {$requestNumber}");
@@ -1351,6 +1467,7 @@ class TransactionController extends Controller
                 "de_signature" => $signature,
                 "dl_receive_by" => $enteredName,
                 "stage_id" => 7,
+                "de_completion_time" => $actualTime,
             ];
         }
 

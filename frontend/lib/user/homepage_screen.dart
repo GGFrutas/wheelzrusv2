@@ -19,6 +19,7 @@ import 'package:frontend/theme/colors.dart';
 import 'package:frontend/theme/text_styles.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:frontend/user/transaction_details.dart';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:carousel_slider/carousel_slider.dart';
@@ -74,6 +75,17 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
       "color": "#7DE4C2"
     },
   ];
+
+  String formatDateTime(String? dateString) {
+    if (dateString == null || dateString.isEmpty) return "N/A"; // Handle null values
+    
+    try {
+      DateTime dateTime = DateTime.parse("${dateString}Z").toLocal();// Convert string to DateTime
+      return DateFormat('d MMMM, yyyy').format(dateTime); // Format date-time
+    } catch (e) {
+      return "Invalid Date"; // Handle errors gracefully
+    }
+  } 
   
   
   
@@ -175,17 +187,20 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
 
                       // If there are no transactions, show a message
                       if (validTransactionList.isEmpty) {
-                        return SingleChildScrollView(
+                        return CustomScrollView(
                           physics: const AlwaysScrollableScrollPhysics(), // Allow scrolling even if the list is empty
-                          child: SizedBox(
-                            height: MediaQuery.of(context).size.height * 0.8, // Adjust height as needed
-                            child: Center(
-                              child: Text(
-                                'No pending transactions available.',
-                                style: AppTextStyles.subtitle,
+                          slivers: [
+                            SliverFillRemaining(
+                              hasScrollBody: false,
+                              child: Center(
+                                child: Text(
+                                  'No pending transactions available.',
+                                  style: AppTextStyles.subtitle,
+                                ),
                               ),
-                            ),
-                          ),
+                            )
+                          ]
+                          
                         );
                       }
 
@@ -366,6 +381,28 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                                                             Flexible(
                                                               child: Text(
                                                                 (item.requestNumber?.toString() ?? 'No Request Number Available'),
+                                                                style: AppTextStyles.caption.copyWith(
+                                                                  color: Colors.white
+                                                                ),
+                                                                softWrap: true, // Text will wrap if it's too long
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                        Row(
+                                                          children: [
+                                                            Text(
+                                                              "Date Assigned: ",
+                                                              style: AppTextStyles.caption.copyWith(
+                                                                fontWeight: FontWeight.bold,
+                                                                fontSize: 12,
+                                                                color: Colors.white,
+                                                              ),
+                                                            ),
+                                                            Flexible(
+                                                              child: Text(
+                                                                // formatDateTime(item.deliveryDate),
+                                                                '—',
                                                                 style: AppTextStyles.caption.copyWith(
                                                                   color: Colors.white
                                                                 ),

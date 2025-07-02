@@ -62,6 +62,16 @@ class Transaction {
   final String? login;
   final String? serviceType;
   final String? stageId;
+  final String? completedTime;
+  final String? deCompletedTime;
+  final String? plCompletedTime;
+  final String? dlCompletedTime;
+  final String? peCompletedTime;
+  final String? rejectedTime;
+  final String? deRejectedTime;
+  final String? plRejectedTime;
+  final String? dlRejectedTime;
+  final String? peRejectedTime;
 
 
   const Transaction({
@@ -122,6 +132,16 @@ class Transaction {
     required this.departureDate,   
     required this.serviceType, 
     required this.stageId,
+    required this.completedTime,
+    required this.deCompletedTime,
+    required this.plCompletedTime,
+    required this.dlCompletedTime,
+    required this.peCompletedTime,
+    required this.rejectedTime,
+    required this.deRejectedTime,
+    required this.plRejectedTime,
+    required this.dlRejectedTime,
+    required this.peRejectedTime,
     this.isAccepted = false,
     required this.login,
   });
@@ -210,6 +230,18 @@ class Transaction {
 
       login: json['login'].toString(),
       stageId: json['stage_id']?.toString() ?? '0',  // Provide a default value
+
+      completedTime: resolveCompletionTime(json) ?? 'Unknown Completed Time',
+      deCompletedTime: json['de_completion_time'] ?? 'Unknown DE',
+      plCompletedTime: json['pl_completion_time'] ?? 'Unknown PL',
+      dlCompletedTime: json['dl_completion_time'] ?? 'Unknown DL',
+      peCompletedTime: json['pe_completion_time'] ?? 'Unknown PE',
+
+      rejectedTime: resolveRejectionTime(json) ?? 'Unknown Rejected Time', // Provide a default value
+      deRejectedTime: json['de_rejection_time'] ?? 'Unknown DE',
+      plRejectedTime: json['pl_rejection_time'] ?? 'Unknown PL',
+      dlRejectedTime: json['dl_rejection_time'] ?? 'Unknown DL',
+      peRejectedTime: json['pe_rejection_time'] ?? 'Unknown PE',
      
 
       isAccepted: false,  // set default or map from API
@@ -227,11 +259,32 @@ class Transaction {
   }
 
   static int? _extractDriverId(dynamic field) {
-  if (field is List && field.isNotEmpty) {
-    return field[0]; // ID is usually the first element
+    if (field is List && field.isNotEmpty) {
+      return field[0]; // ID is usually the first element
+    }
+    return null;
   }
-  return null;
+
+static String? resolveCompletionTime(Map<String, dynamic> json) {
+  return json['pl_completion_time']?.toString().isNotEmpty == true
+      ? json['pl_completion_time']
+      : json['de_completion_time']?.toString().isNotEmpty == true
+          ? json['de_completion_time']
+          : json['dl_completion_time']?.toString().isNotEmpty == true
+              ? json['dl_completion_time']
+              : json['pe_completion_time'];
 }
+
+static String? resolveRejectionTime(Map<String, dynamic> json) {
+  return json['pl_rejection_time']?.toString().isNotEmpty == true
+      ? json['pl_rejection_time']
+      : json['de_rejection_time']?.toString().isNotEmpty == true
+          ? json['de_rejection_time']
+          : json['dl_rejection_time']?.toString().isNotEmpty == true
+              ? json['dl_rejection_time']
+              : json['pe_rejection_time'];
+}
+
 
 
   Transaction copyWith({String? name, String? destination,String? requestNumber,String? origin,String? requestStatus,status, bool? isAccepted, String? truckPlateNumber, String? destinationAddress, String? originAddress}) {
@@ -297,6 +350,17 @@ class Transaction {
       destinationAddress: destinationAddress ?? this.destinationAddress,
       serviceType: serviceType,
       stageId: stageId,
+      completedTime: completedTime ?? completedTime,
+      deCompletedTime: deCompletedTime,
+      plCompletedTime: plCompletedTime,
+      dlCompletedTime: dlCompletedTime,
+      peCompletedTime: peCompletedTime,
+
+      rejectedTime: rejectedTime ?? rejectedTime,
+      deRejectedTime: deRejectedTime,
+      plRejectedTime: plRejectedTime,
+      dlRejectedTime: dlRejectedTime,
+      peRejectedTime: peRejectedTime,
 
       login: login,
 
