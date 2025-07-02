@@ -198,11 +198,11 @@ class TransactionController extends Controller
             'id' => 4
         ]);
 
-        $dispatchManagers = $dispatchRes['result'];
+        $dispatchManagers = $dispatchRes['result'] ?? [];
 
         if (empty($dispatchManagers)) {
             Log::warning("❌ No dispatch.manager records found for driver $partnerName");
-            return response()->json(['success' => false, 'message' => 'No dispatch manager records found'], 404);
+            // return response()->json(['success' => false, 'message' => 'No dispatch manager records found'], 404);
         }
 
         $filteredManagers = array_filter($dispatchManagers, function ($manager) use ($partnerName) {

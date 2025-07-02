@@ -342,7 +342,11 @@ class _HistoryPageState extends ConsumerState<HistoryScreen> {
                                           children: [
                                             // Space between label and value
                                             Text(
-                                              "Date Delivered",
+                                              item.requestStatus == "Completed" 
+                                              ? "Date Completed"
+                                              : item.requestStatus == "Rejected" 
+                                              ? "Date Rejected"
+                                              : "Date Rejected",
                                               style: AppTextStyles.caption.copyWith(
                                                 color: darkerBgColor,
                                               ),

@@ -956,6 +956,8 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                                       ref.read(selectedReasonsProvider.notifier).state = null; // Clear the selected reason
                                       controller.clear(); // Clear the text field
 
+                                      Navigator.of(context, rootNavigator: true).pop(); // close loading
+
                                       print('🔁 Redirecting to HistoryScreen with UID: $uid');
 
                                       await Future.delayed(const Duration(seconds: 2));
@@ -967,6 +969,12 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
 
                                     } else {
                                       print('Rejection Failed');
+                                      Navigator.of(context, rootNavigator: true).pop(); // close loading
+                                      await Future.delayed(const Duration(seconds: 2));
+                                      ref.invalidate(bookingProvider);
+                                      ref.invalidate(filteredItemsProvider);
+                                      Navigator.of(context, rootNavigator: true).popUntil((route) => route.isFirst);
+                                      ref.read(navigationNotifierProvider.notifier).setSelectedIndex(2);
                                       // showDialog(
                                       //   context: context,
                                       //   builder: (context) {
