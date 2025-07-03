@@ -1,9 +1,11 @@
 // navigation_menu.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:frontend/notifiers/auth_notifier.dart';
 import 'package:frontend/notifiers/navigation_notifier.dart';
 import 'package:frontend/provider/transaction_provider.dart';
 import 'package:frontend/theme/colors.dart';
+import 'package:frontend/user/history_screen.dart';
 
 class NavigationMenu extends ConsumerWidget {
   const NavigationMenu({super.key});
@@ -43,6 +45,21 @@ class NavigationMenu extends ConsumerWidget {
           selectedIndex: index,
           onDestinationSelected: (value) {
             ref.read(navigationNotifierProvider.notifier).setSelectedIndex(value);
+             // Add navigation logic here
+            switch (value) {
+              case 0:
+                ref.read(navigationNotifierProvider.notifier).setSelectedIndex(0); // history tab
+                Navigator.of(context).popUntil((route) => route.isFirst); // go back to main/root
+                break;
+              case 1:
+                ref.read(navigationNotifierProvider.notifier).setSelectedIndex(1); // history tab
+                Navigator.of(context).popUntil((route) => route.isFirst); // go back to main/root
+                break;
+              case 2:
+                ref.read(navigationNotifierProvider.notifier).setSelectedIndex(2); // history tab
+                Navigator.of(context).popUntil((route) => route.isFirst); // go back to main/root
+              break;
+            }
           },
           destinations: const [
             NavigationDestination(

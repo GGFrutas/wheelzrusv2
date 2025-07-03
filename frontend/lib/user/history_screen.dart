@@ -41,7 +41,7 @@ class _HistoryPageState extends ConsumerState<HistoryScreen> {
     if (dateString == null || dateString.isEmpty) return "N/A"; // Handle null values
     
     try {
-      DateTime dateTime = DateTime.parse("${dateString}Z").toLocal();// Convert string to DateTime
+      DateTime dateTime = DateTime.parse(dateString);// Convert string to DateTime
       return DateFormat('d MMMM, yyyy').format(dateTime); // Format date-time
     } catch (e) {
       return "Invalid Date"; // Handle errors gracefully
@@ -190,10 +190,13 @@ class _HistoryPageState extends ConsumerState<HistoryScreen> {
                             // Check if the truck driver is the same as the authPartnerId
                             item.copyWith(
                               name: "Deliver to Shipper",
-                              destination: cleanAddress(item.destination),
-                              origin: cleanAddress(item.origin),
+                              destination: cleanAddress(item.origin),
+                              origin: cleanAddress(item.destination),
                               requestNumber: item.deRequestNumber,
                               requestStatus: item.deRequestStatus,
+                              rejectedTime: item.deRejectedTime,
+                              completedTime: item.deCompletedTime
+
                               // truckPlateNumber: item.deTruckPlateNumber,
                             ),
                             // Second instance: Pickup from Shipper
@@ -205,6 +208,8 @@ class _HistoryPageState extends ConsumerState<HistoryScreen> {
                               origin: cleanAddress(item.destination),
                               requestNumber: item.plRequestNumber,
                               requestStatus: item.plRequestStatus,
+                              rejectedTime: item.plRejectedTime,
+                              completedTime: item.plCompletedTime
                               // truckPlateNumber: item.plTruckPlateNumber,
                               ),
                         ];
@@ -218,6 +223,8 @@ class _HistoryPageState extends ConsumerState<HistoryScreen> {
                               destination: cleanAddress(item.origin),
                               requestNumber: item.dlRequestNumber,
                               requestStatus: item.dlRequestStatus,
+                              rejectedTime: item.dlRejectedTime,
+                              completedTime: item.dlCompletedTime
                               // truckPlateNumber: item.dlTruckPlateNumber,
                             ),
                           // Second instance: Pickup from Consignee
@@ -228,6 +235,8 @@ class _HistoryPageState extends ConsumerState<HistoryScreen> {
                               destination: cleanAddress(item.destination),
                               requestNumber: item.peRequestNumber,
                               requestStatus: item.peRequestStatus,
+                              rejectedTime: item.peRejectedTime,
+                              completedTime: item.peCompletedTime
                               // truckPlateNumber: item.peTruckPlateNumber,
                             ),
                         ]; 

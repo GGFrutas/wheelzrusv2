@@ -456,211 +456,220 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
             ),
             
           ),
-          bottomNavigationBar: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column (
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SizedBox(
-                  width: double.infinity, // Make the button full width
-                  child: ElevatedButton(
-                  onPressed: () async {
-                    if (widget.transaction?.requestStatus != 'Pending') {
-                      
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => DetailedDetailScreen(uid: widget.uid, transaction: widget.transaction),
-                        ),
-                      );
-                      // print("SUCCESS");
-                    } else {
-                    
-                      final acceptedTransactionNotifier = ref.read(accepted_transaction.acceptedTransactionProvider.notifier);
-
-                        final isAccepted = acceptedTransactionNotifier.isAccepted(
-                          widget.transaction!.id, 
-                          widget.transaction!.requestNumber.toString(),
-                        );
-
-                        // If not accepted, update the status and add it to accepted transactions
-                      if (isAccepted) {
-                          _loadingStates[widget.transaction!.requestNumber.toString()] = false;
-                        return;
-                      }
-
-                      final success = await acceptedTransactionNotifier.updateStatus(
-                        widget.transaction!.id.toString(),
-                        widget.transaction!.requestNumber.toString(),
-                        'Accepted', // Update status to 'Accepted'
-                        ref,
-                        context,
-                      );
-
-                      final updatedState = ref.read(transaction_list.acceptedTransactionProvider);
-
-                      // final updatedTransaction = updatedState.firstWhere(
-                      //   (transaction) => transaction.id == transaction.id,
-                      //   orElse: () => widget.transaction!, // Return the original if not found
-                      // );
-                      final updatedTransaction = updatedState.firstWhere(
-                        (t) =>
-                            t.id == widget.transaction!.id &&
-                            t.requestNumber == widget.transaction!.requestNumber,
-                        orElse: () => widget.transaction!, // fallback if not founds
-                      );
-                     
-                    
-                      print('✅ Update Status: ${updatedTransaction.requestStatus}'); // Should now be 'Accepted'
-
-                      if (success) {
-                        acceptedTransactionNotifier.addProduct(updatedTransaction); //Add to accepted 
-                        showDialog(
-                          context:context,
-                          barrierDismissible: false,
-                          builder: (context) {
-                            return const Center (
-                              child: CircularProgressIndicator(),
-                            );
-                          },
-                        );
-
-                        await Future.delayed(const Duration(seconds: 2));
-                        Navigator.of(context).pop(); // Close the loading dialog
-
-                        showDialog(
-                          context: context,
-                          barrierDismissible: false,
-                          builder: (_) => PopScope(
-                          canPop: false, // Prevent default pop behavior
-                          onPopInvoked: (didPop) {
-                            if (!didPop) {
-                              ref.invalidate(pendingTransactionProvider);
-                              ref.invalidate(acceptedTransactionProvider);
-                              ref.invalidate(bookingProvider);
-                              ref.invalidate(filteredItemsProvider);
-                              ref.read(navigationNotifierProvider.notifier).setSelectedIndex(0);
-                              // Navigate to home if system back button is pressed
-                              Navigator.of(context).popUntil((route) => route.isFirst);
-                            }
-                          },
-                          child: Dialog(
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                            backgroundColor: Colors.white,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    'Booking has been accepted',
-                                    style: AppTextStyles.body.copyWith(
-                                      color: Colors.black87
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  const Icon (
-                                    Icons.check_circle,
-                                    color: mainColor,
-                                    size: 100
-                                  ),
-                                  const SizedBox(height: 24),
-                                  SizedBox(
-                                    width: 200,
-                                    child:ElevatedButton(
-                                      onPressed: () {
-                                        Navigator.pop(context);
-                                        // Navigator.of(context).popUntil((route) => route.isFirst);
-                                        ref.invalidate(pendingTransactionProvider);
-                                        ref.invalidate(acceptedTransactionProvider);
-                                        ref.invalidate(bookingProvider);
-                                        ref.invalidate(filteredItemsProvider);
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) => DetailedDetailScreen(uid: widget.uid, transaction: updatedTransaction),
-                                          ),
-                                        );
-                                      },
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: mainColor,
-                                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(25),
-                                        ),
-                                      ),
-                                      child: Text("Continue", style: AppTextStyles.body.copyWith(color: Colors.white)),
-                                    ),
-                                  )
-                                  
-                                ],
-                              ),
+          bottomNavigationBar: Column (
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column (
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: double.infinity, // Make the button full width
+                      child: ElevatedButton(
+                      onPressed: () async {
+                        if (widget.transaction?.requestStatus != 'Pending') {
+                          
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => DetailedDetailScreen(uid: widget.uid, transaction: widget.transaction),
                             ),
-                          ),
-                          ),
-                        );
-                      }
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: mainColor,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 80,
-                      vertical: 20,
-                    ),
-                    disabledForegroundColor: mainColor,
-                    disabledBackgroundColor: mainColor,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30.0),
-                    ),
-                  ),
-                  child: Text(
-                    widget.transaction?.requestStatus != 'Pending'
-                    // widget.transaction?.requestStatus == 'Accepted' || widget.transaction?.requestStatus == 'Ongoing'
-                                  ? 'View Booking' // New label for accepted transactions
-                                  : 'Accept Booking', 
-                    style: AppTextStyles.body.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center, // Ensure the text is centered
-                    overflow: TextOverflow.ellipsis, // Handle overflow if needed
-                    maxLines: 1,
-                  ),
-                ),
-              ),
-                const SizedBox(height: 10), // Add some space between buttons
-                
-                SizedBox(
-                  width: double.infinity, // Make the button full width
-                  child: OutlinedButton(
-                    onPressed: () {
-                      _showModal(context,ref);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      padding: const EdgeInsets.symmetric(horizontal: 80, vertical: 20),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30.0),
+                          );
+                          // print("SUCCESS");
+                        } else {
+                        
+                          final acceptedTransactionNotifier = ref.read(accepted_transaction.acceptedTransactionProvider.notifier);
+
+                            final isAccepted = acceptedTransactionNotifier.isAccepted(
+                              widget.transaction!.id, 
+                              widget.transaction!.requestNumber.toString(),
+                            );
+
+                            // If not accepted, update the status and add it to accepted transactions
+                          if (isAccepted) {
+                              _loadingStates[widget.transaction!.requestNumber.toString()] = false;
+                            return;
+                          }
+
+                          final success = await acceptedTransactionNotifier.updateStatus(
+                            widget.transaction!.id.toString(),
+                            widget.transaction!.requestNumber.toString(),
+                            'Accepted', // Update status to 'Accepted'
+                            ref,
+                            context,
+                          );
+
+                          final updatedState = ref.read(transaction_list.acceptedTransactionProvider);
+
+                          // final updatedTransaction = updatedState.firstWhere(
+                          //   (transaction) => transaction.id == transaction.id,
+                          //   orElse: () => widget.transaction!, // Return the original if not found
+                          // );
+                          final updatedTransaction = updatedState.firstWhere(
+                            (t) =>
+                                t.id == widget.transaction!.id &&
+                                t.requestNumber == widget.transaction!.requestNumber,
+                            orElse: () => widget.transaction!, // fallback if not founds
+                          );
+                        
+                        
+                          print('✅ Update Status: ${updatedTransaction.requestStatus}'); // Should now be 'Accepted'
+
+                          if (success) {
+                            acceptedTransactionNotifier.addProduct(updatedTransaction); //Add to accepted 
+                            showDialog(
+                              context:context,
+                              barrierDismissible: false,
+                              builder: (context) {
+                                return const Center (
+                                  child: CircularProgressIndicator(),
+                                );
+                              },
+                            );
+
+                            await Future.delayed(const Duration(seconds: 2));
+                            Navigator.of(context).pop(); // Close the loading dialog
+
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (_) => PopScope(
+                              canPop: false, // Prevent default pop behavior
+                              onPopInvoked: (didPop) {
+                                if (!didPop) {
+                                  ref.invalidate(pendingTransactionProvider);
+                                  ref.invalidate(acceptedTransactionProvider);
+                                  ref.invalidate(bookingProvider);
+                                  ref.invalidate(filteredItemsProvider);
+                                  ref.read(navigationNotifierProvider.notifier).setSelectedIndex(0);
+                                  // Navigate to home if system back button is pressed
+                                  Navigator.of(context).popUntil((route) => route.isFirst);
+                                }
+                              },
+                              child: Dialog(
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                backgroundColor: Colors.white,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        'Booking has been accepted',
+                                        style: AppTextStyles.body.copyWith(
+                                          color: Colors.black87
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                      const SizedBox(height: 16),
+                                      const Icon (
+                                        Icons.check_circle,
+                                        color: mainColor,
+                                        size: 100
+                                      ),
+                                      const SizedBox(height: 24),
+                                      SizedBox(
+                                        width: 200,
+                                        child:ElevatedButton(
+                                          onPressed: () {
+                                            Navigator.pop(context);
+                                            // Navigator.of(context).popUntil((route) => route.isFirst);
+                                            ref.invalidate(pendingTransactionProvider);
+                                            ref.invalidate(acceptedTransactionProvider);
+                                            ref.invalidate(bookingProvider);
+                                            ref.invalidate(filteredItemsProvider);
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) => DetailedDetailScreen(uid: widget.uid, transaction: updatedTransaction),
+                                              ),
+                                            );
+                                          },
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: mainColor,
+                                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(25),
+                                            ),
+                                          ),
+                                          child: Text("Continue", style: AppTextStyles.body.copyWith(color: Colors.white)),
+                                        ),
+                                      )
+                                      
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: mainColor,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 80,
+                          vertical: 20,
+                        ),
+                        disabledForegroundColor: mainColor,
+                        disabledBackgroundColor: mainColor,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30.0),
+                        ),
+                      ),
+                      child: Text(
+                        widget.transaction?.requestStatus != 'Pending'
+                        // widget.transaction?.requestStatus == 'Accepted' || widget.transaction?.requestStatus == 'Ongoing'
+                                      ? 'View Booking' // New label for accepted transactions
+                                      : 'Accept Booking', 
+                        style: AppTextStyles.body.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center, // Ensure the text is centered
+                        overflow: TextOverflow.ellipsis, // Handle overflow if needed
+                        maxLines: 1,
                       ),
                     ),
-                    child: Text(
-                      'Decline Booking',
-                      style: AppTextStyles.body.copyWith(
-                       
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center, // Ensure the text is centered
-                      overflow: TextOverflow.ellipsis, // Handle overflow if needed
-                      maxLines: 1,
-                    ),
                   ),
+                    const SizedBox(height: 10), // Add some space between buttons
+                    if(widget.transaction?.requestStatus == "Pending" || widget.transaction?.requestStatus == "Accepted" )
+                    SizedBox(
+                      width: double.infinity, // Make the button full width
+                      child: OutlinedButton(
+                        onPressed: () {
+                          _showModal(context,ref);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          padding: const EdgeInsets.symmetric(horizontal: 80, vertical: 20),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30.0),
+                          ),
+                        ),
+                        child: Text(
+                          'Decline Booking',
+                          style: AppTextStyles.body.copyWith(
+                          
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center, // Ensure the text is centered
+                          overflow: TextOverflow.ellipsis, // Handle overflow if needed
+                          maxLines: 1,
+                        ),
+                      ),
+                    ),
+                    
+                    
+                  ],
+                  
                 ),
-              ],
-            ),
             
-          ),
+              ),
+              const NavigationMenu(),
+            ],
+          )
           
           // bottomNavigationBar: const NavigationMenu(), // Show navigation menu only if it's the home screen
 
@@ -1017,11 +1026,21 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                                     } else {
                                       print('Rejection Failed');
                                       Navigator.of(context, rootNavigator: true).pop(); // close loading
+                                      await Future.delayed(const Duration(seconds: 2));
+                                      ref.invalidate(bookingProvider);
+                                      ref.invalidate(filteredItemsProvider);
+                                      Navigator.of(context, rootNavigator: true).popUntil((route) => route.isFirst);
+                                      ref.read(navigationNotifierProvider.notifier).setSelectedIndex(2);
                                     }
                                    
                                   } else {
                                     print('Button Rejection Failed');
                                     Navigator.of(context, rootNavigator: true).pop(); // close loading
+                                    await Future.delayed(const Duration(seconds: 2));
+                                      ref.invalidate(bookingProvider);
+                                      ref.invalidate(filteredItemsProvider);
+                                      Navigator.of(context, rootNavigator: true).popUntil((route) => route.isFirst);
+                                      ref.read(navigationNotifierProvider.notifier).setSelectedIndex(2);
                                   }
                                 }catch (e){
                                   print('Error: $e');

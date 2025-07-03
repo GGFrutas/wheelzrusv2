@@ -122,40 +122,56 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
           final authPartnerId = ref.watch(authNotifierProvider).partnerId;
           final driverId = authPartnerId?.toString();
 
-          String cleanAddress(String address) {
-            return address
-              .split(',') // splits the string by commas
-              .map((e) => e.trim()) //removes extra spaces
-              .where((e) => e.isNotEmpty && e.toLowerCase() != 'ph') //filters out empty strings and 'ph'
-              .join(', '); // joins the remaining parts back together
-          }
-
 
           final expandedTransactions = transaction.expand((item) {
            
+            String removeBrackets(String input) {
+              return input.replaceAll(RegExp(r'\s*\[.*?\]'), '')
+                          .replaceAll(RegExp(r'\s*\(.*?\)'), '')
+                          .trim();
+            }
+            String cleanAddress(List<String?> parts) {
+              return parts
+                .where((e) => e != null && e.trim().isNotEmpty && e.trim().toLowerCase() != 'ph')
+                .map((e) => removeBrackets(e!)) // now safe because nulls are filtered above
+                .join(', ');
+            }
+
             if (item.dispatchType == "ot") {
               return [
                 // First instance: Deliver to Shipper
                 if (item.deTruckDriverName == driverId) // Filter out if accepted
                   // Check if the truck driver is the same as the authPartnerId
-                   item.copyWith(
+                  item.copyWith(
                     name: "Deliver to Shipper",
-                    destination: cleanAddress(item.destination),
-                    origin: cleanAddress(item.origin),
+                    origin: cleanAddress([
+                      item.shipperStreet,
+                      item.shipperBarangay,
+                      item.shipperCity,
+                      item.shipperProvince,
+                    ]),
+                    destination: (item.origin),
                     requestNumber: item.deRequestNumber,
                     requestStatus: item.deRequestStatus,
-                    truckPlateNumber: item.deTruckPlateNumber,
+                    // truckPlateNumber: item.deTruckPlateNumber,
                   ),
                   // Second instance: Pickup from Shipper
                 if ( item.plTruckDriverName == driverId) // Filter out if accepted
                   // if (item.plTruckDriverName == authPartnerId)
                     item.copyWith(
                     name: "Pickup from Shipper",
-                    destination: cleanAddress(item.origin),
-                    origin: cleanAddress(item.destination),
+                    origin: cleanAddress([
+                      item.origin
+                    ]),
+                    destination: cleanAddress([
+                      item.shipperStreet,
+                      item.shipperBarangay,
+                      item.shipperCity,
+                      item.shipperProvince,  
+                    ]),
                     requestNumber: item.plRequestNumber,
                     requestStatus: item.plRequestStatus,
-                    truckPlateNumber: item.plTruckPlateNumber,
+                    // truckPlateNumber: item.plTruckPlateNumber,
                     ),
               ];
             } else if (item.dispatchType == "dt") {
@@ -164,21 +180,31 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                 if (item.dlTruckDriverName == driverId) // Filter out if accepted
                   item.copyWith(
                     name: "Deliver to Consignee",
-                    origin: cleanAddress(item.destination),
-                    destination: cleanAddress(item.origin),
+                    origin: cleanAddress([
+                      item.consigneeStreet,
+                      item.consigneeBarangay,
+                      item.consigneeCity,
+                      item.consigneeProvince,
+                    ]),
+                    destination: cleanAddress([item.origin]),
                     requestNumber: item.dlRequestNumber,
                     requestStatus: item.dlRequestStatus,
-                    truckPlateNumber: item.dlTruckPlateNumber,
+                    // truckPlateNumber: item.dlTruckPlateNumber,
                   ),
                 // Second instance: Pickup from Consignee
                 if (item.peTruckDriverName == driverId) // Filter out if accepted
                   item.copyWith(
                     name: "Pickup from Consignee",
-                    origin: cleanAddress(item.origin),
-                    destination: cleanAddress(item.destination),
+                    origin: cleanAddress([item.origin]),
+                    destination: cleanAddress([
+                      item.consigneeStreet,
+                      item.consigneeBarangay,
+                      item.consigneeCity,
+                      item.consigneeProvince,
+                    ]),
                     requestNumber: item.peRequestNumber,
                     requestStatus: item.peRequestStatus,
-                    truckPlateNumber: item.peTruckPlateNumber,
+                    // truckPlateNumber: item.peTruckPlateNumber,
                   ),
               ]; 
             }
@@ -253,7 +279,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                                   children: [
                                     // Space between label and value
                                     Text(
-                                      '${item.origin} — ${item.destination}',
+                                      '${item.destination} — ${item.origin}',
                                       style: AppTextStyles.body.copyWith(
                                         color: mainColor,
                                         fontWeight: FontWeight.bold,
