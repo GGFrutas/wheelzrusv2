@@ -472,13 +472,13 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
                 ),
               ],
             ),
-            
           ),
           
         ),
-        bottomNavigationBar: showButton ? null : Column(
+        bottomNavigationBar: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if(!showButton)
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: Column (
@@ -523,6 +523,7 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
             ),
             const NavigationMenu(),
           ],
+          
         )
          
         // bottomNavigationBar: const NavigationMenu(),

@@ -161,17 +161,35 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
             padding: const EdgeInsets.all(14.0),
             child: ListView( // Use ListView to allow scrolling
               children: [
-                Padding(
-                  // color: Colors.green[500], // Set background color for this section
-                  padding: const EdgeInsets.all(8.0),
-                  child: Text(
-                    " ${getNullableValue(widget.transaction?.name).toUpperCase()}", // Section Title
-                    style: AppTextStyles.body.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: mainColor,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      // color: Colors.green[500], // Set background color for this section
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text(
+                        " ${getNullableValue(widget.transaction?.name).toUpperCase()}", // Section Title
+                        style: AppTextStyles.body.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: mainColor,
+                        ),
+                      ),
                     ),
-                  ),
+                    Padding(
+                      // color: Colors.green[500], // Set background color for this section
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text(
+                        widget.transaction!.originAddress.toUpperCase(), // Section Title
+                        style: AppTextStyles.caption.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: mainColor,
+                        ),
+                      ),
+                    ),
+
+                  ],
                 ),
+                
                 if (showTabs) ...[
                   Row(
                     children: List.generate(tabTitles.length, (index) {
@@ -271,7 +289,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                         child: FlutterMap(
                           mapController: mapController,
                           options: MapOptions(
-                            initialZoom: 5,
+                            initialZoom: 10,
                             onMapReady: () {
                               WidgetsBinding.instance.addPostFrameCallback((_) {
                                 if (mounted) {
@@ -339,9 +357,8 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                                 children: [
                                   // Space between label and value
                                   Text(
-                                    widget.transaction?.destination ?? '',
+                                    widget.transaction?.origin ?? '',
                                     style: AppTextStyles.subtitle.copyWith(
-                                      fontSize: 20,
                                       fontWeight: FontWeight.bold,
                                       color: mainColor,
                                     ),
@@ -394,7 +411,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                                 children: [
                                   // Space between label and value
                                   Text(
-                                    widget.transaction?.origin ?? '',
+                                    widget.transaction?.destination ?? '',
                                     style: AppTextStyles.subtitle.copyWith(
                                       fontWeight: FontWeight.bold,
                                       color: mainColor,
@@ -634,7 +651,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                     ),
                   ),
                     const SizedBox(height: 10), // Add some space between buttons
-                    if(widget.transaction?.requestStatus == "Pending" || widget.transaction?.requestStatus == "Accepted" )
+                    if(widget.transaction?.requestStatus == "Pending" )
                     SizedBox(
                       width: double.infinity, // Make the button full width
                       child: OutlinedButton(
