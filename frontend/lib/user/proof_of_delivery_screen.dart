@@ -15,6 +15,7 @@ import 'package:frontend/provider/base_url_provider.dart';
 import 'package:frontend/provider/theme_provider.dart';
 import 'package:frontend/provider/transaction_list_notifier.dart';
 import 'package:frontend/provider/transaction_provider.dart';
+import 'package:frontend/screen/navigation_menu.dart';
 import 'package:frontend/theme/colors.dart';
 import 'package:frontend/theme/text_styles.dart';
 import 'package:frontend/user/schedule.dart';
@@ -266,131 +267,143 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
           
         ),
       ),
-      bottomNavigationBar: Padding(
-        padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-          top: 8,
-          left: 16,
-          right: 16,
-        ),
-        child: ElevatedButton(
-          
-          onPressed:() async {
-            final missingSignature = _controller.isEmpty;
-            final missingName =  _enteredName == null || _enteredName!.trim().isEmpty;
-            if (missingSignature || missingName) {
-              String message = '';
-              if (missingSignature && missingName){
-                message = 'Please enter a name and provide signature.';
-              }else if (missingName) {
-                message = 'Please enter a name.';
-              }else if(missingSignature) {
-                 message = 'Please provide a signature.';
-              }
-              showDialog(
-                context: context,
-                builder: (context) {
-                  return AlertDialog(
-                    title: Text(
-                      'Submission Error!', 
-                      style: AppTextStyles.subtitle.copyWith(
-                        fontWeight: FontWeight.bold
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: EdgeInsets.all(8.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed:() async {
+                      final missingSignature = _controller.isEmpty;
+                      final missingName =  _enteredName == null || _enteredName!.trim().isEmpty;
+                      if (missingSignature || missingName) {
+                        String message = '';
+                        if (missingSignature && missingName){
+                          message = 'Please enter a name and provide signature.';
+                        }else if (missingName) {
+                          message = 'Please enter a name.';
+                        }else if(missingSignature) {
+                          message = 'Please provide a signature.';
+                        }
+                        showDialog(
+                          context: context,
+                          builder: (context) {
+                            return AlertDialog(
+                              title: Text(
+                                'Submission Error!', 
+                                style: AppTextStyles.subtitle.copyWith(
+                                  fontWeight: FontWeight.bold
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              content: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    message,
+                                    style: AppTextStyles.body.copyWith(
+                                      color: Colors.black87
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  const Icon (
+                                    Icons.edit,
+                                    color: bgColor,
+                                    size: 100
+                                  )
+                                ],
+                              ),
+                              actions: [
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 12.0),
+                                  child: Center(
+                                    child: SizedBox(
+                                      width: 200,
+                                      child: ElevatedButton(
+                                      onPressed: () {
+                                        Navigator.of(context).pop();
+                                      }, 
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.red,
+                                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(25),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        "Try Again",
+                                        style: AppTextStyles.body.copyWith(
+                                          color: Colors.white,
+                                        )
+                                      )
+                                    ),
+                                    )
+                                  )
+                                )
+                              ],
+                            );
+                          }
+                        );
+                      } else {
+
+                        showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder:(context) {
+                            return const Center (
+                              child: CircularProgressIndicator(),
+                            );
+                          },
+                        );
+                        try {
+                          print("UID: ${widget.uid}");
+                          print("Request Number: ${widget.transaction?.requestNumber}");
+                          print("Request Number: ${widget.transaction?.requestStatus}");
+                          print("Entered Name: $_enteredName");
+                            _printFilenames();
+                        } catch (e) {
+                          print("Error: $e");
+                          Navigator.of(context).pop(); // Close the loading dialog
+                          showSuccessDialog(context, "An error occurred while uploading the files.");
+                        }
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: mainColor,
+                      padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 20),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30.0),
+                      ),
+                    ),
+                    child: Text(
+                      "Submit",
+                      style: AppTextStyles.body.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
                       ),
                       textAlign: TextAlign.center,
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
                     ),
-                    content: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text(
-                          message,
-                          style: AppTextStyles.body.copyWith(
-                            color: Colors.black87
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 16),
-                        const Icon (
-                          Icons.edit,
-                          color: bgColor,
-                          size: 100
-                        )
-                      ],
-                    ),
-                    actions: [
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 12.0),
-                        child: Center(
-                          child: SizedBox(
-                            width: 200,
-                            child: ElevatedButton(
-                            onPressed: () {
-                              Navigator.of(context).pop();
-                            }, 
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red,
-                              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(25),
-                              ),
-                            ),
-                            child: Text(
-                              "Try Again",
-                              style: AppTextStyles.body.copyWith(
-                                color: Colors.white,
-                              )
-                            )
-                          ),
-                          )
-                        )
-                      )
-                    ],
-                  );
-                }
-              );
-            } else {
+                  ),
 
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder:(context) {
-                  return const Center (
-                    child: CircularProgressIndicator(),
-                  );
-                },
-              );
-              try {
-                print("UID: ${widget.uid}");
-                print("Request Number: ${widget.transaction?.requestNumber}");
-                print("Request Number: ${widget.transaction?.requestStatus}");
-                print("Entered Name: $_enteredName");
-                  _printFilenames();
-              } catch (e) {
-                print("Error: $e");
-                Navigator.of(context).pop(); // Close the loading dialog
-                showSuccessDialog(context, "An error occurred while uploading the files.");
-              }
-            }
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: mainColor,
-            padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 20),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(30.0),
-            ),
+                )
+              ],
+            )
+            
           ),
-          child: Text(
-            "Submit",
-            style: AppTextStyles.body.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-            textAlign: TextAlign.center,
-            overflow: TextOverflow.ellipsis,
-            maxLines: 1,
-          ),
-        ),
-      ),
+          const NavigationMenu(),
+        ],
+        
+      )
+      
     );
   }  
   void showSuccessDialog(BuildContext context, String message) {

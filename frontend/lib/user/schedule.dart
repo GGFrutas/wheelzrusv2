@@ -7,6 +7,7 @@ import 'dart:math';
 import 'package:animated_toggle_switch/animated_toggle_switch.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:frontend/models/milestone_history_model.dart';
 import 'package:frontend/models/transaction_model.dart';
 import 'package:frontend/notifiers/auth_notifier.dart';
 import 'package:frontend/provider/accepted_transaction.dart' as accepted_transaction;
@@ -40,12 +41,112 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
   void initState() {
     super.initState();
     uid = widget.uid; // Initialize uid
+    // schedule = getPickupAndDeliverySchedule(widget.transaction!) as MilestoneHistoryModel?;
   }
 
   String getNullableValue(String? value, {String fallback = ''}) {
     return value ?? fallback;
   }
+  MilestoneHistoryModel? schedule;
+
+
+  Map<String, MilestoneHistoryModel?> getPickupAndDeliverySchedule(Transaction transaction) {
+  final dispatchType = transaction.dispatchType;
+  final history = transaction.history;
+  final serviceType = transaction.serviceType;
+  final dispatchId = transaction.id.toString();
+
+  final fclPrefixes = {
+    'ot': {
+      'Full Container Load': {
+        'de': ['TEOT','TYOT' ],
+        'pl': ['CLOT', 'TLOT'],
+      },
+      'Less-Than-Container Load': {
+        'pl': ['LCLOT','LTEOT' ],
+      },
+    },
+    'dt': {
+      'Full Container Load': {
+        'dl': [ 'CLDT', 'GYDT'],
+        'pe': ['CYDT', 'GLDT'],
+      },
+      'Less-Than-Container Load': {
+        'dl': [ 'LCLDT', 'LGYDT'],
+      },
+    },
+  };
+
+  final legs = ['de', 'pl', 'dl', 'pe'];
+  final fieldCodeMap = {
+    'de': transaction.deRequestNumber,
+    'pl': transaction.plRequestNumber,
+    'dl': transaction.dlRequestNumber,
+    'pe': transaction.peRequestNumber,
+  };
+
+  MilestoneHistoryModel? pickup;
+  MilestoneHistoryModel? delivery;
+
+  for (final leg in legs) {
+    final requestNo = fieldCodeMap[leg];
+    if (requestNo == null || requestNo.isEmpty) continue;
+
+    final expectedFclCodes = fclPrefixes[dispatchType]?[serviceType]?[leg];
+    if (expectedFclCodes == null) continue;
+
+    final pickupFcl = expectedFclCodes.length > 1 ? expectedFclCodes[1] : null;
+    final deliveryFcl = expectedFclCodes.first;
+
+    // Find Pickup
+    if (pickupFcl != null) {
+      pickup = history.firstWhere(
+        (h) =>
+            h.fclCode.trim().toUpperCase() == pickupFcl.toUpperCase() &&
+            h.dispatchId == dispatchId &&
+            h.serviceType == serviceType,
+        orElse: () => const MilestoneHistoryModel(
+          id: -1,
+          dispatchId: '',
+          dispatchType: '',
+          fclCode: '',
+          scheduledDatetime: '',
+          serviceType: '',
+        ),
+      );
+      if (pickup.id == -1) pickup = null;
+    }
+
+    // Find Delivery
+    delivery = history.firstWhere(
+      (h) =>
+          h.fclCode.trim().toUpperCase() == deliveryFcl.toUpperCase() &&
+          h.dispatchId == dispatchId &&
+          h.serviceType == serviceType,
+      orElse: () => const MilestoneHistoryModel(
+        id: -1,
+        dispatchId: '',
+        dispatchType: '',
+        fclCode: '',
+        scheduledDatetime: '',
+        serviceType: '',
+      ),
+    );
+    if (delivery.id == -1) delivery = null;
+
+    // If both found for this leg, stop
+    if (pickup != null || delivery != null) break;
+  }
+
+  return {
+    'pickup': pickup,
+    'delivery': delivery,
+  };
+}
+
+
   
+
   Map< String, String> separateDateTime(String? dateTime) {
     if (dateTime == null || dateTime.isEmpty) {
       return {"date": "N/A", "time": "N/A"}; // Return default values if null or empty
@@ -67,7 +168,9 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
   
   @override
   Widget build(BuildContext context) {
-   
+   final scheduleMap = getPickupAndDeliverySchedule(widget.transaction!);
+final pickup = scheduleMap['pickup'];
+final delivery = scheduleMap['delivery'];
     return Scaffold(
       appBar: AppBar(
         iconTheme: const IconThemeData(color: mainColor),
@@ -104,7 +207,7 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
               Container(
                 padding: const EdgeInsets.all(8.0),
                 child: Text(
-                  "Freight and Container Info", // Section Title
+                  "Pickup and Delivery Schedule", // Section Title
                   style: AppTextStyles.body.copyWith(
                     fontWeight: FontWeight.w600,
                     color: const Color.fromARGB(255, 128, 137, 145),
@@ -156,7 +259,7 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
                                     Text(
-                                      separateDateTime(widget.transaction?.arrivalDate)["date"] ?? "N/A",
+                                      separateDateTime(pickup?.scheduledDatetime)["date"] ?? "N/A",
                                       style: AppTextStyles.caption.copyWith(
                                         fontWeight: FontWeight.bold,
                                         color: mainColor,
@@ -164,7 +267,7 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
                                     ),
                                     const SizedBox(height: 5), // Space between label and value
                                       Text(
-                                        separateDateTime(widget.transaction?.arrivalDate)["time"] ?? "N/A",
+                                        separateDateTime(pickup?.scheduledDatetime)["time"] ?? "N/A",
                                         style: AppTextStyles.caption.copyWith(
                                           fontWeight: FontWeight.bold,
                                           color: mainColor,
@@ -214,7 +317,7 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
                                     Text(
-                                      separateDateTime(widget.transaction?.deliveryDate)["date"] ?? "N/A",
+                                      separateDateTime(delivery?.scheduledDatetime)["date"] ?? "N/A",
                                       style: AppTextStyles.caption.copyWith(
                                         fontWeight: FontWeight.bold,
                                         color: mainColor,
@@ -222,7 +325,7 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
                                     ),
                                     const SizedBox(height: 5), // Space between label and value
                                     Text(
-                                      separateDateTime(widget.transaction?.deliveryDate)["time"] ?? "N/A",
+                                      separateDateTime(delivery?.scheduledDatetime)["time"] ?? "N/A",
                                       style: AppTextStyles.caption.copyWith(
                                         fontWeight: FontWeight.bold,
                                         color: mainColor,
@@ -245,42 +348,55 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
         ),
         
       ),
-      bottomNavigationBar: Padding(
-        padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-          top: 8,
-          left: 16,
-          right: 16,
-        ),
-        child: ElevatedButton(
-        onPressed: () {
-          print("uid: ${widget.uid}");
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ConfirmationScreen(uid: widget.uid, transaction: widget.transaction),
+      bottomNavigationBar: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Column (
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        
+                        print("uid: ${widget.uid}");
+                    
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ConfirmationScreen(uid: widget.uid, transaction: widget.transaction),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: mainColor,
+                        padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 20),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30.0),
+                        ),
+                      ),
+                      child: Text(
+                        "Next",
+                        style: AppTextStyles.body.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+                    ),
+                  )
+                ],
+              )
+              
             ),
-          );
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: mainColor,
-          padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 20),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30.0),
-          ),
-        ),
-        child: Text(
-          "Next",
-          style: AppTextStyles.body.copyWith(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-          textAlign: TextAlign.center,
-          overflow: TextOverflow.ellipsis,
-          maxLines: 1,
-        ),
-      ),
-      ),
+            const NavigationMenu(),
+          ],
+          
+        )
       // bottomNavigationBar: const NavigationMenu(),
     );
   }

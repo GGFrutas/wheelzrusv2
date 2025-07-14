@@ -1,3 +1,5 @@
+import 'package:frontend/models/milestone_history_model.dart';
+
 class Transaction {
   final int id;
   final String name;
@@ -73,6 +75,23 @@ class Transaction {
   final String? dlRejectedTime;
   final String? peRejectedTime;
 
+  final String? shipperProvince;
+  final String? shipperCity;  
+  final String? shipperBarangay;
+  final String? shipperStreet;
+  final String? consigneeProvince;
+  final String? consigneeCity;  
+  final String? consigneeBarangay;
+  final String? consigneeStreet;
+
+  final String? assignedDate;
+  final String? deAssignedDate;
+  final String? plAssignedDate;
+  final String? dlAssignedDate;
+  final String? peAssignedDate;
+
+  final List<MilestoneHistoryModel> history;
+
 
   const Transaction({
     required this.id,
@@ -142,11 +161,27 @@ class Transaction {
     required this.plRejectedTime,
     required this.dlRejectedTime,
     required this.peRejectedTime,
-    this.isAccepted = false,
+    required this.shipperProvince,
+    required this.shipperCity,
+    required this.shipperBarangay,
+    required this.shipperStreet,
+    required this.consigneeProvince,
+    required this.consigneeCity,
+    required this.consigneeBarangay,
+    required this.consigneeStreet,
+    required this.isAccepted,
+    required this.assignedDate,
+    required this.deAssignedDate,
+    required this.plAssignedDate,
+    required this.dlAssignedDate,
+    required this.peAssignedDate,
     required this.login,
+    required this.history,
   });
 
   factory Transaction.fromJson(Map<String, dynamic> json) {
+    print('knii Raw transaction JSON: $json');
+
     return Transaction(
       id: json['id'] ?? 0,
       name: json['name'] ?? 'No Name Provided',  // Provide a default value
@@ -226,23 +261,39 @@ class Transaction {
       pickupDate: json['pickup_date'] ?? 'Unknown Pick Up Date',  // Provide a default value
       departureDate: json['departure_date'] ?? 'Unknown DEparture Date',  // Provide a default value
 
-      serviceType: json['service_type']?.toString() ?? 'Unknown Service Type',  // Provide a default value
+      serviceType:json['service_type']?.toString(),
 
       login: json['login'].toString(),
       stageId: json['stage_id']?.toString() ?? '0',  // Provide a default value
 
-      completedTime: resolveCompletionTime(json) ?? 'Unknown Completed Time',
+      completedTime: json['de_completion_time'] ?? 'Unknown Completed Time',
       deCompletedTime: json['de_completion_time'] ?? 'Unknown DE',
       plCompletedTime: json['pl_completion_time'] ?? 'Unknown PL',
       dlCompletedTime: json['dl_completion_time'] ?? 'Unknown DL',
       peCompletedTime: json['pe_completion_time'] ?? 'Unknown PE',
 
-      rejectedTime: resolveRejectionTime(json) ?? 'Unknown Rejected Time', // Provide a default value
+      rejectedTime: json['de_rejection_time'] ?? 'Unknown Rejected Time', // Provide a default value
       deRejectedTime: json['de_rejection_time'] ?? 'Unknown DE',
       plRejectedTime: json['pl_rejection_time'] ?? 'Unknown PL',
       dlRejectedTime: json['dl_rejection_time'] ?? 'Unknown DL',
       peRejectedTime: json['pe_rejection_time'] ?? 'Unknown PE',
-     
+      shipperProvince: json['shipper_province']?.toString() ?? 'Unknown Shipper Province',
+      shipperCity: json['shipper_city']?.toString() ?? 'Unknown Shipper City',
+      shipperBarangay: json['shipper_barangay']?.toString() ?? 'Unknown Shipper Barangay',
+      shipperStreet: json['shipper_street']?.toString() ?? 'Unknown Shipper Street',
+      consigneeProvince: json['consignee_province']?.toString() ?? 'Unknown Consignee Province',
+      consigneeCity: json['consignee_city']?.toString() ?? 'Unknown Consignee City',
+      consigneeBarangay: json['consignee_barangay']?.toString() ?? 'Unknown Consignee Barangay',
+      consigneeStreet: json['consignee_street']?.toString() ?? 'Unknown Consignee Street',
+
+      assignedDate: json['de_assignation_time'] ?? 'Unknown Assignation Time', // Provide a default value
+      deAssignedDate: json['de_assignation_time'] ?? 'Unknown DE',
+      plAssignedDate: json['pl_assignation_time'] ?? 'Unknown PL',
+      dlAssignedDate: json['dl_assignation_time'] ?? 'Unknown DL',
+      peAssignedDate: json['pe_assignation_time'] ?? 'Unknown PE',
+
+      history: (json['history'] is List) 
+        ? (json['history'] as List).map((e) => MilestoneHistoryModel.fromJson(e)).toList() : [],
 
       isAccepted: false,  // set default or map from API
       
@@ -265,29 +316,13 @@ class Transaction {
     return null;
   }
 
-static String? resolveCompletionTime(Map<String, dynamic> json) {
-  return json['pl_completion_time']?.toString().isNotEmpty == true
-      ? json['pl_completion_time']
-      : json['de_completion_time']?.toString().isNotEmpty == true
-          ? json['de_completion_time']
-          : json['dl_completion_time']?.toString().isNotEmpty == true
-              ? json['dl_completion_time']
-              : json['pe_completion_time'];
-}
-
-static String? resolveRejectionTime(Map<String, dynamic> json) {
-  return json['pl_rejection_time']?.toString().isNotEmpty == true
-      ? json['pl_rejection_time']
-      : json['de_rejection_time']?.toString().isNotEmpty == true
-          ? json['de_rejection_time']
-          : json['dl_rejection_time']?.toString().isNotEmpty == true
-              ? json['dl_rejection_time']
-              : json['pe_rejection_time'];
-}
+ 
 
 
 
-  Transaction copyWith({String? name, String? destination,String? requestNumber,String? origin,String? requestStatus,status, bool? isAccepted, String? truckPlateNumber, String? destinationAddress, String? originAddress}) {
+
+
+  Transaction copyWith({String? name, String? destination,String? requestNumber,String? origin,String? requestStatus,status, bool? isAccepted, String? truckPlateNumber, String? destinationAddress, String? originAddress, String? rejectedTime, String? completedTime, String? assignedDate}) {
     return Transaction(
       id: id,
       name: name ?? this.name,
@@ -361,8 +396,23 @@ static String? resolveRejectionTime(Map<String, dynamic> json) {
       plRejectedTime: plRejectedTime,
       dlRejectedTime: dlRejectedTime,
       peRejectedTime: peRejectedTime,
+      shipperProvince: shipperProvince,
+      shipperCity: shipperCity,
+      shipperBarangay: shipperBarangay,
+      shipperStreet: shipperStreet,
+      consigneeProvince: consigneeProvince,
+      consigneeCity: consigneeCity,
+      consigneeBarangay: consigneeBarangay,
+      consigneeStreet: consigneeStreet,
+      assignedDate: assignedDate ?? assignedDate,
+      deAssignedDate: deAssignedDate,
+      plAssignedDate: plAssignedDate,
+      dlAssignedDate: dlAssignedDate,
+      peAssignedDate: peAssignedDate,
+      
 
       login: login,
+       history: history,
 
     );
   }

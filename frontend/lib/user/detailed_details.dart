@@ -156,9 +156,9 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
                         children: [
                           const SizedBox(width: 8),
                           const Icon(
-                            Icons.check_circle,
+                            Icons.circle_rounded,
                             color: mainColor,
-                            size: 20,
+                            size: 15,
                           ),
                           const SizedBox(width: 20), // Space between icon and text
                           Column(
@@ -188,7 +188,7 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
                           const Icon(
                             Icons.circle_rounded,
                             color: mainColor,
-                            size: 20,
+                            size: 15,
                           ),
                           const SizedBox(width: 20), // Space between icon and text
                           Expanded (
@@ -225,7 +225,7 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
                           const Icon(
                             Icons.circle_rounded,
                             color: mainColor,
-                            size: 20,
+                            size: 15,
                           ),
                           const SizedBox(width: 20), // Space between icon and text
                           Expanded(
@@ -260,7 +260,7 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
                           const Icon(
                             Icons.circle_rounded,
                             color: mainColor,
-                            size: 20,
+                            size: 15,
                           ),
                           const SizedBox(width: 20), // Space between icon and text
                           Expanded(
@@ -292,7 +292,7 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
                           const Icon(
                             Icons.circle_rounded,
                             color: mainColor,
-                            size: 20,
+                            size: 15,
                           ),
                           const SizedBox(width: 20), // Space between icon and text
                           Column(
@@ -345,9 +345,9 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
                         children: [
                           const SizedBox(width: 8),
                           const Icon(
-                            Icons.check_circle,
+                            Icons.circle_rounded,
                             color: mainColor,
-                            size: 20,
+                            size: 15,
                           ),
                           const SizedBox(width: 20), // Space between icon and text
                           Column(
@@ -378,7 +378,7 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
                           const Icon(
                             Icons.circle_rounded,
                             color: mainColor,
-                            size: 20,
+                            size: 15,
                           ),
                           const SizedBox(width: 20), // Space between icon and text
                           Column(
@@ -409,7 +409,7 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
                           const Icon(
                             Icons.circle_rounded,
                             color: mainColor,
-                            size: 20,
+                            size: 15,
                           ),
                           const SizedBox(width: 20), // Space between icon and text
                           Column(
@@ -441,7 +441,7 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
                           const Icon(
                             Icons.circle_rounded,
                             color: mainColor,
-                            size: 20,
+                            size: 15,
                           ),
                           const SizedBox(width: 20), // Space between icon and text
                           Column(
@@ -472,48 +472,60 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
                 ),
               ],
             ),
-            
           ),
           
         ),
-        bottomNavigationBar: showButton ? null : Padding(
-          padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-            top: 0,
-            left: 16,
-            right: 16,
-          ),
-          child: ElevatedButton(
-            onPressed: () {
+        bottomNavigationBar: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if(!showButton)
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Column (
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        
+                        print("uid: ${widget.uid}");
+                    
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ScheduleScreen(uid: widget.uid, transaction: widget.transaction),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: mainColor,
+                        padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 20),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30.0),
+                        ),
+                      ),
+                      child: Text(
+                        "Next",
+                        style: AppTextStyles.body.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+                    ),
+                  )
+                ],
+              )
               
-              print("uid: ${widget.uid}");
+            ),
+            const NavigationMenu(),
+          ],
           
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ScheduleScreen(uid: widget.uid, transaction: widget.transaction),
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: mainColor,
-              padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 20),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(30.0),
-              ),
-            ),
-            child: Text(
-              "Next",
-              style: AppTextStyles.body.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
-            ),
-          ),
-        ),
+        )
+         
         // bottomNavigationBar: const NavigationMenu(),
       )
     );

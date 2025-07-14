@@ -3,6 +3,7 @@
 import 'dart:io';
 import 'dart:math';
 import 'package:carousel_slider/carousel_slider.dart';
+import 'package:frontend/models/transaction_model.dart';
 import 'package:frontend/notifiers/auth_notifier.dart';
 import 'package:frontend/notifiers/transaction_notifier.dart';
 import 'package:frontend/provider/accepted_transaction.dart' as accepted_transaction;
@@ -122,63 +123,91 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
           final authPartnerId = ref.watch(authNotifierProvider).partnerId;
           final driverId = authPartnerId?.toString();
 
-          String cleanAddress(String address) {
-            return address
-              .split(',') // splits the string by commas
-              .map((e) => e.trim()) //removes extra spaces
-              .where((e) => e.isNotEmpty && e.toLowerCase() != 'ph') //filters out empty strings and 'ph'
-              .join(', '); // joins the remaining parts back together
-          }
-
 
           final expandedTransactions = transaction.expand((item) {
            
+            String removeBrackets(String input) {
+              return input.replaceAll(RegExp(r'\s*\[.*?\]'), '')
+                          .replaceAll(RegExp(r'\s*\(.*?\)'), '')
+                          .trim();
+            }
+            String cleanAddress(List<String?> parts) {
+              return parts
+                .where((e) => e != null && e.trim().isNotEmpty && e.trim().toLowerCase() != 'ph')
+                .map((e) => removeBrackets(e!)) // now safe because nulls are filtered above
+                .join(', ');
+            }
+
+            String buildConsigneeAddress(Transaction item, {bool cityLevel = false}) {
+              return cleanAddress(cityLevel ? [item.consigneeCity,item.consigneeProvince]
+              : [item.consigneeStreet,item.consigneeBarangay,item.consigneeCity,item.consigneeProvince]
+              );
+            }
+
+            String buildShipperAddress(Transaction item, {bool cityLevel = false}) {
+              return cleanAddress(cityLevel ? [item.shipperCity,item.shipperProvince]
+              : [item.shipperStreet,item.shipperBarangay,item.shipperCity,item.shipperProvince]
+              );
+            }
+
             if (item.dispatchType == "ot") {
+              final shipperOrigin = buildShipperAddress(item, cityLevel: true);
+              final shipperDestination = cleanAddress([item.destination]);
               return [
                 // First instance: Deliver to Shipper
                 if (item.deTruckDriverName == driverId) // Filter out if accepted
                   // Check if the truck driver is the same as the authPartnerId
-                   item.copyWith(
+                  item.copyWith(
                     name: "Deliver to Shipper",
-                    destination: cleanAddress(item.destination),
-                    origin: cleanAddress(item.origin),
+                    origin:shipperDestination,
+                    destination: shipperOrigin,
                     requestNumber: item.deRequestNumber,
                     requestStatus: item.deRequestStatus,
-                    truckPlateNumber: item.deTruckPlateNumber,
+                    assignedDate:item.deAssignedDate,
+                    originAddress: "Deliver Empty Container to Shipper"
+                    // truckPlateNumber: item.deTruckPlateNumber,
                   ),
                   // Second instance: Pickup from Shipper
                 if ( item.plTruckDriverName == driverId) // Filter out if accepted
                   // if (item.plTruckDriverName == authPartnerId)
                     item.copyWith(
                     name: "Pickup from Shipper",
-                    destination: cleanAddress(item.origin),
-                    origin: cleanAddress(item.destination),
+                    origin:shipperOrigin,
+                    destination:shipperDestination,
                     requestNumber: item.plRequestNumber,
                     requestStatus: item.plRequestStatus,
-                    truckPlateNumber: item.plTruckPlateNumber,
+                    assignedDate:item.plAssignedDate,
+                    originAddress: "Pickup Laden Container from Shipper"
+                    // truckPlateNumber: item.plTruckPlateNumber,
                     ),
               ];
             } else if (item.dispatchType == "dt") {
+              final consigneeOrigin = buildConsigneeAddress(item, cityLevel: true);
+              final consigneeDestination = cleanAddress([item.origin]);
               return [
                 // First instance: Deliver to Consignee
                 if (item.dlTruckDriverName == driverId) // Filter out if accepted
                   item.copyWith(
                     name: "Deliver to Consignee",
-                    origin: cleanAddress(item.destination),
-                    destination: cleanAddress(item.origin),
+                    origin:  consigneeDestination,
+                    destination: consigneeOrigin,
                     requestNumber: item.dlRequestNumber,
                     requestStatus: item.dlRequestStatus,
-                    truckPlateNumber: item.dlTruckPlateNumber,
+                    assignedDate:item.dlAssignedDate,
+                    originAddress: "Deliver Laden Container to Consignee"
+                    // truckPlateNumber: item.dlTruckPlateNumber,
                   ),
                 // Second instance: Pickup from Consignee
                 if (item.peTruckDriverName == driverId) // Filter out if accepted
                   item.copyWith(
                     name: "Pickup from Consignee",
-                    origin: cleanAddress(item.origin),
-                    destination: cleanAddress(item.destination),
+                    origin: consigneeOrigin,
+                    destination: consigneeDestination,
                     requestNumber: item.peRequestNumber,
                     requestStatus: item.peRequestStatus,
-                    truckPlateNumber: item.peTruckPlateNumber,
+                    assignedDate:item.peAssignedDate,
+                    originAddress: "Pickup Empty Container from Consignee"
+                    // truckPlateNumber: item.peTruckPlateNumber,
                   ),
               ]; 
             }
@@ -253,7 +282,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                                   children: [
                                     // Space between label and value
                                     Text(
-                                      '${item.origin} — ${item.destination}',
+                                      '${item.origin} - ${item.destination}',
                                       style: AppTextStyles.body.copyWith(
                                         color: mainColor,
                                         fontWeight: FontWeight.bold,

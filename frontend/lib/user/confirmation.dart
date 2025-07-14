@@ -223,112 +223,124 @@ class _ConfirmationState extends ConsumerState<ConfirmationScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: Padding(
-        padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-          top: 8,
-          left: 16,
-          right: 16,
-        ),
-        child: ElevatedButton(
-        onPressed:() async {
-          if (_images.isEmpty) {
-            showDialog(
-              context: context,
-              builder: (context) {
-                return AlertDialog(
-                  title: Text(
-                    'Upload Error!', 
-                    style: AppTextStyles.subtitle.copyWith(
-                      fontWeight: FontWeight.bold
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Please select at least one image.',
-                        style: AppTextStyles.body.copyWith(
-                          color: Colors.black87
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 16),
-                      const Icon (
-                        Icons.image_outlined,
-                        color: bgColor,
-                        size: 100
-                      )
-                    ],
-                  ),
-                  actions: [
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12.0),
-                      child: Center(
-                        child: SizedBox(
-                          width: 200,
-                          child: ElevatedButton(
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                          }, 
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
-                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(25),
-                            ),
-                          ),
-                          child: Text(
-                            "Try Again",
-                            style: AppTextStyles.body.copyWith(
-                              color: Colors.white,
-                            )
-                          )
-                        ),
-                        )
-                      )
-                    )
-                  ],
-                );
-              }
-            );
-          } else {
-            final validImages = _images.whereType<File>().toList();
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed:() async {
+                      if (_images.isEmpty) {
+                        showDialog(
+                          context: context,
+                          builder: (context) {
+                            return AlertDialog(
+                              title: Text(
+                                'Upload Error!', 
+                                style: AppTextStyles.subtitle.copyWith(
+                                  fontWeight: FontWeight.bold
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              content: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    'Please select at least one image.',
+                                    style: AppTextStyles.body.copyWith(
+                                      color: Colors.black87
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  const Icon (
+                                    Icons.image_outlined,
+                                    color: bgColor,
+                                    size: 100
+                                  )
+                                ],
+                              ),
+                              actions: [
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 12.0),
+                                  child: Center(
+                                    child: SizedBox(
+                                      width: 200,
+                                      child: ElevatedButton(
+                                      onPressed: () {
+                                        Navigator.of(context).pop();
+                                      }, 
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.red,
+                                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(25),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        "Try Again",
+                                        style: AppTextStyles.body.copyWith(
+                                          color: Colors.white,
+                                        )
+                                      )
+                                    ),
+                                    )
+                                  )
+                                )
+                              ],
+                            );
+                          }
+                        );
+                      } else {
+                        final validImages = _images.whereType<File>().toList();
 
-            if (validImages.isEmpty) {
-              return;
-            }
-            final base64Images =  await _convertImagestoBase64(validImages);
-             print('Base64 Image: $base64Images\n');
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ProofOfDeliveryScreen(uid: widget.uid, transaction: widget.transaction,base64Images: base64Images),
-              ),
-            );
-          }
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: mainColor,
-          padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 20),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30.0),
+                        if (validImages.isEmpty) {
+                          return;
+                        }
+                        final base64Images =  await _convertImagestoBase64(validImages);
+                          print('Base64 Image: $base64Images\n');
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ProofOfDeliveryScreen(uid: widget.uid, transaction: widget.transaction,base64Images: base64Images),
+                          ),
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: mainColor,
+                      padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 20),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30.0),
+                      ),
+                    ),
+                    child: Text(
+                      "Confirm",
+                      style: AppTextStyles.body.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  )
+                )
+              ],
+            )
+            
           ),
-        ),
-        child: Text(
-          "Confirm",
-          style: AppTextStyles.body.copyWith(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-          textAlign: TextAlign.center,
-          overflow: TextOverflow.ellipsis,
-          maxLines: 1,
-        ),
-      ),
-      ),
+          const NavigationMenu(),
+        ],
+      )
+      
+   
       // bottomNavigationBar: const NavigationMenu(),
     );
   }
