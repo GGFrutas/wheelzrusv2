@@ -631,7 +631,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                 ),
               ),
                 const SizedBox(height: 10), // Add some space between buttons
-                
+                if (widget.transaction?.requestStatus == "Pending" || widget.transaction?.requestStatus == "Accepted") 
                 SizedBox(
                   width: double.infinity, // Make the button full width
                   child: OutlinedButton(
@@ -1076,6 +1076,11 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                                   } else {
                                     print('Button Rejection Failed');
                                     Navigator.of(context, rootNavigator: true).pop(); // close loading
+                                    await Future.delayed(const Duration(seconds: 2));
+                                      ref.invalidate(bookingProvider);
+                                      ref.invalidate(filteredItemsProvider);
+                                      Navigator.of(context, rootNavigator: true).popUntil((route) => route.isFirst);
+                                      ref.read(navigationNotifierProvider.notifier).setSelectedIndex(2);
                                   }
                                 }catch (e){
                                   print('Error: $e');
