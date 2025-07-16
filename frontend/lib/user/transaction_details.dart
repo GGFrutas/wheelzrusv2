@@ -25,6 +25,8 @@ import 'package:frontend/user/history_screen.dart';
 import 'package:frontend/user/homepage_screen.dart';
 import 'package:frontend/user/proof_of_delivery_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/http.dart' as ref;
 import 'package:latlong2/latlong.dart';
@@ -58,12 +60,17 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
   
   final Map<String, bool> _loadingStates = {};
 
-  late MapController mapController;
+  gmaps.GoogleMapController? _googleMapController;
+
+ 
   Location location = Location();
-  bool _isMapReady = false;
+  // bool _isMapReady = false;
   PermissionStatus? _permissionGranted;
   bool _serviceEnabled = false;
   LocationData? _locationData;
+  static const gmaps.LatLng _pointA = gmaps.LatLng(10.300233284867856, 123.91189477293283);
+  static const gmaps.LatLng _pointB = gmaps.LatLng(10.298462163232422, 123.8950565989957);
+  static const gmaps.LatLng _pointC = gmaps.LatLng(10.301827521156078, 123.9120902055735);
 
   int? _expandedTabIndex;
 
@@ -80,11 +87,10 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
   @override
   void initState() {
     super.initState();
-    mapController = MapController();
     initLocation();
   }
 
-  initLocation() async {
+  Future<void> initLocation() async {
     _serviceEnabled = await location.serviceEnabled();
     if (!_serviceEnabled) {
       _serviceEnabled = await location.requestService();
@@ -99,21 +105,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
 
     _locationData = await location.getLocation();
 
-    if (_isMapReady) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          setState(() {
-            mapController.move(
-              LatLng(
-                _locationData?.latitude ?? 0,
-                _locationData?.longitude ?? 0,
-              ),
-              16,
-            );
-          });
-        }
-      });
-    }
+    
   }
 
   String getNullableValue(String? value, {String fallback = ''}) {
@@ -279,67 +271,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                     crossAxisAlignment: CrossAxisAlignment.start, // Align text to the left
                     children: [
                       //  Placeholder for the Map
-                      Container(
-                        height: 250, // Height of the map container
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[600], // Placeholder color
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: FlutterMap(
-                          mapController: mapController,
-                          options: MapOptions(
-                            initialZoom: 10,
-                            onMapReady: () {
-                              WidgetsBinding.instance.addPostFrameCallback((_) {
-                                if (mounted) {
-                                  setState(() {
-                                    _isMapReady = true;
-                                  });
-                                }
-                              });
-                            },
-                          ),
-                          children: [
-                            TileLayer(
-                              urlTemplate:
-                                  'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                              userAgentPackageName:
-                                  'dev.fleaflet.flutter_map.example',
-                            ),
-                            MarkerLayer(
-                              markers: [
-                                Marker(
-                                  point: LatLng(
-                                    _locationData?.latitude ?? 10.3157,
-                                    _locationData?.longitude ?? 123.8854,
-                                  ),
-                                  width: 60,
-                                  height: 60,
-                                  alignment: Alignment.centerLeft,
-                                  child: const Icon(
-                                    Icons.location_pin,
-                                    size: 60,
-                                    color: Colors.red,
-                                  ),
-                                ),
-                                const Marker(
-                                  point: LatLng(10.3157, 123.8854),
-                                  width: 60,
-                                  height: 60,
-                                  alignment: Alignment.centerLeft,
-                                  child: Icon(
-                                    Icons.location_pin,
-                                    size: 60,
-                                    color: Colors.green,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
+                      
                       Container(
                         padding: const EdgeInsets.all(12.0),
                         child: Row(
@@ -466,9 +398,82 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                           ],
                         ),
                       ),
+                      const SizedBox(height: 8),
+                      // Container(
+                      //   height: 250, // Height of the map container
+                      //   width: double.infinity,
+                      //   decoration: BoxDecoration(
+                      //     color: Colors.grey[600], // Placeholder color
+                      //     borderRadius: BorderRadius.circular(10),
+                      //   ),
+                      //   child: gmaps.GoogleMap(
+                      //     initialCameraPosition: const gmaps.CameraPosition(
+                      //       target: _pointA,
+                      //       zoom: 13,
+                      //     ),
+                          
+                      //     markers: {
+                      //         gmaps.Marker(
+                      //           markerId: const gmaps.MarkerId("current_location"),
+                      //           position: _pointA,
+                      //           icon: gmaps.BitmapDescriptor.defaultMarkerWithHue(gmaps.BitmapDescriptor.hueRed),
+                      //         ),
+                              
+                      //      gmaps.Marker(
+                      //           markerId: const gmaps.MarkerId("source_location"),
+                      //           position: _pointB,
+                      //           icon: gmaps.BitmapDescriptor.defaultMarkerWithHue(gmaps.BitmapDescriptor.hueGreen),
+                      //         ),
+                      //     },
+                      //     myLocationEnabled: true,
+                      //     myLocationButtonEnabled: true,
+                      //     zoomGesturesEnabled: true,
+                      //     zoomControlsEnabled: false,
+                      //   ),
+                      // ),
+                      
+
+
                     ],
                   ),
                 ),
+                SizedBox(
+                        height: 300,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: GoogleMap(
+                            initialCameraPosition: const CameraPosition(
+                              target: _pointA,
+                              zoom: 13,
+                            ),
+                            markers: {
+                              gmaps.Marker(
+                                markerId: const MarkerId("current_location"),
+                                position: _pointA,
+                                icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+                              ),
+                              gmaps.Marker(
+                                markerId: const MarkerId("source_location"),
+                                position: _pointB,
+                                icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+                              ),
+                              gmaps.Marker(
+                                markerId: const MarkerId("first_location"),
+                                position: _pointC,
+                                icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow),
+                              ),
+                            },
+                            zoomGesturesEnabled: true,
+                            scrollGesturesEnabled: true,
+                            rotateGesturesEnabled: true,
+                            tiltGesturesEnabled: true,
+                            zoomControlsEnabled: true,
+                            onMapCreated: (controller) {
+                              _googleMapController = controller;
+                            },
+                          ),
+                        ),
+                      ),
               ],
             ),
             
@@ -636,10 +641,11 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                         ),
                       ),
                       child: Text(
-                        widget.transaction?.requestStatus != 'Pending'
-                        // widget.transaction?.requestStatus == 'Accepted' || widget.transaction?.requestStatus == 'Ongoing'
-                                      ? 'View Booking' // New label for accepted transactions
-                                      : 'Accept Booking', 
+                        // widget.transaction?.requestStatus != 'Pending'
+                        // // widget.transaction?.requestStatus == 'Accepted' || widget.transaction?.requestStatus == 'Ongoing'
+                        //               ? 'View Booking' // New label for accepted transactions
+                        //               : 'Accept Booking', 
+                        'View Booking',
                         style: AppTextStyles.body.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,

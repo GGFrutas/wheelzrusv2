@@ -222,7 +222,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
           });
 
           final ongoingTransactions = expandedTransactions
-            .where((tx) => tx.requestStatus == 'Ongoing' || tx.requestStatus == "Accepted")
+            .where((tx) => tx.requestStatus == 'Ongoing')
             .toList();
 
           if (ongoingTransactions.isEmpty){

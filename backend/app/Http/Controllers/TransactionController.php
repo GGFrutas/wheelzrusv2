@@ -1357,6 +1357,7 @@ class TransactionController extends Controller
         $requestNumber = $request->input('request_number');
         $actualTime = $request->input('timestamp');
         $enteredName = $request->input('enteredName');
+        $newStatus = $request->input('newStatus');
 
         Log::info('Received file uplodad request', [
             'uid' => $uid,
@@ -1430,6 +1431,7 @@ class TransactionController extends Controller
                 "pe_signature" => $signature,
                 "pe_release_by" => $enteredName,
                 "stage_id" => 5,
+                "de_request_status" => $newStatus,
             ];
         } elseif ($type['dispatch_type'] == "ot" && $type['pl_request_no'] == $requestNumber) {
             Log::info("Updating PL proof and signature for request number: {$requestNumber}");
@@ -1437,6 +1439,7 @@ class TransactionController extends Controller
                 "pl_proof" => $images,
                 "pl_signature" => $signature,
                 "pl_receive_by" => $enteredName,
+                "pl_request_status" => $newStatus,
             ];
         }
 
@@ -1447,6 +1450,7 @@ class TransactionController extends Controller
                 "pl_signature" => $signature,
                 "pe_release_by" => $enteredName,
                 "stage_id" => 5,
+                "dl_request_status" => $newStatus,
             ];
         } elseif ($type['dispatch_type'] == "dt" && $type['pe_request_no'] == $requestNumber) {
             Log::info("Updating PE proof and signature for request number: {$requestNumber}");
@@ -1454,9 +1458,11 @@ class TransactionController extends Controller
                 "pe_proof" => $images,
                 "pe_signature" => $signature,
                 "pl_receive_by" => $enteredName,
+                "pe_request_status" => $newStatus,
             ];
         }
       
+        Log::info("Requested status update: {$newStatus}");
 
         $updatePOD = [
             "jsonrpc" => "2.0",
@@ -1475,6 +1481,11 @@ class TransactionController extends Controller
                        
                         $updateField,
                         
+                    ]
+                ],
+                "kwargs" => [
+                    "context" => [
+                        "skip_set_status" => true
                     ]
                 ]
             ],
@@ -1641,6 +1652,7 @@ class TransactionController extends Controller
         $requestNumber = $request->input('request_number');
         $actualTime = $request->input('timestamp');
         $enteredName = $request->input('enteredName');
+        $newStatus = $request->input('newStatus');
 
         Log::info('Received file uplodad request', [
             'uid' => $uid,
@@ -1714,6 +1726,7 @@ class TransactionController extends Controller
                 "de_signature" => $signature,
                 "de_release_by" => $enteredName,
                 "de_completion_time" => $actualTime,
+                // "de_request_status" => $newStatus,
                 
             ];
         } elseif ($type['dispatch_type'] == "ot" && $type['pl_request_no'] == $requestNumber) {
@@ -1724,6 +1737,7 @@ class TransactionController extends Controller
                 "dl_receive_by" => $enteredName,
                 "stage_id" => 7,
                 "dl_completion_time" => $actualTime,
+                // "pl_request_status" => $newStatus,
             ];
         }
 
@@ -1734,6 +1748,7 @@ class TransactionController extends Controller
                 "dl_signature" => $signature,
                 "de_release_by" => $enteredName,
                 "dl_completion_time" => $actualTime,
+                // "dl_request_status" => $newStatus,
             ];
         } elseif ($type['dispatch_type'] == "dt" && $type['pe_request_no'] == $requestNumber) {
             Log::info("Updating DE proof and signature for request number: {$requestNumber}");
@@ -1743,8 +1758,11 @@ class TransactionController extends Controller
                 "dl_receive_by" => $enteredName,
                 "stage_id" => 7,
                 "de_completion_time" => $actualTime,
+                // "pe_request_status" => $newStatus,
             ];
         }
+
+       
 
         $updatePOD = [
             "jsonrpc" => "2.0",
@@ -1764,7 +1782,8 @@ class TransactionController extends Controller
                         $updateField,
                         
                     ]
-                ]
+                ],
+                
             ],
             "id" => 2
         ];
