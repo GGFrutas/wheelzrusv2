@@ -1,4 +1,4 @@
-// ignore_for_file: avoid_print, unused_import, depend_on_referenced_packages
+// ignore_for_file: avoid_print, unused_import
 
 import 'dart:convert';
 import 'dart:typed_data';
@@ -553,137 +553,6 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                             await Future.delayed(const Duration(seconds: 2));
                             Navigator.of(context).pop(); // Close the loading dialog
 
-                        showDialog(
-                          context: context,
-                          barrierDismissible: false,
-                          builder: (_) => PopScope(
-                          canPop: false, // Prevent default pop behavior
-                          onPopInvoked: (didPop) {
-                            if (!didPop) {
-                              ref.invalidate(pendingTransactionProvider);
-                              ref.invalidate(acceptedTransactionProvider);
-                              ref.invalidate(bookingProvider);
-                              ref.invalidate(filteredItemsProvider);
-                              ref.read(navigationNotifierProvider.notifier).setSelectedIndex(0);
-                              // Navigate to home if system back button is pressed
-                              Navigator.of(context).popUntil((route) => route.isFirst);
-                            }
-                          },
-                          child: Dialog(
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                            backgroundColor: Colors.white,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    'Booking has been accepted',
-                                    style: AppTextStyles.body.copyWith(
-                                      color: Colors.black87
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  const Icon (
-                                    Icons.check_circle,
-                                    color: mainColor,
-                                    size: 100
-                                  ),
-                                  const SizedBox(height: 24),
-                                  SizedBox(
-                                    width: 200,
-                                    child:ElevatedButton(
-                                      onPressed: () {
-                                        Navigator.pop(context);
-                                        // Navigator.of(context).popUntil((route) => route.isFirst);
-                                        ref.invalidate(pendingTransactionProvider);
-                                        ref.invalidate(acceptedTransactionProvider);
-                                        ref.invalidate(bookingProvider);
-                                        ref.invalidate(filteredItemsProvider);
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) => DetailedDetailScreen(uid: widget.uid, transaction: updatedTransaction),
-                                          ),
-                                        );
-                                      },
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: mainColor,
-                                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(25),
-                                        ),
-                                      ),
-                                      child: Text("Continue", style: AppTextStyles.body.copyWith(color: Colors.white)),
-                                    ),
-                                  )
-                                  
-                                ],
-                              ),
-                            ),
-                          ),
-                          ),
-                        );
-                      }
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: mainColor,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 80,
-                      vertical: 20,
-                    ),
-                    disabledForegroundColor: mainColor,
-                    disabledBackgroundColor: mainColor,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30.0),
-                    ),
-                  ),
-                  child: Text(
-                    widget.transaction?.requestStatus != 'Pending'
-                    // widget.transaction?.requestStatus == 'Accepted' || widget.transaction?.requestStatus == 'Ongoing'
-                                  ? 'View Booking' // New label for accepted transactions
-                                  : 'Accept Booking', 
-                    style: AppTextStyles.body.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center, // Ensure the text is centered
-                    overflow: TextOverflow.ellipsis, // Handle overflow if needed
-                    maxLines: 1,
-                  ),
-                ),
-              ),
-                const SizedBox(height: 10), // Add some space between buttons
-                if (widget.transaction?.requestStatus == "Pending" || widget.transaction?.requestStatus == "Accepted") 
-                SizedBox(
-                  width: double.infinity, // Make the button full width
-                  child: OutlinedButton(
-                    onPressed: () {
-                      _showModal(context,ref);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      padding: const EdgeInsets.symmetric(horizontal: 80, vertical: 20),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30.0),
-                      ),
-                    ),
-                    child: Text(
-                      'Decline Booking',
-                      style: AppTextStyles.body.copyWith(
-                       
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center, // Ensure the text is centered
-                      overflow: TextOverflow.ellipsis, // Handle overflow if needed
-                      maxLines: 1,
-                    ),
-                  ),
-                ),
-              ],
-            ),
                             showDialog(
                               context: context,
                               barrierDismissible: false,
@@ -1168,8 +1037,6 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
 
                                       Navigator.of(context, rootNavigator: true).pop(); // close loading
 
-                                      Navigator.of(context, rootNavigator: true).pop(); // close loading
-
                                       print('🔁 Redirecting to HistoryScreen with UID: $uid');
 
                                       await Future.delayed(const Duration(seconds: 2));
@@ -1187,68 +1054,11 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                                       ref.invalidate(filteredItemsProvider);
                                       Navigator.of(context, rootNavigator: true).popUntil((route) => route.isFirst);
                                       ref.read(navigationNotifierProvider.notifier).setSelectedIndex(2);
-                                      // showDialog(
-                                      //   context: context,
-                                      //   builder: (context) {
-                                      //     return AlertDialog(
-                                      //       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                                      //       title: Text (
-                                      //         "Rejection Failed!",
-                                      //         style: AppTextStyles.body.copyWith(color: Colors.red, fontWeight: FontWeight.bold),
-                                      //         textAlign: TextAlign.center,
-                                      //       ),
-                                      //       content: Text (
-                                      //         'An error occurred while rejecting the booking. Please try again later.',
-                                      //         style: AppTextStyles.body,
-                                      //         textAlign: TextAlign.center,
-                                      //       ),
-                                      //       actions: [
-                                      //         Padding(
-                                      //           padding: const EdgeInsets.only(bottom: 12.0),
-                                      //           child: Center(
-                                      //             child: SizedBox(
-                                      //               width: 200,
-                                      //               child: ElevatedButton(
-                                      //               onPressed: () {
-                                      //                 Navigator.of(context).pop();
-                                      //               }, 
-                                      //               style: ElevatedButton.styleFrom(
-                                      //                 backgroundColor: Colors.red,
-                                      //                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                                      //                 shape: RoundedRectangleBorder(
-                                      //                   borderRadius: BorderRadius.circular(25),
-                                      //                 ),
-                                      //               ),
-                                      //               child: Text(
-                                      //                 "OK",
-                                      //                 style: AppTextStyles.body.copyWith(
-                                      //                   color: Colors.white,
-                                      //                 )
-                                      //               )
-                                      //             ),
-                                      //             )
-                                      //           )
-                                      //         )
-                                      //       ],
-                                      //     );
-                                      //   }
-                                      // );
-                                      // return;
-                                      await Future.delayed(const Duration(seconds: 2));
-                                      ref.invalidate(bookingProvider);
-                                      ref.invalidate(filteredItemsProvider);
-                                      Navigator.of(context, rootNavigator: true).popUntil((route) => route.isFirst);
-                                      ref.read(navigationNotifierProvider.notifier).setSelectedIndex(2);
                                     }
                                    
                                   } else {
                                     print('Button Rejection Failed');
                                     Navigator.of(context, rootNavigator: true).pop(); // close loading
-                                    await Future.delayed(const Duration(seconds: 2));
-                                      ref.invalidate(bookingProvider);
-                                      ref.invalidate(filteredItemsProvider);
-                                      Navigator.of(context, rootNavigator: true).popUntil((route) => route.isFirst);
-                                      ref.read(navigationNotifierProvider.notifier).setSelectedIndex(2);
                                     await Future.delayed(const Duration(seconds: 2));
                                       ref.invalidate(bookingProvider);
                                       ref.invalidate(filteredItemsProvider);
