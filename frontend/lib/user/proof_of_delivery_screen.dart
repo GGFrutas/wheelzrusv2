@@ -106,6 +106,7 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
       },
       body: jsonEncode({
         'id': widget.transaction?.id,
+        'newStatus': nextStatus,
         'signature': base64Signature,
         'images': imageToUpload,
         'dispatch_type': widget.transaction?.dispatchType,
@@ -114,9 +115,12 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
         'enteredName': enteredName,
       }),
     );
+    print("Response status code: ${response.statusCode}");
+    
     print('Posting to: $url for status update to $nextStatus');
     if (response.statusCode == 200) {
       print("Files uploaded successfully!");
+      print("Response body: ${response.body}");
       final ongoingTransactionNotifier = ref.read(accepted_transaction.acceptedTransactionProvider.notifier);
 
       if (currentStatus == "Accepted" || currentStatus == "Pending") {
@@ -136,7 +140,6 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
           context
         );
       }
-      
      
       final updatedTransaction = ref
         .read(ongoingTransactionProvider)

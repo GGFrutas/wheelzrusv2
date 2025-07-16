@@ -63,6 +63,7 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
     //                   (dispatchType == 'dt' && (isNullOrEmpty(transaction?.dlProof) || isNullOrEmpty(transaction?.dlSign))  && widget.transaction?.peRequestNumber == widget.transaction?.requestNumber);
     final transaction = widget.transaction;
     final dispatchType = transaction?.dispatchType;
+    final serviceType = transaction?.serviceType;
     final requestNumber = transaction?.requestNumber;
     final plRequestNumber = transaction?.plRequestNumber;
     final peRequestNumber = transaction?.peRequestNumber;
@@ -76,6 +77,7 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
     /// Base conditions (ot and dt)
     bool hideForCurrentDispatch = 
       (dispatchType == 'ot' &&
+      serviceType == 'Full Container Load' &&
         (isNullOrEmpty(transaction?.deProof) || isNullOrEmpty(transaction?.deSign)) &&
         plRequestNumber == requestNumber) ||
 
