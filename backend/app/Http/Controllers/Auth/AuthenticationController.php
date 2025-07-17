@@ -27,7 +27,7 @@ class AuthenticationController extends Controller
 {
 
     protected $db = 'jralejandria-beta-dev-yxe-production-beta-21746751';
-    protected $odoo_url = "https://jralejandria-beta-dev-yxe.odoo.com/jsonrpc";
+    protected $url = "https://jralejandria-beta-dev-yxe.odoo.com/jsonrpc";
 
     public function getOdooUsers()
     {

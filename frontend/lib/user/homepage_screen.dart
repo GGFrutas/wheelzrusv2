@@ -322,7 +322,7 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                       });
 
                       final ongoingTransactions = expandedTransactions
-                        .where((tx) => tx.requestStatus == "Accepted")
+                        .where((tx) => tx.requestStatus == "Accepted" || tx.requestStatus == "Assigned" || tx.requestStatus == "Pending")
                         .toList();
                      
                       
