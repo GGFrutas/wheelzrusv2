@@ -74,15 +74,24 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
 
   int? _expandedTabIndex;
 
-  List<String> get tabTitles {
-    final type = widget.transaction?.dispatchType;
-    return [
-      'Yard/Port',
-      type == 'dt' ? 'Consignee' : 'Shipper',
-    ];
+ 
+  bool get isFreightFirst {
+    // Replace with actual logic or remove if not needed
+   
+    // Example if you want to compare:
+    return widget.transaction?.requestNumber == widget.transaction?.deRequestNumber || widget.transaction?.requestNumber ==widget.transaction?. dlRequestNumber;
   }
 
-  
+  List<String> get tabTitles {
+    final type = widget.transaction?.dispatchType;
+    final title = type == 'dt' ? 'Consignee' : 'Shipper';
+    if(isFreightFirst){
+      return ['Yard/Port', title];
+    } else {
+      return [title, 'Yard/Port'];
+    }
+      
+  }
 
   @override
   void initState() {
@@ -224,8 +233,13 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                     }),
                   ),
                   const SizedBox(height: 16),
-                  if(_expandedTabIndex == 0) _buildFreightTab(),
-                  if(_expandedTabIndex == 1) _buildShipConsTab(),
+                  if (isFreightFirst) ...[
+                    if (_expandedTabIndex == 0) _buildFreightTab(),
+                    if (_expandedTabIndex == 1) _buildShipConsTab(),
+                  ] else ...[
+                    if (_expandedTabIndex == 0) _buildShipConsTab(),
+                    if (_expandedTabIndex == 1) _buildFreightTab(),
+                  ]
 
                 ],
                 const SizedBox(height: 12), // Add some space between sections
@@ -490,7 +504,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                       width: double.infinity, // Make the button full width
                       child: ElevatedButton(
                       onPressed: () async {
-                        if (widget.transaction?.requestStatus != 'Pending') {
+                        // if (widget.transaction?.requestStatus != 'Pending') {
                           
                           Navigator.push(
                             context,
@@ -499,134 +513,134 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                             ),
                           );
                           // print("SUCCESS");
-                        } else {
+                        // } else {
                         
-                          final acceptedTransactionNotifier = ref.read(accepted_transaction.acceptedTransactionProvider.notifier);
+                        //   final acceptedTransactionNotifier = ref.read(accepted_transaction.acceptedTransactionProvider.notifier);
 
-                            final isAccepted = acceptedTransactionNotifier.isAccepted(
-                              widget.transaction!.id, 
-                              widget.transaction!.requestNumber.toString(),
-                            );
+                        //     final isAccepted = acceptedTransactionNotifier.isAccepted(
+                        //       widget.transaction!.id, 
+                        //       widget.transaction!.requestNumber.toString(),
+                        //     );
 
-                            // If not accepted, update the status and add it to accepted transactions
-                          if (isAccepted) {
-                              _loadingStates[widget.transaction!.requestNumber.toString()] = false;
-                            return;
-                          }
+                        //     // If not accepted, update the status and add it to accepted transactions
+                        //   if (isAccepted) {
+                        //       _loadingStates[widget.transaction!.requestNumber.toString()] = false;
+                        //     return;
+                        //   }
 
-                          final success = await acceptedTransactionNotifier.updateStatus(
-                            widget.transaction!.id.toString(),
-                            widget.transaction!.requestNumber.toString(),
-                            'Accepted', // Update status to 'Accepted'
-                            ref,
-                            context,
-                          );
+                        //   final success = await acceptedTransactionNotifier.updateStatus(
+                        //     widget.transaction!.id.toString(),
+                        //     widget.transaction!.requestNumber.toString(),
+                        //     'Accepted', // Update status to 'Accepted'
+                        //     ref,
+                        //     context,
+                        //   );
 
-                          final updatedState = ref.read(transaction_list.acceptedTransactionProvider);
+                        //   final updatedState = ref.read(transaction_list.acceptedTransactionProvider);
 
-                          // final updatedTransaction = updatedState.firstWhere(
-                          //   (transaction) => transaction.id == transaction.id,
-                          //   orElse: () => widget.transaction!, // Return the original if not found
-                          // );
-                          final updatedTransaction = updatedState.firstWhere(
-                            (t) =>
-                                t.id == widget.transaction!.id &&
-                                t.requestNumber == widget.transaction!.requestNumber,
-                            orElse: () => widget.transaction!, // fallback if not founds
-                          );
+                        //   // final updatedTransaction = updatedState.firstWhere(
+                        //   //   (transaction) => transaction.id == transaction.id,
+                        //   //   orElse: () => widget.transaction!, // Return the original if not found
+                        //   // );
+                        //   final updatedTransaction = updatedState.firstWhere(
+                        //     (t) =>
+                        //         t.id == widget.transaction!.id &&
+                        //         t.requestNumber == widget.transaction!.requestNumber,
+                        //     orElse: () => widget.transaction!, // fallback if not founds
+                        //   );
                         
                         
-                          print('✅ Update Status: ${updatedTransaction.requestStatus}'); // Should now be 'Accepted'
+                        //   print('✅ Update Status: ${updatedTransaction.requestStatus}'); // Should now be 'Accepted'
 
-                          if (success) {
-                            acceptedTransactionNotifier.addProduct(updatedTransaction); //Add to accepted 
-                            showDialog(
-                              context:context,
-                              barrierDismissible: false,
-                              builder: (context) {
-                                return const Center (
-                                  child: CircularProgressIndicator(),
-                                );
-                              },
-                            );
+                        //   if (success) {
+                        //     acceptedTransactionNotifier.addProduct(updatedTransaction); //Add to accepted 
+                        //     showDialog(
+                        //       context:context,
+                        //       barrierDismissible: false,
+                        //       builder: (context) {
+                        //         return const Center (
+                        //           child: CircularProgressIndicator(),
+                        //         );
+                        //       },
+                        //     );
 
-                            await Future.delayed(const Duration(seconds: 2));
-                            Navigator.of(context).pop(); // Close the loading dialog
+                        //     await Future.delayed(const Duration(seconds: 2));
+                        //     Navigator.of(context).pop(); // Close the loading dialog
 
-                            showDialog(
-                              context: context,
-                              barrierDismissible: false,
-                              builder: (_) => PopScope(
-                              canPop: false, // Prevent default pop behavior
-                              onPopInvoked: (didPop) {
-                                if (!didPop) {
-                                  ref.invalidate(pendingTransactionProvider);
-                                  ref.invalidate(acceptedTransactionProvider);
-                                  ref.invalidate(bookingProvider);
-                                  ref.invalidate(filteredItemsProvider);
-                                  ref.read(navigationNotifierProvider.notifier).setSelectedIndex(0);
-                                  // Navigate to home if system back button is pressed
-                                  Navigator.of(context).popUntil((route) => route.isFirst);
-                                }
-                              },
-                              child: Dialog(
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                                backgroundColor: Colors.white,
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        'Booking has been accepted',
-                                        style: AppTextStyles.body.copyWith(
-                                          color: Colors.black87
-                                        ),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                      const SizedBox(height: 16),
-                                      const Icon (
-                                        Icons.check_circle,
-                                        color: mainColor,
-                                        size: 100
-                                      ),
-                                      const SizedBox(height: 24),
-                                      SizedBox(
-                                        width: 200,
-                                        child:ElevatedButton(
-                                          onPressed: () {
-                                            Navigator.pop(context);
-                                            // Navigator.of(context).popUntil((route) => route.isFirst);
-                                            ref.invalidate(pendingTransactionProvider);
-                                            ref.invalidate(acceptedTransactionProvider);
-                                            ref.invalidate(bookingProvider);
-                                            ref.invalidate(filteredItemsProvider);
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (context) => DetailedDetailScreen(uid: widget.uid, transaction: updatedTransaction),
-                                              ),
-                                            );
-                                          },
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: mainColor,
-                                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(25),
-                                            ),
-                                          ),
-                                          child: Text("Continue", style: AppTextStyles.body.copyWith(color: Colors.white)),
-                                        ),
-                                      )
+                        //     showDialog(
+                        //       context: context,
+                        //       barrierDismissible: false,
+                        //       builder: (_) => PopScope(
+                        //       canPop: false, // Prevent default pop behavior
+                        //       onPopInvoked: (didPop) {
+                        //         if (!didPop) {
+                        //           ref.invalidate(pendingTransactionProvider);
+                        //           ref.invalidate(acceptedTransactionProvider);
+                        //           ref.invalidate(bookingProvider);
+                        //           ref.invalidate(filteredItemsProvider);
+                        //           ref.read(navigationNotifierProvider.notifier).setSelectedIndex(0);
+                        //           // Navigate to home if system back button is pressed
+                        //           Navigator.of(context).popUntil((route) => route.isFirst);
+                        //         }
+                        //       },
+                        //       child: Dialog(
+                        //         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        //         backgroundColor: Colors.white,
+                        //         child: Padding(
+                        //           padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
+                        //           child: Column(
+                        //             mainAxisSize: MainAxisSize.min,
+                        //             children: [
+                        //               Text(
+                        //                 'Booking has been accepted',
+                        //                 style: AppTextStyles.body.copyWith(
+                        //                   color: Colors.black87
+                        //                 ),
+                        //                 textAlign: TextAlign.center,
+                        //               ),
+                        //               const SizedBox(height: 16),
+                        //               const Icon (
+                        //                 Icons.check_circle,
+                        //                 color: mainColor,
+                        //                 size: 100
+                        //               ),
+                        //               const SizedBox(height: 24),
+                        //               SizedBox(
+                        //                 width: 200,
+                        //                 child:ElevatedButton(
+                        //                   onPressed: () {
+                        //                     Navigator.pop(context);
+                        //                     // Navigator.of(context).popUntil((route) => route.isFirst);
+                        //                     ref.invalidate(pendingTransactionProvider);
+                        //                     ref.invalidate(acceptedTransactionProvider);
+                        //                     ref.invalidate(bookingProvider);
+                        //                     ref.invalidate(filteredItemsProvider);
+                        //                     Navigator.push(
+                        //                       context,
+                        //                       MaterialPageRoute(
+                        //                         builder: (context) => DetailedDetailScreen(uid: widget.uid, transaction: updatedTransaction),
+                        //                       ),
+                        //                     );
+                        //                   },
+                        //                   style: ElevatedButton.styleFrom(
+                        //                     backgroundColor: mainColor,
+                        //                     padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                        //                     shape: RoundedRectangleBorder(
+                        //                       borderRadius: BorderRadius.circular(25),
+                        //                     ),
+                        //                   ),
+                        //                   child: Text("Continue", style: AppTextStyles.body.copyWith(color: Colors.white)),
+                        //                 ),
+                        //               )
                                       
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              ),
-                            );
-                          }
-                        }
+                        //             ],
+                        //           ),
+                        //         ),
+                        //       ),
+                        //       ),
+                        //     );
+                        //   }
+                        // }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: mainColor,
@@ -717,8 +731,31 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
       }
     }
 
-    final signBytes = isDT ? _decodeBase64(widget.transaction?.plSign) : _decodeBase64(widget.transaction?.peSign);
-    final proofBytes = isDT ? _decodeBase64(widget.transaction?.plProof) : _decodeBase64(widget.transaction?.peProof);
+    String? signBase64;
+    String? proofBase64;
+    
+
+    if (isDT) {
+      if (widget.transaction?.requestNumber == widget.transaction?.dlRequestNumber) {
+        signBase64 = widget.transaction?.plSign;
+        proofBase64 = widget.transaction?.plProof;
+      } else if (widget.transaction?.requestNumber == widget.transaction?.peRequestNumber) {
+        signBase64 = widget.transaction?.deSign;
+        proofBase64 = widget.transaction?.deProof;
+      }
+    } else {
+      if (widget.transaction?.requestNumber == widget.transaction?.deRequestNumber) {
+        signBase64 = widget.transaction?.peSign;
+        proofBase64 = widget.transaction?.peProof;
+      } else if (widget.transaction?.requestNumber == widget.transaction?.plRequestNumber) {
+        signBase64 = widget.transaction?.dlSign;
+        proofBase64 = widget.transaction?.dlProof;
+      }
+    }
+
+    final signBytes = _decodeBase64(signBase64);
+    final proofBytes = _decodeBase64(proofBase64);
+
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -778,8 +815,30 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
       }
     }
 
-    final signBytes = isDT ? _decodeBase64(widget.transaction?.deSign) : _decodeBase64(widget.transaction?.dlSign);
-    final proofBytes = isDT ? _decodeBase64(widget.transaction?.deProof) : _decodeBase64(widget.transaction?.dlProof);
+    String? signBase64;
+    String? proofBase64;
+    
+
+    if (isDT) {
+      if (widget.transaction?.requestNumber == widget.transaction?.dlRequestNumber) {
+        signBase64 = widget.transaction?.dlSign;
+        proofBase64 = widget.transaction?.dlProof;
+      } else if (widget.transaction?.requestNumber == widget.transaction?.peRequestNumber) {
+        signBase64 = widget.transaction?.peSign;
+        proofBase64 = widget.transaction?.peProof;
+      }
+    } else {
+      if (widget.transaction?.requestNumber == widget.transaction?.deRequestNumber) {
+        signBase64 = widget.transaction?.deSign;
+        proofBase64 = widget.transaction?.deProof;
+      } else if (widget.transaction?.requestNumber == widget.transaction?.plRequestNumber) {
+        signBase64 = widget.transaction?.plSign;
+        proofBase64 = widget.transaction?.plProof;
+      }
+    }
+
+    final signBytes = _decodeBase64(signBase64);
+    final proofBytes = _decodeBase64(proofBase64);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

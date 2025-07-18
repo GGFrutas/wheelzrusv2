@@ -90,6 +90,8 @@ class Transaction {
   final String? dlAssignedDate;
   final String? peAssignedDate;
 
+  final String? landTransport;
+
   final List<MilestoneHistoryModel> history;
 
 
@@ -177,6 +179,7 @@ class Transaction {
     required this.peAssignedDate,
     required this.login,
     required this.history,
+    required this.landTransport,
   });
 
   factory Transaction.fromJson(Map<String, dynamic> json) {
@@ -291,6 +294,7 @@ class Transaction {
       plAssignedDate: json['pl_assignation_time'] ?? 'Unknown PL',
       dlAssignedDate: json['dl_assignation_time'] ?? 'Unknown DL',
       peAssignedDate: json['pe_assignation_time'] ?? 'Unknown PE',
+      landTransport: json['booking_service'] ?? 'Unknown Transport', 
 
       history: (json['history'] is List) 
         ? (json['history'] as List).map((e) => MilestoneHistoryModel.fromJson(e)).toList() : [],
@@ -409,6 +413,7 @@ class Transaction {
       plAssignedDate: plAssignedDate,
       dlAssignedDate: dlAssignedDate,
       peAssignedDate: peAssignedDate,
+      landTransport: landTransport,
       
 
       login: login,
