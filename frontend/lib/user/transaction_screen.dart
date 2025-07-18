@@ -150,6 +150,21 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
               );
             }
 
+            String descriptionMsg(Transaction item) {
+              if (item.landTransport == 'land'){
+                return 'Deliver Laden Container to Consignee';
+              } else {
+                return 'Pickup Laden Container from Shipper';
+              }
+            }
+            String newName(Transaction item) {
+              if (item.landTransport == 'land'){
+                return 'Deliver to Consignee';
+              } else {
+                return 'Pickup from Shipper';
+              }
+            }
+
             if (item.dispatchType == "ot") {
               final shipperOrigin = buildShipperAddress(item, cityLevel: true);
               final shipperDestination = cleanAddress([item.destination]);
@@ -171,13 +186,13 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                 if ( item.plTruckDriverName == driverId) // Filter out if accepted
                   // if (item.plTruckDriverName == authPartnerId)
                     item.copyWith(
-                    name: "Pickup from Shipper",
+                    name: newName(item),
                     origin:shipperOrigin,
                     destination:shipperDestination,
                     requestNumber: item.plRequestNumber,
                     requestStatus: item.plRequestStatus,
                     assignedDate:item.plAssignedDate,
-                    originAddress: "Pickup Laden Container from Shipper"
+                    originAddress: descriptionMsg(item),
                     // truckPlateNumber: item.plTruckPlateNumber,
                     ),
               ];

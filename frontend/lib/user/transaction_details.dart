@@ -74,15 +74,24 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
 
   int? _expandedTabIndex;
 
-  List<String> get tabTitles {
-    final type = widget.transaction?.dispatchType;
-    return [
-      'Yard/Port',
-      type == 'dt' ? 'Consignee' : 'Shipper',
-    ];
+ 
+  bool get isFreightFirst {
+    // Replace with actual logic or remove if not needed
+   
+    // Example if you want to compare:
+    return widget.transaction?.requestNumber == widget.transaction?.deRequestNumber || widget.transaction?.requestNumber ==widget.transaction?. dlRequestNumber;
   }
 
-  
+  List<String> get tabTitles {
+    final type = widget.transaction?.dispatchType;
+    final title = type == 'dt' ? 'Consignee' : 'Shipper';
+    if(isFreightFirst){
+      return ['Yard/Port', title];
+    } else {
+      return [title, 'Yard/Port'];
+    }
+      
+  }
 
   @override
   void initState() {
@@ -224,8 +233,13 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                     }),
                   ),
                   const SizedBox(height: 16),
-                  if(_expandedTabIndex == 0) _buildFreightTab(),
-                  if(_expandedTabIndex == 1) _buildShipConsTab(),
+                  if (isFreightFirst) ...[
+                    if (_expandedTabIndex == 0) _buildFreightTab(),
+                    if (_expandedTabIndex == 1) _buildShipConsTab(),
+                  ] else ...[
+                    if (_expandedTabIndex == 0) _buildShipConsTab(),
+                    if (_expandedTabIndex == 1) _buildFreightTab(),
+                  ]
 
                 ],
                 const SizedBox(height: 12), // Add some space between sections
@@ -717,8 +731,31 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
       }
     }
 
-    final signBytes = isDT ? _decodeBase64(widget.transaction?.plSign) : _decodeBase64(widget.transaction?.peSign);
-    final proofBytes = isDT ? _decodeBase64(widget.transaction?.plProof) : _decodeBase64(widget.transaction?.peProof);
+    String? signBase64;
+    String? proofBase64;
+    
+
+    if (isDT) {
+      if (widget.transaction?.requestNumber == widget.transaction?.dlRequestNumber) {
+        signBase64 = widget.transaction?.plSign;
+        proofBase64 = widget.transaction?.plProof;
+      } else if (widget.transaction?.requestNumber == widget.transaction?.peRequestNumber) {
+        signBase64 = widget.transaction?.deSign;
+        proofBase64 = widget.transaction?.deProof;
+      }
+    } else {
+      if (widget.transaction?.requestNumber == widget.transaction?.deRequestNumber) {
+        signBase64 = widget.transaction?.peSign;
+        proofBase64 = widget.transaction?.peProof;
+      } else if (widget.transaction?.requestNumber == widget.transaction?.plRequestNumber) {
+        signBase64 = widget.transaction?.dlSign;
+        proofBase64 = widget.transaction?.dlProof;
+      }
+    }
+
+    final signBytes = _decodeBase64(signBase64);
+    final proofBytes = _decodeBase64(proofBase64);
+
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -778,8 +815,30 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
       }
     }
 
-    final signBytes = isDT ? _decodeBase64(widget.transaction?.deSign) : _decodeBase64(widget.transaction?.dlSign);
-    final proofBytes = isDT ? _decodeBase64(widget.transaction?.deProof) : _decodeBase64(widget.transaction?.dlProof);
+    String? signBase64;
+    String? proofBase64;
+    
+
+    if (isDT) {
+      if (widget.transaction?.requestNumber == widget.transaction?.dlRequestNumber) {
+        signBase64 = widget.transaction?.dlSign;
+        proofBase64 = widget.transaction?.dlProof;
+      } else if (widget.transaction?.requestNumber == widget.transaction?.peRequestNumber) {
+        signBase64 = widget.transaction?.peSign;
+        proofBase64 = widget.transaction?.peProof;
+      }
+    } else {
+      if (widget.transaction?.requestNumber == widget.transaction?.deRequestNumber) {
+        signBase64 = widget.transaction?.deSign;
+        proofBase64 = widget.transaction?.deProof;
+      } else if (widget.transaction?.requestNumber == widget.transaction?.plRequestNumber) {
+        signBase64 = widget.transaction?.plSign;
+        proofBase64 = widget.transaction?.plProof;
+      }
+    }
+
+    final signBytes = _decodeBase64(signBase64);
+    final proofBytes = _decodeBase64(proofBase64);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

@@ -193,7 +193,8 @@ class TransactionController extends Controller
                         "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
                         "pickup_date", "departure_date","origin", "destination", "de_rejection_time", "pl_rejection_time", "dl_rejection_time", "pe_rejection_time", "de_completion_time", 
                         "pl_completion_time", "dl_completion_time", "pe_completion_time", "shipper_province","shipper_city","shipper_barangay","shipper_street", 
-                        "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime", "service_type",
+                        "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime", "service_type", "booking_service",
+                        "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time",
                     ]],
                 ]
             ],
@@ -231,7 +232,8 @@ class TransactionController extends Controller
             "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
             "pickup_date", "departure_date","origin", "destination","de_rejection_time", "pl_rejection_time", "dl_rejection_time", "pe_rejection_time", "de_completion_time", 
             "pl_completion_time", "dl_completion_time", "pe_completion_time","shipper_province","shipper_city","shipper_barangay","shipper_street",
-            "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime",  "service_type",
+            "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime",  "service_type","booking_service",
+            "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time",
         ];
 
         $jobResponses = [];
@@ -1438,7 +1440,7 @@ class TransactionController extends Controller
             $updateField = [
                 "pl_proof" => $images,
                 "pl_signature" => $signature,
-                "pl_receive_by" => $enteredName,
+                "dl_receive_by" => $enteredName,
                 "pl_request_status" => $newStatus,
             ];
         }
@@ -1457,7 +1459,7 @@ class TransactionController extends Controller
             $updateField = [
                 "pe_proof" => $images,
                 "pe_signature" => $signature,
-                "pl_receive_by" => $enteredName,
+                "dl_receive_by" => $enteredName,
                 "pe_request_status" => $newStatus,
             ];
         }
@@ -1734,7 +1736,7 @@ class TransactionController extends Controller
             $updateField = [
                 "dl_proof" => $images,
                 "dl_signature" => $signature,
-                "dl_receive_by" => $enteredName,
+                "pl_receive_by" => $enteredName,
                 "stage_id" => 7,
                 "dl_completion_time" => $actualTime,
                 // "pl_request_status" => $newStatus,
@@ -1755,7 +1757,7 @@ class TransactionController extends Controller
             $updateField = [
                 "de_proof" => $images,
                 "de_signature" => $signature,
-                "dl_receive_by" => $enteredName,
+                "pl_receive_by" => $enteredName,
                 "stage_id" => 7,
                 "de_completion_time" => $actualTime,
                 // "pe_request_status" => $newStatus,
