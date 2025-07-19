@@ -151,14 +151,14 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
             }
 
             String descriptionMsg(Transaction item) {
-              if (item.landTransport == 'land'){
+              if (item.landTransport == 'transport'){
                 return 'Deliver Laden Container to Consignee';
               } else {
                 return 'Pickup Laden Container from Shipper';
               }
             }
             String newName(Transaction item) {
-              if (item.landTransport == 'land'){
+              if (item.landTransport == 'transport'){
                 return 'Deliver to Consignee';
               } else {
                 return 'Pickup from Shipper';

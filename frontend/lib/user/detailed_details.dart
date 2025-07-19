@@ -85,7 +85,7 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
         (isNullOrEmpty(transaction?.dlProof) || isNullOrEmpty(transaction?.dlSign)) &&
         peRequestNumber == requestNumber);
 
-    bool isLandTransport = transaction?.landTransport == 'land';
+    bool isLandTransport = transaction?.landTransport != 'transport';
 
     final allTransactions = ref.read(acceptedTransactionProvider);
 
@@ -100,7 +100,7 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
     bool ffNotComplete = relatedFF != null && relatedFF.stageId != '7';
 
     /// Final decision: if any rule to hide the button is true, we hide it
-    final showButton = hideForCurrentDispatch || ffNotComplete || isLandTransport;
+    final showButton = (isLandTransport && hideForCurrentDispatch) || (isLandTransport && ffNotComplete);
 
         
     return PopScope(

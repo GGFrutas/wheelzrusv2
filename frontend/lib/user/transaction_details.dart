@@ -20,6 +20,7 @@ import 'package:frontend/screen/homepage_screen.dart';
 import 'package:frontend/screen/navigation_menu.dart';
 import 'package:frontend/theme/colors.dart';
 import 'package:frontend/theme/text_styles.dart';
+import 'package:frontend/user/confirmation.dart';
 import 'package:frontend/user/detailed_details.dart';
 import 'package:frontend/user/history_screen.dart';
 import 'package:frontend/user/homepage_screen.dart';
@@ -70,7 +71,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
   LocationData? _locationData;
   static const gmaps.LatLng _pointA = gmaps.LatLng(10.300233284867856, 123.91189477293283);
   static const gmaps.LatLng _pointB = gmaps.LatLng(10.298462163232422, 123.8950565989957);
-  static const gmaps.LatLng _pointC = gmaps.LatLng(10.301827521156078, 123.9120902055735);
+  static const gmaps.LatLng _pointC = gmaps.LatLng(10.308225643109328, 123.90735316709156);
 
   int? _expandedTabIndex;
 
@@ -97,6 +98,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
   void initState() {
     super.initState();
     initLocation();
+    _expandedTabIndex = 1;
   }
 
   Future<void> initLocation() async {
@@ -137,7 +139,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
   @override
   Widget build(BuildContext context) {
     // If transaction is null, display a fallback message
-    final showTabs = !(widget.transaction?.requestStatus == "Pending" || widget.transaction?.requestStatus == "Accepted");
+    final showTabs = widget.transaction?.requestStatus == "Ongoing";
     return Consumer(
       builder: (context, ref, child) {
         
@@ -194,6 +196,12 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                 if (showTabs) ...[
                   Row(
                     children: List.generate(tabTitles.length, (index) {
+                      final bool isSelected = _expandedTabIndex == index;
+                      
+
+                      final Color tabColor = isSelected ? mainColor : bgColor;
+
+
                       return Expanded(
                         child: GestureDetector(
                           onTap: () {
@@ -214,7 +222,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                             decoration: BoxDecoration(
                               border: Border (
                                 bottom: BorderSide(
-                                  color: _expandedTabIndex == index ? mainColor : bgColor,
+                                  color: tabColor,
                                   width: 2,
                                 ),
                               ),
@@ -223,7 +231,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                             child: Text(
                               tabTitles[index],
                               style: AppTextStyles.body.copyWith(
-                                color:  _expandedTabIndex == index ? mainColor : bgColor,
+                                color:  tabColor,
                                 fontWeight: FontWeight.bold
                               ),
                             ),
@@ -505,13 +513,23 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                       child: ElevatedButton(
                       onPressed: () async {
                         // if (widget.transaction?.requestStatus != 'Pending') {
-                          
+                        if (widget.transaction?.requestStatus == 'Ongoing') {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ConfirmationScreen(uid: widget.uid, transaction: widget.transaction),
+                            ),
+                          );
+                        }else {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (context) => DetailedDetailScreen(uid: widget.uid, transaction: widget.transaction),
                             ),
                           );
+                        }
+                          
+                          
                           // print("SUCCESS");
                         // } else {
                         

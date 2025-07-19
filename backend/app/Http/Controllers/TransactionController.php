@@ -1752,6 +1752,10 @@ class TransactionController extends Controller
                 "dl_completion_time" => $actualTime,
                 // "dl_request_status" => $newStatus,
             ];
+
+            if (isset($type['service_type']) && $type['service_type'] == 2) {
+                $updateField['stage_id'] = 7;
+            }
         } elseif ($type['dispatch_type'] == "dt" && $type['pe_request_no'] == $requestNumber) {
             Log::info("Updating DE proof and signature for request number: {$requestNumber}");
             $updateField = [
