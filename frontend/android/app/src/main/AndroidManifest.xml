@@ -12,6 +12,7 @@
         android:label="YXE Driver App"
         android:name="${applicationName}"
         android:icon="@mipmap/xlogo"
+        
         >
         <!-- android:enableOnBackInvokeCallback="true" -->
         <activity

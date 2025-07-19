@@ -250,14 +250,14 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                           );
                         }
                         String descriptionMsg(Transaction item) {
-                          if (item.landTransport == 'land'){
+                          if (item.landTransport == 'transport'){
                             return 'Deliver Laden Container to Consignee';
                           } else {
                             return 'Pickup Laden Container from Shipper';
                           }
                         }
                         String newName(Transaction item) {
-                          if (item.landTransport == 'land'){
+                          if (item.landTransport == 'transport'){
                             return 'Deliver to Consignee';
                           } else {
                             return 'Pickup from Shipper';
@@ -330,13 +330,13 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                       }).toList();
 
                       expandedTransactions.sort((a,b){
-                        DateTime dateA = DateTime.tryParse(a.deliveryDate) ?? DateTime(0);
-                        DateTime dateB = DateTime.tryParse(b.deliveryDate) ?? DateTime(0);
+                        DateTime dateA = DateTime.tryParse(a.assignedDate ?? '') ?? DateTime(0);
+                        DateTime dateB = DateTime.tryParse(b.assignedDate ?? '') ?? DateTime(0);
                         return dateB.compareTo(dateA);
                       });
 
                       final ongoingTransactions = expandedTransactions
-                        .where((tx) => tx.requestStatus == "Accepted")
+                        .where((tx) => tx.requestStatus == "Accepted" || tx.requestStatus == "Assigned" || tx.requestStatus == "Pending")
                         .toList();
                      
                       

@@ -27,7 +27,7 @@ class AuthenticationController extends Controller
 {
 
     protected $db = 'jralejandria-beta-dev-yxe-production-beta-21746751';
-    protected $odoo_url = "https://jralejandria-beta-dev-yxe.odoo.com/jsonrpc";
+    protected $url = "https://jralejandria-beta-dev-yxe.odoo.com/jsonrpc";
 
     public function getOdooUsers()
     {
@@ -75,10 +75,12 @@ class AuthenticationController extends Controller
     {
         $username = $credentials['email'];  // Odoo login field
         $password = $credentials['password']; // Odoo password
-    
-        $url = $this->odoo_url;
+       
+
+        $url = $this->url;
         $db = $this->db;
        
+        
         $jsonrequest = [
             "jsonrpc" => "2.0",
             "method" => "call",
@@ -101,11 +103,12 @@ class AuthenticationController extends Controller
                 "method" => "POST",
                 "content" => json_encode($jsonrequest),
                 "ignore_errors" => true,
+                'timeout' => 5
             ],
         ];
 
         $context = stream_context_create($options);
-        $response = file_get_contents("$url", false, $context);
+        $response = file_get_contents($url, false, $context);
 
         if($response === false) {
             Log::error("🚨 Authentication failed: No response from Odoo server.");
@@ -121,7 +124,7 @@ class AuthenticationController extends Controller
 
     public function getUser($username,$uid, $odooPassword)
     {
-        $url = $this->odoo_url;
+        $url = $this->url;
         $db = $this->db;
 
         Log::info("🔍 Searching for Odoo user with email: $username");
@@ -288,7 +291,7 @@ class AuthenticationController extends Controller
     public function login(Request $request){
         $credentials = $request->only('email', 'password');
         $odooPassword = $credentials['password'];
-        $url = $this->odoo_url;
+        $url = $this->url;
         $db = $this->db;
         
         //Check authentication

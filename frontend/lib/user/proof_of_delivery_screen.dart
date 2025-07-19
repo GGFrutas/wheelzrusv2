@@ -1,4 +1,4 @@
-// ignore_for_file: unused_import, avoid_print
+// ignore_for_file: unused_import, avoid_print, depend_on_referenced_packages
 
 import 'dart:convert';
 import 'dart:io';
@@ -83,7 +83,7 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
     Uri url;
   
     String nextStatus;
-    if (currentStatus == "Accepted" || currentStatus == "Pending") {
+    if (currentStatus == "Accepted" || currentStatus == "Pending" || currentStatus == "Assigned") {
       nextStatus = "Ongoing";
      url = Uri.parse('$baseUrl/api/odoo/pod-accepted-to-ongoing?uid=$uid');
       nextStatus = "Ongoing";
