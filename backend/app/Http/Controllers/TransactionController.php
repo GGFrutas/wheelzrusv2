@@ -45,7 +45,7 @@ class TransactionController extends Controller
 {
     protected $url = "https://jralejandria-beta-dev-yxe.odoo.com";
     protected $db = 'jralejandria-beta-dev-yxe-production-beta-21746751';
-    // protected $odoo_url = "http://192.168.118.102:8000/odoo/jsonrpc";
+    // protected $odoo_url = "http://192.168.152.53:8000/odoo/jsonrpc";
     protected $odoo_url = "https://jralejandria-beta-dev-yxe.odoo.com/jsonrpc";
 
     public function getBooking(Request $request)
@@ -1619,8 +1619,88 @@ class TransactionController extends Controller
                     ])), true);
 
                     if (isset($updateActualResponse['result']) && $updateActualResponse['result']) {
-                        // Log::info("✅ Actual time updated successfully for milestone ID: {$milestoneIdToUpdate}");
-                        return response()->json(['success' => true, 'message' => 'POD and milestome updated'], 200);
+
+                        $fcl_code_email = [
+                            'TYOT' => 'dispatch_manager.a2_email_notification_shipper_template',
+                            'TEOT' => 'dispatch_manager.a7_shipper_arrived_shiplocation_template',
+                            'TLOT' => 'dispatch_manager.a5_email_notification_laden_template',
+                            'CLOT' => 'dispatch_manager.a6_notification_container_outbound_template',
+                            'CYDT' => 'dispatch_manager.b4_container_vendor_yard_template',
+                            'GLDT' => 'dispatch_manager.a5_email_notification_laden_template',
+                            'CLDT' => 'dispatch_manager.c2_consignee_arrived_conslocation_template',
+                            'GYDT' => 'dispatch_manager.a2_email_notification_shipper_template',
+                        ];
+
+                        $template_xml_id = $fcl_code_email[$fcl_code] ?? 'dispatch_manager.dispatch_milestone_history';
+
+                        $get_template_id = [
+                            "jsonrpc" => "2.0",
+                            "method" => "call",
+                            "params" => [
+                                "service" => "object",
+                                "method" => "execute_kw",
+                                "args" => [
+                                    $db,
+                                    $uid,
+                                    $odooPassword,
+                                    "ir.model.data",
+                                    "xmlid_to res_id",
+                                    [$template_xml_id]
+                                ]
+                            ],
+                            "id" => 5
+                        ];
+
+                        $templateResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
+                            "http" => [
+                                "header" => "Content-Type: application/json",
+                                "method" => "POST",
+                                "content" => json_encode($get_template_id),
+                            ]
+                        ])), true);
+
+                        $template_id = $templateResponse['result'] ?? null;
+
+                        if($template_id) {
+                            $send_email = [
+                                "jsonrpc" => "2.0",
+                                "method" => "call",
+                                "params" => [
+                                    "service" => "object",
+                                    "method" => "execute_kw",
+                                    "args" => [
+                                        $db,
+                                        $uid,
+                                        $odooPassword,
+                                        "mail.template",
+                                        "send_email",
+                                        [
+                                            $template_xml_id,
+                                            $milestoneIdToUpdate
+                                        ]
+                                    ]
+                                ],
+                                "id" => 6
+                            ];
+
+                            $sendEmailResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
+                                "http" => [
+                                    "header" => "Content-Type: application/json",
+                                    "method" => "POST",
+                                    "content" => json_encode($send_email),
+                                ]
+                            ])), true);
+
+                            if(isset($sendEmailResponse['result'])) {
+                                return response()->json(['success' => true, 'message' => 'Milestsone updated and email sent'], 200);
+                            } else {
+                                Log::warning("Milestone update, but email is not sent", ['response' => $sendEmailResponse]);
+                                return response()->json(['success' => true, 'message' => 'Milestsone updated, but email failed'], 200);
+                            }
+                        } else {
+                            Log::error("Failed to resolve template XML ID $template_xml_id");
+                            return response()->json(['success' => false, 'message' => 'Template not found'], 500);
+                        }
                     } else {
                         Log::error("⚠️ POD updated but failed to update milestone", ['response' => $updateActualResponse]);
                         return response()->json(['success' => false, 'message' => 'POD updated but milestone failed'], 500);

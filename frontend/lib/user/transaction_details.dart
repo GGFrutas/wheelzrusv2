@@ -483,7 +483,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                             tiltGesturesEnabled: true,
                             zoomControlsEnabled: true,
                             onMapCreated: (controller) {
-                              _googleMapController = controller;
+                              controller = _googleMapController!;
                             },
                           ),
                         ),
