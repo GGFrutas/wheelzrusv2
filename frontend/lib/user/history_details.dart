@@ -51,7 +51,8 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
       
       try {
         DateTime dateTime = DateTime.parse(dateString); // Convert string to DateTime
-        return DateFormat('dd / MM / yyyy  - h:mm a').format(dateTime); // Format date-time
+        DateTime adjustedTime = dateTime.add(const Duration(hours:8));
+        return DateFormat('dd / MM / yyyy  - h:mm a').format(adjustedTime); // Format date-time
       } catch (e) {
         return "Invalid Date"; // Handle errors gracefully
       }

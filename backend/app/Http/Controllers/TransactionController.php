@@ -45,7 +45,7 @@ class TransactionController extends Controller
 {
     protected $url = "https://jralejandria-beta-dev-yxe.odoo.com";
     protected $db = 'jralejandria-beta-dev-yxe-production-beta-21746751';
-    // protected $odoo_url = "http://192.168.152.53:8000/odoo/jsonrpc";
+    // protected $odoo_url = "http://192.168.118.102:8000/odoo/jsonrpc";
     protected $odoo_url = "https://jralejandria-beta-dev-yxe.odoo.com/jsonrpc";
 
     public function getBooking(Request $request)
@@ -1504,7 +1504,7 @@ class TransactionController extends Controller
 
 
         if (isset($updateResponse['result']) && $updateResponse['result']) {
-            Log::info("✅ POD uploaded. Proceeding with milestone update.");
+            Log::info("✅ POD uploaded. Proceeding with milestone update. POD JOURNEY");
 
             $milestoneCodeSearch = [
                 "jsonrpc" => "2.0",
@@ -1559,7 +1559,7 @@ class TransactionController extends Controller
                 $milestoneCodeToUpdate = "GYDT";
                 Log::info("Milestone to update: {$milestoneCodeToUpdate} with actual time: {$actualTime}");
             } elseif ($type['dispatch_type'] == "dt" && $type['pe_request_no'] == $requestNumber && $serviceType == 1) {
-                $milestoneCodeToUpdate = "CLDT";
+                $milestoneCodeToUpdate = "GLDT";
                 Log::info("Milestone to update: {$milestoneCodeToUpdate} with actual time: {$actualTime}");
             }
 
@@ -1579,6 +1579,12 @@ class TransactionController extends Controller
                 foreach ($milestoneResultList as $milestone) {
                     if ($milestone['fcl_code'] === $milestoneCodeToUpdate) {
                         $milestoneIdToUpdate = $milestone['id'];
+                        $fcl_code = $milestone['fcl_code'];
+
+                          Log::info("🆗 Milestone matched and ID found", [
+                            'milestone_id' => $milestoneIdToUpdate,
+                            'fcl_code' => $fcl_code
+                        ]);
                         break;
                     }
                 }
@@ -1586,6 +1592,7 @@ class TransactionController extends Controller
 
                 if ($milestoneIdToUpdate) {
                     // Update actual datetime
+                    
                     $update_actual_time = [
                         "jsonrpc" => "2.0",
                         "method" => "call",
@@ -1617,9 +1624,9 @@ class TransactionController extends Controller
                             "content" => json_encode($update_actual_time),
                         ]
                     ])), true);
+                    Log::debug("📝 Actual time update response", ['response' => $updateActualResponse]);
 
                     if (isset($updateActualResponse['result']) && $updateActualResponse['result']) {
-
                         $fcl_code_email = [
                             'TYOT' => 'dispatch_manager.a2_email_notification_shipper_template',
                             'TEOT' => 'dispatch_manager.a7_shipper_arrived_shiplocation_template',
@@ -1631,38 +1638,12 @@ class TransactionController extends Controller
                             'GYDT' => 'dispatch_manager.a2_email_notification_shipper_template',
                         ];
 
-                        $template_xml_id = $fcl_code_email[$fcl_code] ?? 'dispatch_manager.dispatch_milestone_history';
+                        $template_xml_id = $fcl_code_email[$fcl_code] ?? null;
 
-                        $get_template_id = [
-                            "jsonrpc" => "2.0",
-                            "method" => "call",
-                            "params" => [
-                                "service" => "object",
-                                "method" => "execute_kw",
-                                "args" => [
-                                    $db,
-                                    $uid,
-                                    $odooPassword,
-                                    "ir.model.data",
-                                    "xmlid_to res_id",
-                                    [$template_xml_id]
-                                ]
-                            ],
-                            "id" => 5
-                        ];
-
-                        $templateResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
-                            "http" => [
-                                "header" => "Content-Type: application/json",
-                                "method" => "POST",
-                                "content" => json_encode($get_template_id),
-                            ]
-                        ])), true);
-
-                        $template_id = $templateResponse['result'] ?? null;
-
-                        if($template_id) {
-                            $send_email = [
+                        if($template_xml_id) {
+                            Log::info("✅ Actual datetime successfully updated for milestone ID: $milestoneIdToUpdate");
+                            [$module, $xml_id] = explode('.', $template_xml_id, 2);
+                            $get_template_id = [
                                 "jsonrpc" => "2.0",
                                 "method" => "call",
                                 "params" => [
@@ -1672,34 +1653,84 @@ class TransactionController extends Controller
                                         $db,
                                         $uid,
                                         $odooPassword,
-                                        "mail.template",
-                                        "send_email",
+                                        "ir.model.data",
+                                        "search_read",
                                         [
-                                            $template_xml_id,
-                                            $milestoneIdToUpdate
+                                            [["module", "=", $module], ["name", "=", $xml_id]],
+                                            ["res_id"]
                                         ]
+                                       
                                     ]
                                 ],
-                                "id" => 6
+                                "id" => 5
                             ];
-
-                            $sendEmailResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
+                            $templateResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
                                 "http" => [
                                     "header" => "Content-Type: application/json",
                                     "method" => "POST",
-                                    "content" => json_encode($send_email),
+                                    "content" => json_encode($get_template_id),
                                 ]
                             ])), true);
 
-                            if(isset($sendEmailResponse['result'])) {
-                                return response()->json(['success' => true, 'message' => 'Milestsone updated and email sent'], 200);
+                            Log::debug("🔍 Template response", ['response' => $templateResponse]);
+
+                            $template_id = $templateResponse['result'] ?? [];
+
+                            if (!empty($template_id) && isset($template_id[0]['res_id'])) {
+                                $resolved_id = $template_id[0]['res_id'];
+                                Log::info("📩 Template ID resolved: $resolved_id for $template_xml_id");
+
+                                $send_email = [
+                                    "jsonrpc" => "2.0",
+                                    "method" => "call",
+                                    "params" => [
+                                        "service" => "object",
+                                        "method" => "execute_kw",
+                                        "args" => [
+                                            $db,
+                                            $uid,
+                                            $odooPassword,
+                                            "mail.template",
+                                            "send_mail",
+                                            [
+                                                $resolved_id,
+                                                $milestoneIdToUpdate,
+                                                true
+                                            ]
+                                        ]
+                                    ],
+                                    "id" => 6
+                                ];
+
+                                $sendEmailResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
+                                    "http" => [
+                                        "header" => "Content-Type: application/json",
+                                        "method" => "POST",
+                                        "content" => json_encode($send_email),
+                                    ]
+                                ])), true);
+
+                                if(isset($sendEmailResponse['result']) && $sendEmailResponse['result']) {
+                                    Log::info("Milestone updated and email sent.");
+                                    return response()->json([
+                                        'success' => true,
+                                        'message' => 'Milestone updated and email sent successfully.',
+                                        'milestone_id' => $milestoneIdToUpdate,
+                                        'template_id' =>  $resolved_id,
+
+                                    ], 200);
+                                } else {
+                                    Log::warning("Milestone update, but email is not sent", ['response' => $sendEmailResponse]);
+                                    return response()->json(['success' => true, 'message' => 'Milestsone updated, but email failed'], 200);
+                                }
                             } else {
-                                Log::warning("Milestone update, but email is not sent", ['response' => $sendEmailResponse]);
-                                return response()->json(['success' => true, 'message' => 'Milestsone updated, but email failed'], 200);
+                                Log::error("Failed to resolve template XML ID $template_xml_id");
+                                return response()->json(['success' => false, 'message' => 'Template not found'], 500);
                             }
+                            Log::info("Milestone updated!");
                         } else {
-                            Log::error("Failed to resolve template XML ID $template_xml_id");
-                            return response()->json(['success' => false, 'message' => 'Template not found'], 500);
+                            Log::warning("No template configured for FCL Code: $fcl_code");
+                            return response()->json(['success' => true, 'message' => 'Milestone updated but no email sent'], 200);
                         }
                     } else {
                         Log::error("⚠️ POD updated but failed to update milestone", ['response' => $updateActualResponse]);
@@ -1818,32 +1849,37 @@ class TransactionController extends Controller
                 "dl_signature" => $signature,
                 "pl_receive_by" => $enteredName,
                 "stage_id" => 7,
-                "dl_completion_time" => $actualTime,
+                "pl_completion_time" => $actualTime,
                 // "pl_request_status" => $newStatus,
             ];
         }
 
-        if ($type['dispatch_type'] == "dt" && $type['dl_request_no'] == $requestNumber) {
-            Log::info("Updating DL proof and signature for request number: {$requestNumber}");
+        if ($type['dispatch_type'] === "dt" && $type['dl_request_no'] === $requestNumber && isset($type['service_type']) && $type['service_type'] == 2) {
+            Log::info("Updating DL proof and signature for request number: {$requestNumber} with service_type = 2");
            $updateField = [
+                "dl_proof" => $images,
+                "dl_signature" => $signature,
+                "de_release_by" => $enteredName,
+                "dl_completion_time" => $actualTime,
+                "stage_id" => 7,
+                // "dl_request_status" => $newStatus,
+            ];
+        } elseif($type['dispatch_type'] === "dt" && $type['dl_request_no'] === $requestNumber) {
+             $updateField = [
                 "dl_proof" => $images,
                 "dl_signature" => $signature,
                 "de_release_by" => $enteredName,
                 "dl_completion_time" => $actualTime,
                 // "dl_request_status" => $newStatus,
             ];
-
-            if (isset($type['service_type']) && $type['service_type'] == 2) {
-                $updateField['stage_id'] = 7;
-            }
-        } elseif ($type['dispatch_type'] == "dt" && $type['pe_request_no'] == $requestNumber) {
+        } elseif ($type['dispatch_type'] === "dt" && $type['pe_request_no'] === $requestNumber) {
             Log::info("Updating DE proof and signature for request number: {$requestNumber}");
             $updateField = [
                 "de_proof" => $images,
                 "de_signature" => $signature,
                 "pl_receive_by" => $enteredName,
                 "stage_id" => 7,
-                "de_completion_time" => $actualTime,
+                "pe_completion_time" => $actualTime,
                 // "pe_request_status" => $newStatus,
             ];
         }
@@ -1884,7 +1920,7 @@ class TransactionController extends Controller
 
 
         if (isset($updateResponse['result']) && $updateResponse['result']) {
-            Log::info("✅ POD uploaded. Proceeding with milestone update.");
+            Log::info("✅ POD uploaded. Proceeding with milestone update. POD JOURNEY");
 
             $milestoneCodeSearch = [
                 "jsonrpc" => "2.0",
@@ -1936,7 +1972,7 @@ class TransactionController extends Controller
                 $milestoneCodeToUpdate = "CLOT";
                 Log::info("Milestone to update: {$milestoneCodeToUpdate} with actual time: {$actualTime}");
             } elseif ($type['dispatch_type'] == "dt" && $type['dl_request_no'] == $requestNumber && $serviceType == 1) {
-                $milestoneCodeToUpdate = "GLDT";
+                $milestoneCodeToUpdate = "CLDT";
                 Log::info("Milestone to update: {$milestoneCodeToUpdate} with actual time: {$actualTime}");
             } elseif ($type['dispatch_type'] == "dt" && $type['pe_request_no'] == $requestNumber && $serviceType == 1) {
                 $milestoneCodeToUpdate = "CYDT";
@@ -1959,6 +1995,12 @@ class TransactionController extends Controller
                 foreach ($milestoneResultList as $milestone) {
                     if ($milestone['fcl_code'] === $milestoneCodeToUpdate) {
                         $milestoneIdToUpdate = $milestone['id'];
+                        $fcl_code = $milestone['fcl_code'];
+
+                          Log::info("🆗 Milestone matched and ID found", [
+                            'milestone_id' => $milestoneIdToUpdate,
+                            'fcl_code' => $fcl_code
+                        ]);
                         break;
                     }
                 }
@@ -1966,6 +2008,7 @@ class TransactionController extends Controller
 
                 if ($milestoneIdToUpdate) {
                     // Update actual datetime
+                    
                     $update_actual_time = [
                         "jsonrpc" => "2.0",
                         "method" => "call",
@@ -1982,7 +2025,7 @@ class TransactionController extends Controller
                                     [$milestoneIdToUpdate],
                                     [
                                         'actual_datetime' => $actualTime,
-                                        'button_readonly' => true,
+                                        'button_readonly' => true, 
                                     ]
                                 ]
                             ]
@@ -1997,10 +2040,115 @@ class TransactionController extends Controller
                             "content" => json_encode($update_actual_time),
                         ]
                     ])), true);
+                    Log::debug("📝 Actual time update response", ['response' => $updateActualResponse]);
 
                     if (isset($updateActualResponse['result']) && $updateActualResponse['result']) {
-                        // Log::info("✅ Actual time updated successfully for milestone ID: {$milestoneIdToUpdate}");
-                        return response()->json(['success' => true, 'message' => 'POD and milestome updated'], 200);
+                        $fcl_code_email = [
+                            'TYOT' => 'dispatch_manager.a2_email_notification_shipper_template',
+                            'TEOT' => 'dispatch_manager.a7_shipper_arrived_shiplocation_template',
+                            'TLOT' => 'dispatch_manager.a5_email_notification_laden_template',
+                            'CLOT' => 'dispatch_manager.a6_notification_container_outbound_template',
+                            'CYDT' => 'dispatch_manager.b4_container_vendor_yard_template',
+                            'GLDT' => 'dispatch_manager.a5_email_notification_laden_template',
+                            'CLDT' => 'dispatch_manager.c2_consignee_arrived_conslocation_template',
+                            'GYDT' => 'dispatch_manager.a2_email_notification_shipper_template',
+                        ];
+
+                        $template_xml_id = $fcl_code_email[$fcl_code] ?? null;
+
+                        if($template_xml_id) {
+                            Log::info("✅ Actual datetime successfully updated for milestone ID: $milestoneIdToUpdate");
+                            [$module, $xml_id] = explode('.', $template_xml_id, 2);
+                            $get_template_id = [
+                                "jsonrpc" => "2.0",
+                                "method" => "call",
+                                "params" => [
+                                    "service" => "object",
+                                    "method" => "execute_kw",
+                                    "args" => [
+                                        $db,
+                                        $uid,
+                                        $odooPassword,
+                                        "ir.model.data",
+                                        "search_read",
+                                        [
+                                            [["module", "=", $module], ["name", "=", $xml_id]],
+                                            ["res_id"]
+                                        ]
+                                    ]
+                                ],
+                                "id" => 5
+                            ];
+                            $templateResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
+                                "http" => [
+                                    "header" => "Content-Type: application/json",
+                                    "method" => "POST",
+                                    "content" => json_encode($get_template_id),
+                                ]
+                            ])), true);
+
+                            Log::debug("🔍 Template response", ['response' => $templateResponse]);
+
+
+
+                            $template_id = $templateResponse['result'] ?? [];
+
+                            if (!empty($template_id) && isset($template_id[0]['res_id'])) {
+                                $resolved_id = $template_id[0]['res_id'];
+                                Log::info("📩 Template ID resolved: $resolved_id for $template_xml_id");
+
+                                $send_email = [
+                                    "jsonrpc" => "2.0",
+                                    "method" => "call",
+                                    "params" => [
+                                        "service" => "object",
+                                        "method" => "execute_kw",
+                                        "args" => [
+                                            $db,
+                                            $uid,
+                                            $odooPassword,
+                                            "mail.template",
+                                            "send_mail",
+                                            [
+                                                $resolved_id,
+                                                $milestoneIdToUpdate,
+                                                true
+                                            ]
+                                        ]
+                                    ],
+                                    "id" => 6
+                                ];
+
+                                $sendEmailResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
+                                    "http" => [
+                                        "header" => "Content-Type: application/json",
+                                        "method" => "POST",
+                                        "content" => json_encode($send_email),
+                                    ]
+                                ])), true);
+
+                                if(isset($sendEmailResponse['result']) && $sendEmailResponse['result']) {
+                                    Log::info("Milestone updated and email sent.");
+                                    return response()->json([
+                                        'success' => true,
+                                        'message' => 'Milestone updated and email sent successfully.',
+                                        'milestone_id' => $milestoneIdToUpdate,
+                                        'template_id' =>  $resolved_id,
+
+                                    ], 200);
+                                } else {
+                                    Log::warning("Milestone update, but email is not sent", ['response' => $sendEmailResponse]);
+                                    return response()->json(['success' => true, 'message' => 'Milestsone updated, but email failed'], 200);
+                                }
+                            } else {
+                                Log::error("Failed to resolve template XML ID $template_xml_id");
+                                return response()->json(['success' => false, 'message' => 'Template not found'], 500);
+                            }
+                            Log::info("Milestone updated!");
+                        } else {
+                            Log::warning("No template configured for FCL Code: $fcl_code");
+                            return response()->json(['success' => true, 'message' => 'Milestone updated but no email sent'], 200);
+                        }
                     } else {
                         Log::error("⚠️ POD updated but failed to update milestone", ['response' => $updateActualResponse]);
                         return response()->json(['success' => false, 'message' => 'POD updated but milestone failed'], 500);

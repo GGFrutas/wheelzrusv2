@@ -56,7 +56,8 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
     Uint8List? signatureImage = await _controller.toPngBytes();
     String? base64Signature = signatureImage != null ? base64Encode(signatureImage) : null;
     final now = DateTime.now();
-    final timestamp = DateFormat("yyyy-MM-dd HH:mm:ss").format(now);
+final adjustedTime = now.subtract(const Duration(hours: 8));
+final timestamp = DateFormat("yyyy-MM-dd HH:mm:ss").format(adjustedTime);
 
     String? enteredName = _enteredName;
 

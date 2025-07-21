@@ -50,7 +50,7 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
   MilestoneHistoryModel? schedule;
 
 
-  Map<String, MilestoneHistoryModel?> getPickupAndDeliverySchedule(Transaction transaction) {
+  Map<String, MilestoneHistoryModel?> getPickupAndDeliverySchedule(Transaction transaction, String legKey) {
   final dispatchType = transaction.dispatchType;
   final history = transaction.history;
   final serviceType = transaction.serviceType;
@@ -59,25 +59,24 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
   final fclPrefixes = {
     'ot': {
       'Full Container Load': {
-        'de': ['TEOT','TYOT' ],
-        'pl': ['CLOT', 'TLOT'],
+        'de': ['TEOT', 'TYOT'], // delivery, pickup
+        'pl': ['CLOT', 'TLOT'], // delivery, pickup
       },
       'Less-Than-Container Load': {
-        'pl': ['LCLOT','LTEOT' ],
+        'pl': ['LCLOT', 'LTEOT'],
       },
     },
     'dt': {
       'Full Container Load': {
-        'dl': [ 'CLDT', 'GYDT'],
+        'dl': ['CLDT', 'GYDT'],
         'pe': ['CYDT', 'GLDT'],
       },
       'Less-Than-Container Load': {
-        'dl': [ 'LCLDT', 'LGYDT'],
+        'dl': ['LCLDT', 'LGYDT'],
       },
     },
   };
 
-  final legs = ['de', 'pl', 'dl', 'pe'];
   final fieldCodeMap = {
     'de': transaction.deRequestNumber,
     'pl': transaction.plRequestNumber,
@@ -85,58 +84,41 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
     'pe': transaction.peRequestNumber,
   };
 
+  final requestNo = fieldCodeMap[legKey];
+  if (requestNo == null || requestNo.isEmpty) {
+    return {'pickup': null, 'delivery': null};
+  }
+
+  final expectedFclCodes = fclPrefixes[dispatchType]?[serviceType]?[legKey];
+  if (expectedFclCodes == null || expectedFclCodes.isEmpty) {
+    return {'pickup': null, 'delivery': null};
+  }
+
+  final deliveryFcl = expectedFclCodes[0];
+  final pickupFcl = expectedFclCodes.length > 1 ? expectedFclCodes[1] : null;
+
   MilestoneHistoryModel? pickup;
   MilestoneHistoryModel? delivery;
 
-  for (final leg in legs) {
-    final requestNo = fieldCodeMap[leg];
-    if (requestNo == null || requestNo.isEmpty) continue;
-
-    final expectedFclCodes = fclPrefixes[dispatchType]?[serviceType]?[leg];
-    if (expectedFclCodes == null) continue;
-
-    final pickupFcl = expectedFclCodes.length > 1 ? expectedFclCodes[1] : null;
-    final deliveryFcl = expectedFclCodes.first;
-
-    // Find Pickup
-    if (pickupFcl != null) {
-      pickup = history.firstWhere(
-        (h) =>
-            h.fclCode.trim().toUpperCase() == pickupFcl.toUpperCase() &&
-            h.dispatchId == dispatchId &&
-            h.serviceType == serviceType,
-        orElse: () => const MilestoneHistoryModel(
-          id: -1,
-          dispatchId: '',
-          dispatchType: '',
-          fclCode: '',
-          scheduledDatetime: '',
-          serviceType: '',
-        ),
-      );
-      if (pickup.id == -1) pickup = null;
-    }
-
-    // Find Delivery
-    delivery = history.firstWhere(
+  if (pickupFcl != null) {
+    pickup = history.firstWhere(
       (h) =>
-          h.fclCode.trim().toUpperCase() == deliveryFcl.toUpperCase() &&
+          h.fclCode.trim().toUpperCase() == pickupFcl.toUpperCase() &&
           h.dispatchId == dispatchId &&
           h.serviceType == serviceType,
-      orElse: () => const MilestoneHistoryModel(
-        id: -1,
-        dispatchId: '',
-        dispatchType: '',
-        fclCode: '',
-        scheduledDatetime: '',
-        serviceType: '',
-      ),
+      orElse: () => const MilestoneHistoryModel(id: -1, dispatchId: '', dispatchType: '', fclCode: '', scheduledDatetime: '', serviceType: ''),
     );
-    if (delivery.id == -1) delivery = null;
-
-    // If both found for this leg, stop
-    if (pickup != null || delivery != null) break;
+    if (pickup.id == -1) pickup = null;
   }
+
+  delivery = history.firstWhere(
+    (h) =>
+        h.fclCode.trim().toUpperCase() == deliveryFcl.toUpperCase() &&
+        h.dispatchId == dispatchId &&
+        h.serviceType == serviceType,
+    orElse: () => const MilestoneHistoryModel(id: -1, dispatchId: '', dispatchType: '', fclCode: '', scheduledDatetime: '', serviceType: ''),
+  );
+  if (delivery.id == -1) delivery = null;
 
   return {
     'pickup': pickup,
@@ -168,7 +150,7 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
   
   @override
   Widget build(BuildContext context) {
-   final scheduleMap = getPickupAndDeliverySchedule(widget.transaction!);
+   final scheduleMap = getPickupAndDeliverySchedule(widget.transaction!, 'de'); // Provide appropriate legKey
 final pickup = scheduleMap['pickup'];
 final delivery = scheduleMap['delivery'];
     return Scaffold(
