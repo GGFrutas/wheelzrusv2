@@ -45,7 +45,7 @@ class TransactionController extends Controller
 {
     protected $url = "https://jralejandria-beta-dev-yxe.odoo.com";
     protected $db = 'jralejandria-beta-dev-yxe-production-beta-21746751';
-    // protected $odoo_url = "http://192.168.118.102:8000/odoo/jsonrpc";
+    // protected $odoo_url = "http://192.168.76.86:8080/odoo/jsonrpc";
     protected $odoo_url = "https://jralejandria-beta-dev-yxe.odoo.com/jsonrpc";
 
     public function getBooking(Request $request)
@@ -310,222 +310,6 @@ class TransactionController extends Controller
     }
 
 
-    // public function getHistory(Request $request)
-    // {
-    //     $url = $this->url;
-    //     $db = $this->db;
-
-       
-      
-    //     $uid = $request->query('uid') ;
-    //     $login = $request->header('login'); 
-    //     $odooPassword = $request->header('password');
-    //     $bookingId = $request->query('booking_id'); // Get booking ID from query
-    //     Log::info('🔐 Login request', [
-    //         'uid' => $request->query('uid'),
-    //         'headers' => [
-    //             'login' => $request->header('login'),
-    //             'password' => $request->header('password'), // ⚠️ don't log in production
-    //         ],
-    //         'body' => $request->all(), // This shows form or JSON body content
-    //     ]);
-        
-      
-        
-    //     if (!$uid) {
-    //         return response()->json(['success' => false, 'message' => 'UID is required for details'], 400);
-    //     }
-
-    //     $odooUrl = "{$this->url}/jsonrpc"; 
-       
-        
-    //     $response = jsonRpcRequest("$odooUrl", [
-    //         'jsonrpc' => '2.0',
-    //         'method' => 'call',
-    //         'params' => [
-    //             'service' => 'common',
-    //             'method' => 'login',
-    //             'args' => [$db, $login, $odooPassword],
-    //         ],
-    //         'id' => 1
-    //     ]);
-      
-
-    //     if (!isset($response['result']) || !is_numeric($response['result'])) {
-    //         Log::error('❌ Auth failed', [
-    //             'login' => $login,
-    //             'db' => $db,
-    //             'response' => $response
-    //         ]);
-    //         return response()->json(['success' => false, 'message' => 'Login failed'], 403);
-    //     }
-
-      
-    //     $uid = $response['result'];
-
-    //     // Step 2: Get res.users to find partner_id
-    //     $userRes = jsonRpcRequest("$odooUrl", [
-    //         'jsonrpc' => '2.0',
-    //         'method' => 'call',
-    //         'params' => [
-    //             'service' => 'object',
-    //             'method' => 'execute_kw',
-    //             'args' => [
-    //                 $db,
-    //                 $uid,
-    //                 $odooPassword,
-    //                 'res.users',
-    //                 'search_read',
-    //                 [[['id', '=', $uid]]],
-    //                 ['fields' => ['partner_id', 'login']]
-    //             ]
-    //         ],
-    //         'id' => 2
-    //     ]);
-
-    //     $userData = $userRes['result'][0] ?? null;
-    //     if (!$userData || !isset($userData['partner_id'][0])) {
-    //         Log::error("❌ No partner_id for user $uid");
-    //         return response()->json(['success' => false, 'message' => 'No partner found'], 404);
-    //     }
-
-    //     $partnerId = $userData['partner_id'][0];
-    //     $partnerName = $userData['partner_id'][1] ?? '';
-    //     $user = [
-    //         'id' => $uid,
-    //         'login' => $login
-    //     ];
-
-    //     // Step 3: Get res.partner to check driver_access
-    //     $partnerRes = jsonRpcRequest("$odooUrl", [
-    //         'jsonrpc' => '2.0',
-    //         'method' => 'call',
-    //         'params' => [
-    //             'service' => 'object',
-    //             'method' => 'execute_kw',
-    //             'args' => [
-    //                 $db,
-    //                 $uid,
-    //                 $odooPassword,
-    //                 'res.partner',
-    //                 'search_read',
-    //                 [[['id', '=', $partnerId]]],
-    //                 ['fields' => ['name', 'driver_access']]
-    //             ]
-    //         ],
-    //         'id' => 3
-    //     ]);
-
-    //     $isDriver = $partnerRes['result'][0]['driver_access'] ?? false;
-    //     if (!$isDriver) {
-    //         Log::warning("❌ Partner $partnerId is not a driver");
-    //         return response()->json(['success' => false, 'message' => 'Not a driver'], 403);
-    //     }
-
-        
-    //     // Step 4: Find all dispatch.manager records where driver name matches
-    //     $dispatchRes =jsonRpcRequest("$odooUrl", [
-    //         'jsonrpc' => '2.0',
-    //         'method' => 'call',
-    //         'params' => [
-    //             'service' => 'object',
-    //             'method' => 'execute_kw',
-    //             'args' => [
-    //                 $db,
-    //                 $uid,
-    //                 $odooPassword,
-    //                 'dispatch.manager',
-    //                 'search_read',
-    //                 [[
-                    
-    //                     "|", "|", "|",
-    //                     ["de_truck_driver_name", "=", $partnerId],
-    //                     ["dl_truck_driver_name", "=", $partnerId],
-    //                     ["pe_truck_driver_name", "=", $partnerId],
-    //                     ["pl_truck_driver_name", "=", $partnerId],
-                    
-                        
-                    
-                        
-    //                 ]],
-    //                 ["fields" => [
-    //                     "id", "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
-    //                     "dispatch_type", "de_truck_driver_name", "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name",
-    //                     "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", "origin_port_terminal_address", "destination_port_terminal_address", "arrival_date", "delivery_date",
-    //                     "container_number", "seal_number", "booking_reference_no", "origin_forwarder_name", "destination_forwarder_name", "freight_booking_number",
-    //                     "origin_container_location", "freight_bl_number",
-    //                     "freight_forwarder_name", "shipper_phone", "consignee_phone", "dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", "pl_truck_plate_no",
-    //                     "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
-    //                     "pickup_date", "departure_date","origin", "destination", 
-    //                 ]],
-    //             ]
-    //         ],
-    //         'id' => 4
-    //     ]);
-       
-
-    //     $dispatchManagers = $dispatchRes['result'] ?? [];
-
-    //     if (empty($dispatchManagers)) {
-    //         Log::warning("❌ No dispatch.manager records found for driver $partnerName");
-    //         return response()->json(['success' => false, 'message' => 'No dispatch manager records found'], 404);
-    //     }
-
-        
-
-  
-
-    //     // Step 5: Queue a job for each dispatch.manager record
-    //     $fieldsToString = [
-    //        "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
-    //         "dispatch_type", 
-    //         "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", "origin_port_terminal_address", "destination_port_terminal_address", "arrival_date", "delivery_date",
-    //         "container_number", "seal_number", "booking_reference_no", "origin_forwarder_name", "destination_forwarder_name", "freight_booking_number",
-    //         "origin_container_location", "freight_bl_number",
-    //         "freight_forwarder_name", "shipper_phone", "consignee_phone", "dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", "pl_truck_plate_no",
-    //         "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
-    //         "pickup_date", "departure_date","origin", "destination", 
-    //     ];
-
-    //     $jobResponses = [];
-
-    //     foreach ($dispatchManagers  as $manager) {
-
-    //         foreach ($fieldsToString as $field){
-    //             if (!isset($manager[$field]) || $manager[$field] === null || $manager[$field] === false) {
-    //                 $manager[$field] = "";
-    //             } elseif (is_array($manager[$field]) && count($manager[$field]) > 1 && is_string($manager[$field][1])) {
-    //                 $manager[$field] = $manager[$field][1]; // ✅ convert [id, name] to name
-    //             } elseif (is_bool($manager[$field])) {
-    //                 $manager[$field] = $manager[$field] ? "true" : "false";
-    //             } else {
-    //                 $manager[$field] = (string) $manager[$field];
-    //             }
-    //         }
-
-    //         $jobRes = jsonRpcRequest("$url/job_dispatcher/queue_job", [
-    //             'jsonrpc' => '2.0',
-    //             'method' => 'call',
-    //             'params' => [
-    //                 'model' => 'dispatch.manager',
-    //                 'id' => $manager['id'],
-    //                 'method' => 'run_laravel_job',
-    //             ],
-    //             'id' => 5
-    //         ]);
-
-            
-
-    //         $jobResponses[] = $manager;
-    //     }
-
-    //     // ✅ Final return
-    //     return response()->json([
-    //         'data' => [
-    //             'transactions' => $jobResponses
-    //         ]
-    //     ]);
-    // }
 
     public function getHistory(Request $request)
     {
@@ -1680,49 +1464,49 @@ class TransactionController extends Controller
                                 $resolved_id = $template_id[0]['res_id'];
                                 Log::info("📩 Template ID resolved: $resolved_id for $template_xml_id");
 
-                                $send_email = [
-                                    "jsonrpc" => "2.0",
-                                    "method" => "call",
-                                    "params" => [
-                                        "service" => "object",
-                                        "method" => "execute_kw",
-                                        "args" => [
-                                            $db,
-                                            $uid,
-                                            $odooPassword,
-                                            "mail.template",
-                                            "send_mail",
-                                            [
-                                                $resolved_id,
-                                                $milestoneIdToUpdate,
-                                                true
-                                            ]
-                                        ]
-                                    ],
-                                    "id" => 6
-                                ];
+                                // $send_email = [
+                                //     "jsonrpc" => "2.0",
+                                //     "method" => "call",
+                                //     "params" => [
+                                //         "service" => "object",
+                                //         "method" => "execute_kw",
+                                //         "args" => [
+                                //             $db,
+                                //             $uid,
+                                //             $odooPassword,
+                                //             "mail.template",
+                                //             "send_mail",
+                                //             [
+                                //                 $resolved_id,
+                                //                 $milestoneIdToUpdate,
+                                //                 true
+                                //             ]
+                                //         ]
+                                //     ],
+                                //     "id" => 6
+                                // ];
 
-                                $sendEmailResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
-                                    "http" => [
-                                        "header" => "Content-Type: application/json",
-                                        "method" => "POST",
-                                        "content" => json_encode($send_email),
-                                    ]
-                                ])), true);
+                                // $sendEmailResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
+                                //     "http" => [
+                                //         "header" => "Content-Type: application/json",
+                                //         "method" => "POST",
+                                //         "content" => json_encode($send_email),
+                                //     ]
+                                // ])), true);
 
-                                if(isset($sendEmailResponse['result']) && $sendEmailResponse['result']) {
-                                    Log::info("Milestone updated and email sent.");
-                                    return response()->json([
-                                        'success' => true,
-                                        'message' => 'Milestone updated and email sent successfully.',
-                                        'milestone_id' => $milestoneIdToUpdate,
-                                        'template_id' =>  $resolved_id,
+                                // if(isset($sendEmailResponse['result']) && $sendEmailResponse['result']) {
+                                //     Log::info("Milestone updated and email sent.");
+                                //     return response()->json([
+                                //         'success' => true,
+                                //         'message' => 'Milestone updated and email sent successfully.',
+                                //         'milestone_id' => $milestoneIdToUpdate,
+                                //         'template_id' =>  $resolved_id,
 
-                                    ], 200);
-                                } else {
-                                    Log::warning("Milestone update, but email is not sent", ['response' => $sendEmailResponse]);
-                                    return response()->json(['success' => true, 'message' => 'Milestsone updated, but email failed'], 200);
-                                }
+                                //     ], 200);
+                                // } else {
+                                //     Log::warning("Milestone update, but email is not sent", ['response' => $sendEmailResponse]);
+                                //     return response()->json(['success' => true, 'message' => 'Milestsone updated, but email failed'], 200);
+                                // }
                             } else {
                                 Log::error("Failed to resolve template XML ID $template_xml_id");
                                 return response()->json(['success' => false, 'message' => 'Template not found'], 500);
@@ -2097,49 +1881,49 @@ class TransactionController extends Controller
                                 $resolved_id = $template_id[0]['res_id'];
                                 Log::info("📩 Template ID resolved: $resolved_id for $template_xml_id");
 
-                                $send_email = [
-                                    "jsonrpc" => "2.0",
-                                    "method" => "call",
-                                    "params" => [
-                                        "service" => "object",
-                                        "method" => "execute_kw",
-                                        "args" => [
-                                            $db,
-                                            $uid,
-                                            $odooPassword,
-                                            "mail.template",
-                                            "send_mail",
-                                            [
-                                                $resolved_id,
-                                                $milestoneIdToUpdate,
-                                                true
-                                            ]
-                                        ]
-                                    ],
-                                    "id" => 6
-                                ];
+                                // $send_email = [
+                                //     "jsonrpc" => "2.0",
+                                //     "method" => "call",
+                                //     "params" => [
+                                //         "service" => "object",
+                                //         "method" => "execute_kw",
+                                //         "args" => [
+                                //             $db,
+                                //             $uid,
+                                //             $odooPassword,
+                                //             "mail.template",
+                                //             "send_mail",
+                                //             [
+                                //                 $resolved_id,
+                                //                 $milestoneIdToUpdate,
+                                //                 true
+                                //             ]
+                                //         ]
+                                //     ],
+                                //     "id" => 6
+                                // ];
 
-                                $sendEmailResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
-                                    "http" => [
-                                        "header" => "Content-Type: application/json",
-                                        "method" => "POST",
-                                        "content" => json_encode($send_email),
-                                    ]
-                                ])), true);
+                                // $sendEmailResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
+                                //     "http" => [
+                                //         "header" => "Content-Type: application/json",
+                                //         "method" => "POST",
+                                //         "content" => json_encode($send_email),
+                                //     ]
+                                // ])), true);
 
-                                if(isset($sendEmailResponse['result']) && $sendEmailResponse['result']) {
-                                    Log::info("Milestone updated and email sent.");
-                                    return response()->json([
-                                        'success' => true,
-                                        'message' => 'Milestone updated and email sent successfully.',
-                                        'milestone_id' => $milestoneIdToUpdate,
-                                        'template_id' =>  $resolved_id,
+                                // if(isset($sendEmailResponse['result']) && $sendEmailResponse['result']) {
+                                //     Log::info("Milestone updated and email sent.");
+                                //     return response()->json([
+                                //         'success' => true,
+                                //         'message' => 'Milestone updated and email sent successfully.',
+                                //         'milestone_id' => $milestoneIdToUpdate,
+                                //         'template_id' =>  $resolved_id,
 
-                                    ], 200);
-                                } else {
-                                    Log::warning("Milestone update, but email is not sent", ['response' => $sendEmailResponse]);
-                                    return response()->json(['success' => true, 'message' => 'Milestsone updated, but email failed'], 200);
-                                }
+                                //     ], 200);
+                                // } else {
+                                //     Log::warning("Milestone update, but email is not sent", ['response' => $sendEmailResponse]);
+                                //     return response()->json(['success' => true, 'message' => 'Milestsone updated, but email failed'], 200);
+                                // }
                             } else {
                                 Log::error("Failed to resolve template XML ID $template_xml_id");
                                 return response()->json(['success' => false, 'message' => 'Template not found'], 500);
