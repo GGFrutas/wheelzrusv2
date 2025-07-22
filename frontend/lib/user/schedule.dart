@@ -59,24 +59,25 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
   final fclPrefixes = {
     'ot': {
       'Full Container Load': {
-        'de': ['TEOT', 'TYOT'], // delivery, pickup
-        'pl': ['CLOT', 'TLOT'], // delivery, pickup
+        'de': {'delivery': 'TEOT', 'pickup': 'TYOT'} ,
+        'pl': {'delivery': 'CLOT', 'pickup': 'TLOT'},
       },
       'Less-Than-Container Load': {
-        'pl': ['LCLOT', 'LTEOT'],
+        'pl': {'delivery': 'LCLOT', 'pickup': 'LTEOT'} ,
       },
     },
     'dt': {
       'Full Container Load': {
-        'dl': ['CLDT', 'GYDT'],
-        'pe': ['CYDT', 'GLDT'],
+        'dl': {'delivery': 'CLDT','pickup': 'GYDT'},
+        'pe': {'delivery': 'CYDT', 'pickup':'GLDT'},
       },
       'Less-Than-Container Load': {
-        'dl': ['LCLDT', 'LGYDT'],
+        'dl': {'delivery': 'LCLDT','pickup': 'LGYDT'},
       },
     },
   };
 
+  final legs = ['de', 'pl', 'dl', 'pe'];
   final fieldCodeMap = {
     'de': transaction.deRequestNumber,
     'pl': transaction.plRequestNumber,
@@ -84,41 +85,67 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
     'pe': transaction.peRequestNumber,
   };
 
-  final requestNo = fieldCodeMap[legKey];
-  if (requestNo == null || requestNo.isEmpty) {
-    return {'pickup': null, 'delivery': null};
-  }
-
-  final expectedFclCodes = fclPrefixes[dispatchType]?[serviceType]?[legKey];
-  if (expectedFclCodes == null || expectedFclCodes.isEmpty) {
-    return {'pickup': null, 'delivery': null};
-  }
-
-  final deliveryFcl = expectedFclCodes[0];
-  final pickupFcl = expectedFclCodes.length > 1 ? expectedFclCodes[1] : null;
-
   MilestoneHistoryModel? pickup;
   MilestoneHistoryModel? delivery;
 
-  if (pickupFcl != null) {
-    pickup = history.firstWhere(
-      (h) =>
-          h.fclCode.trim().toUpperCase() == pickupFcl.toUpperCase() &&
-          h.dispatchId == dispatchId &&
-          h.serviceType == serviceType,
-      orElse: () => const MilestoneHistoryModel(id: -1, dispatchId: '', dispatchType: '', fclCode: '', scheduledDatetime: '', serviceType: ''),
-    );
-    if (pickup.id == -1) pickup = null;
-  }
+  for (final leg in legs) {
+    final requestNo = fieldCodeMap[leg];
+    if (requestNo == null || requestNo.isEmpty) continue;
 
-  delivery = history.firstWhere(
-    (h) =>
-        h.fclCode.trim().toUpperCase() == deliveryFcl.toUpperCase() &&
-        h.dispatchId == dispatchId &&
-        h.serviceType == serviceType,
-    orElse: () => const MilestoneHistoryModel(id: -1, dispatchId: '', dispatchType: '', fclCode: '', scheduledDatetime: '', serviceType: ''),
-  );
-  if (delivery.id == -1) delivery = null;
+    final fclMap = fclPrefixes[dispatchType]?[serviceType]?[leg];
+    if (fclMap == null) continue;
+
+
+    final pickupFcl = fclMap['pickup'];
+    final deliveryFcl = fclMap['delivery'];
+
+    // Find Pickup
+    if (pickupFcl != null) {
+      pickup = history.firstWhere(
+        (h) =>
+            h.fclCode.trim().toUpperCase() == pickupFcl.toUpperCase() &&
+            h.dispatchId == dispatchId &&
+            h.serviceType == serviceType,
+        orElse: () => const MilestoneHistoryModel(
+          id: -1,
+          dispatchId: '',
+          dispatchType: '',
+          fclCode: '',
+          scheduledDatetime: '',
+          serviceType: '',
+        ),
+      );
+      if (pickup.id == -1) pickup = null;
+    }
+
+    // Find Delivery
+    if (deliveryFcl != null) {
+      delivery = history.firstWhere(
+        (h) =>
+            h.fclCode.trim().toUpperCase() == deliveryFcl.toUpperCase() &&
+            h.dispatchId == dispatchId &&
+            h.serviceType == serviceType,
+        orElse: () => const MilestoneHistoryModel(
+          id: -1,
+          dispatchId: '',
+          dispatchType: '',
+          fclCode: '',
+          scheduledDatetime: '',
+          serviceType: '',
+        ),
+      );
+      if (delivery.id == -1) delivery = null;
+
+      if(pickup != null || delivery != null) {
+        pickup = pickup;
+        delivery = delivery;
+        break;
+      }
+    }
+
+    // If both found for this leg, stop
+    if (pickup != null || delivery != null) break;
+  }
 
   return {
     'pickup': pickup,

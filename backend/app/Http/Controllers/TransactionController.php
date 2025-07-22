@@ -1680,49 +1680,49 @@ class TransactionController extends Controller
                                 $resolved_id = $template_id[0]['res_id'];
                                 Log::info("📩 Template ID resolved: $resolved_id for $template_xml_id");
 
-                                $send_email = [
-                                    "jsonrpc" => "2.0",
-                                    "method" => "call",
-                                    "params" => [
-                                        "service" => "object",
-                                        "method" => "execute_kw",
-                                        "args" => [
-                                            $db,
-                                            $uid,
-                                            $odooPassword,
-                                            "mail.template",
-                                            "send_mail",
-                                            [
-                                                $resolved_id,
-                                                $milestoneIdToUpdate,
-                                                true
-                                            ]
-                                        ]
-                                    ],
-                                    "id" => 6
-                                ];
+                                // $send_email = [
+                                //     "jsonrpc" => "2.0",
+                                //     "method" => "call",
+                                //     "params" => [
+                                //         "service" => "object",
+                                //         "method" => "execute_kw",
+                                //         "args" => [
+                                //             $db,
+                                //             $uid,
+                                //             $odooPassword,
+                                //             "mail.template",
+                                //             "send_mail",
+                                //             [
+                                //                 $resolved_id,
+                                //                 $milestoneIdToUpdate,
+                                //                 true
+                                //             ]
+                                //         ]
+                                //     ],
+                                //     "id" => 6
+                                // ];
 
-                                $sendEmailResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
-                                    "http" => [
-                                        "header" => "Content-Type: application/json",
-                                        "method" => "POST",
-                                        "content" => json_encode($send_email),
-                                    ]
-                                ])), true);
+                                // $sendEmailResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
+                                //     "http" => [
+                                //         "header" => "Content-Type: application/json",
+                                //         "method" => "POST",
+                                //         "content" => json_encode($send_email),
+                                //     ]
+                                // ])), true);
 
-                                if(isset($sendEmailResponse['result']) && $sendEmailResponse['result']) {
-                                    Log::info("Milestone updated and email sent.");
-                                    return response()->json([
-                                        'success' => true,
-                                        'message' => 'Milestone updated and email sent successfully.',
-                                        'milestone_id' => $milestoneIdToUpdate,
-                                        'template_id' =>  $resolved_id,
+                                // if(isset($sendEmailResponse['result']) && $sendEmailResponse['result']) {
+                                //     Log::info("Milestone updated and email sent.");
+                                //     return response()->json([
+                                //         'success' => true,
+                                //         'message' => 'Milestone updated and email sent successfully.',
+                                //         'milestone_id' => $milestoneIdToUpdate,
+                                //         'template_id' =>  $resolved_id,
 
-                                    ], 200);
-                                } else {
-                                    Log::warning("Milestone update, but email is not sent", ['response' => $sendEmailResponse]);
-                                    return response()->json(['success' => true, 'message' => 'Milestsone updated, but email failed'], 200);
-                                }
+                                //     ], 200);
+                                // } else {
+                                //     Log::warning("Milestone update, but email is not sent", ['response' => $sendEmailResponse]);
+                                //     return response()->json(['success' => true, 'message' => 'Milestsone updated, but email failed'], 200);
+                                // }
                             } else {
                                 Log::error("Failed to resolve template XML ID $template_xml_id");
                                 return response()->json(['success' => false, 'message' => 'Template not found'], 500);
@@ -2097,49 +2097,49 @@ class TransactionController extends Controller
                                 $resolved_id = $template_id[0]['res_id'];
                                 Log::info("📩 Template ID resolved: $resolved_id for $template_xml_id");
 
-                                $send_email = [
-                                    "jsonrpc" => "2.0",
-                                    "method" => "call",
-                                    "params" => [
-                                        "service" => "object",
-                                        "method" => "execute_kw",
-                                        "args" => [
-                                            $db,
-                                            $uid,
-                                            $odooPassword,
-                                            "mail.template",
-                                            "send_mail",
-                                            [
-                                                $resolved_id,
-                                                $milestoneIdToUpdate,
-                                                true
-                                            ]
-                                        ]
-                                    ],
-                                    "id" => 6
-                                ];
+                                // $send_email = [
+                                //     "jsonrpc" => "2.0",
+                                //     "method" => "call",
+                                //     "params" => [
+                                //         "service" => "object",
+                                //         "method" => "execute_kw",
+                                //         "args" => [
+                                //             $db,
+                                //             $uid,
+                                //             $odooPassword,
+                                //             "mail.template",
+                                //             "send_mail",
+                                //             [
+                                //                 $resolved_id,
+                                //                 $milestoneIdToUpdate,
+                                //                 true
+                                //             ]
+                                //         ]
+                                //     ],
+                                //     "id" => 6
+                                // ];
 
-                                $sendEmailResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
-                                    "http" => [
-                                        "header" => "Content-Type: application/json",
-                                        "method" => "POST",
-                                        "content" => json_encode($send_email),
-                                    ]
-                                ])), true);
+                                // $sendEmailResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
+                                //     "http" => [
+                                //         "header" => "Content-Type: application/json",
+                                //         "method" => "POST",
+                                //         "content" => json_encode($send_email),
+                                //     ]
+                                // ])), true);
 
-                                if(isset($sendEmailResponse['result']) && $sendEmailResponse['result']) {
-                                    Log::info("Milestone updated and email sent.");
-                                    return response()->json([
-                                        'success' => true,
-                                        'message' => 'Milestone updated and email sent successfully.',
-                                        'milestone_id' => $milestoneIdToUpdate,
-                                        'template_id' =>  $resolved_id,
+                                // if(isset($sendEmailResponse['result']) && $sendEmailResponse['result']) {
+                                //     Log::info("Milestone updated and email sent.");
+                                //     return response()->json([
+                                //         'success' => true,
+                                //         'message' => 'Milestone updated and email sent successfully.',
+                                //         'milestone_id' => $milestoneIdToUpdate,
+                                //         'template_id' =>  $resolved_id,
 
-                                    ], 200);
-                                } else {
-                                    Log::warning("Milestone update, but email is not sent", ['response' => $sendEmailResponse]);
-                                    return response()->json(['success' => true, 'message' => 'Milestsone updated, but email failed'], 200);
-                                }
+                                //     ], 200);
+                                // } else {
+                                //     Log::warning("Milestone update, but email is not sent", ['response' => $sendEmailResponse]);
+                                //     return response()->json(['success' => true, 'message' => 'Milestsone updated, but email failed'], 200);
+                                // }
                             } else {
                                 Log::error("Failed to resolve template XML ID $template_xml_id");
                                 return response()->json(['success' => false, 'message' => 'Template not found'], 500);
