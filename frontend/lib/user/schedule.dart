@@ -99,9 +99,12 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
     final pickupFcl = fclMap['pickup'];
     final deliveryFcl = fclMap['delivery'];
 
+    MilestoneHistoryModel? tempPickup;
+    MilestoneHistoryModel? tempDelivery;
+
     // Find Pickup
     if (pickupFcl != null) {
-      pickup = history.firstWhere(
+      tempPickup = history.firstWhere(
         (h) =>
             h.fclCode.trim().toUpperCase() == pickupFcl.toUpperCase() &&
             h.dispatchId == dispatchId &&
@@ -115,12 +118,12 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
           serviceType: '',
         ),
       );
-      if (pickup.id == -1) pickup = null;
+      if (tempPickup.id == -1) tempPickup = null;
     }
 
     // Find Delivery
     if (deliveryFcl != null) {
-      delivery = history.firstWhere(
+      tempDelivery = history.firstWhere(
         (h) =>
             h.fclCode.trim().toUpperCase() == deliveryFcl.toUpperCase() &&
             h.dispatchId == dispatchId &&
@@ -134,11 +137,11 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
           serviceType: '',
         ),
       );
-      if (delivery.id == -1) delivery = null;
+      if (tempDelivery.id == -1) tempDelivery = null;
 
       if(pickup != null || delivery != null) {
-        pickup = pickup;
-        delivery = delivery;
+        pickup = tempPickup;
+        delivery = tempDelivery;
         break;
       }
     }
