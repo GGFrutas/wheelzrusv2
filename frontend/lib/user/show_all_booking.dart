@@ -308,7 +308,6 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
                 "Accepted",
                 "Pending",
                 "Assigned",
-                "Completed"
               ].contains(tx.requestStatus);
 
               if (!isOngoing) return false;
