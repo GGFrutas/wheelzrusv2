@@ -20,67 +20,98 @@ import 'package:frontend/notifiers/auth_notifier.dart';
 // part 'transaction_provider.g.dart';
 
 // Fetch data from the API
-Future<List<Transaction>> fetchTransactions(FutureProviderRef<List<Transaction>> ref, {required uid}) async {
+// Future<List<Transaction>> fetchTransactions(FutureProviderRef<List<Transaction>> ref, {required uid}) async {
  
    
-  final password = ref.watch(authNotifierProvider).password ?? '';
-  final baseUrl = ref.watch(baseUrlProvider);
-  final login = ref.watch(authNotifierProvider).login ?? '';
+//   final password = ref.watch(authNotifierProvider).password ?? '';
+//   final baseUrl = ref.watch(baseUrlProvider);
+//   final login = ref.watch(authNotifierProvider).login ?? '';
 
+
+//   if (uid == null || uid.isEmpty) {
+//     throw Exception('UID is missing. Please log in.');
+//   }
+//   // print('✅ Retrieved UID: $uid'); // Debugging UID
+
+//   final response = await http.get(
+//     Uri.parse('$baseUrl/api/odoo/booking?uid=$uid'),
+//     headers: {
+//       'Content-Type': 'application/json',
+//       'Accept': 'application/json',
+//       'password': password,
+//       'login': login
+//     },
+//   );
+
+
+//   if (response.statusCode == 200) {
+//     if (response.body.isEmpty) {
+//       // print("🚨 Empty response body.");
+//       throw Exception('Empty response body.');
+//     }
+//     final decodedData = json.decode(response.body);
+//     // print("🔍 Decoded Response: $decodedData"); // Debugging
+
+//     if (decodedData is Map && decodedData.containsKey("data")) {
+//       final data = decodedData["data"];
+
+//       // print("🔍 Data object: $data"); // Debugging: Print the entire "data" object
+
+//       if (data is Map) {
+//         if (data.containsKey("transactions")) {
+//           // print("🔍 'transactions' found: ${data['transactions']}"); // Debugging
+          
+//           final transactions = data["transactions"];
+
+//           // Check what type "transactions" actually is
+//           // print("🔍 Type of 'transactions': ${transactions.runtimeType}");
+
+//           if (transactions is Map<String, dynamic>) {
+//             final transactionsList = transactions.values.toList();
+//             // print("✅ Parsed transactions count: ${transactionsList.length}");
+//             return transactionsList.map((json) => Transaction.fromJson(json)).toList();
+//           } 
+//           else if (transactions is List) {
+//             // print("✅ Transactions is a List with ${transactions.length} items.");
+//             return transactions.map((json) => Transaction.fromJson(json)).toList();
+//           } 
+          
+//         } 
+//       } 
+//     }
+//   }
+//   throw Exception("Unable to fetch data.");
+// }
+Future<List<Transaction>> fetchFilteredTransactions({
+  required FutureProviderRef<List<Transaction>> ref,
+  required String endpoint,
+}) async {
+  final baseUrl = ref.watch(baseUrlProvider);
+  final auth = ref.watch(authNotifierProvider);
+  final uid = auth.uid;
+  final password = auth.password ?? '';
+  final login = auth.login ?? '';
 
   if (uid == null || uid.isEmpty) {
     throw Exception('UID is missing. Please log in.');
   }
-  // print('✅ Retrieved UID: $uid'); // Debugging UID
 
-  final response = await http.get(
-    Uri.parse('$baseUrl/api/odoo/booking?uid=$uid'),
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-      'password': password,
-      'login': login
-    },
-  );
+  final url = '$baseUrl/api/odoo/booking/$endpoint?uid=$uid';
 
+  final response = await http.get(Uri.parse(url), headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'password': password,
+    'login': login,
+  });
 
   if (response.statusCode == 200) {
-    if (response.body.isEmpty) {
-      // print("🚨 Empty response body.");
-      throw Exception('Empty response body.');
-    }
-    final decodedData = json.decode(response.body);
-    // print("🔍 Decoded Response: $decodedData"); // Debugging
-
-    if (decodedData is Map && decodedData.containsKey("data")) {
-      final data = decodedData["data"];
-
-      // print("🔍 Data object: $data"); // Debugging: Print the entire "data" object
-
-      if (data is Map) {
-        if (data.containsKey("transactions")) {
-          // print("🔍 'transactions' found: ${data['transactions']}"); // Debugging
-          
-          final transactions = data["transactions"];
-
-          // Check what type "transactions" actually is
-          // print("🔍 Type of 'transactions': ${transactions.runtimeType}");
-
-          if (transactions is Map<String, dynamic>) {
-            final transactionsList = transactions.values.toList();
-            // print("✅ Parsed transactions count: ${transactionsList.length}");
-            return transactionsList.map((json) => Transaction.fromJson(json)).toList();
-          } 
-          else if (transactions is List) {
-            // print("✅ Transactions is a List with ${transactions.length} items.");
-            return transactions.map((json) => Transaction.fromJson(json)).toList();
-          } 
-          
-        } 
-      } 
-    }
+    final decoded = json.decode(response.body);
+    final transactions = decoded['data']['transactions'] as List;
+    return transactions.map((json) => Transaction.fromJson(json)).toList();
   }
-  throw Exception("Unable to fetch data.");
+
+  throw Exception("Failed to fetch filtered transactions: ${response.statusCode}");
 }
 
 // Future<Transaction> fetchTransactionDetails(FutureProviderRef<List<Transaction>> ref, {required uid, required bookingId}) async {
@@ -129,38 +160,6 @@ final transactionDetailProvider = FutureProvider.family<Transaction, Map<String,
 });
 
 
-// Future<Transaction> fetchTransactionStatus(WidgetRef ref, String baseUrl, String transactionId) async {
-//   try {
-//     // print("Fetching Transactions status for ID : $transactionId");
-//     final uid = ref.watch(authNotifierProvider).uid;
-//     final password = ref.watch(authNotifierProvider).password ?? '';
-//     final login = ref.watch(authNotifierProvider).login ?? '';
-    
-//     if (uid == null || uid.isEmpty) {
-//       throw Exception('UID is missing. Please log in.');
-//     }
-
-//     final response = await http.get(
-//       Uri.parse('$baseUrl/api/odoo/booking?uid=$uid&transaction_id=$transactionId'),
-//       headers: {
-//         'Content-Type': 'application/json',
-//         'Accept': 'application/json',
-//         'password': password,
-//         'login': login
-//       },
-//     );
-
-//     if (response.statusCode == 200) {
-//       final decodeData = json.decode(response.body);
-//       if (decodeData is Map && decodeData.containsKey("transaction")) {
-//         return Transaction.fromJson(decodeData["transaction"]);
-//       }
-//     }
-//   } catch (e) {
-//     throw Exception("Error fetching transaction status: $e");
-//   }
-//   throw Exception("Unexpected error: Transaction not found. here?");
-// }
 Future<Transaction> fetchTransactionStatus(WidgetRef ref, String baseUrl, String transactionId) async {
   try {
     final uid = ref.watch(authNotifierProvider).uid;
@@ -227,49 +226,169 @@ final bookingProvider = FutureProvider<List<Transaction>>((ref) async {
 
   // print('✅ Retrieved UID in bookingProvider: $uid'); // Debugging
 
-  return fetchTransactions(ref, uid: uid); // ✅ Pass uid properly
+  return fetchFilteredTransactions(ref: ref, endpoint: 'today'); // Provide required named parameters
 });
 
 final filteredItemsProvider = FutureProvider<List<Transaction>>((ref) async {
-  final transactions = await ref.watch(bookingProvider.future);
-  // final authPartnerId = ref.watch(authNotifierProvider).partnerId;
+  // final transactions = await ref.watch(bookingProvider.future);
+  // // final authPartnerId = ref.watch(authNotifierProvider).partnerId;
 
-  // print("🔍 Total transactions before filtering: ${transactions.length}");
+  // // print("🔍 Total transactions before filtering: ${transactions.length}");
 
-  final filtered = transactions.where((t) {
+  // final now = DateTime.now();
+  // final today = DateTime(now.year, now.month, now.day);
+  // final tomorrow = today.add(const Duration(days: 1));
+
+  // bool isTodayOrTomorrow(String? rawDate) {
+  //   if (rawDate == null || rawDate.isEmpty) return false;
+
+  //   try {
+  //     final parsed = DateTime.parse(rawDate);
+  //     final d = DateTime(parsed.year, parsed.month, parsed.day);
+  //     return d == today || d == tomorrow;
+  //   } catch (e) {
+  //     return false;
+  //   }
+  // }
+
+  // final filtered = transactions.where((t) {
     
-    final isAllPending =  t.deRequestStatus == 'Pending' || t.deRequestStatus == 'Accepted' ||
-                          t.deRequestStatus == 'Rejected' || t.deRequestStatus == 'Completed' || t.deRequestStatus == 'Ongoing' ||
-                          // t.deTruckDriverName == authPartnerId || 
+  //   final isAllPending =  t.deRequestStatus == 'Pending' || t.deRequestStatus == 'Accepted' ||
+  //                         t.deRequestStatus == 'Rejected' || t.deRequestStatus == 'Completed' || t.deRequestStatus == 'Ongoing' ||
+  //                         // t.deTruckDriverName == authPartnerId || 
 
-                          t.plRequestStatus == 'Pending' || t.plRequestStatus == 'Accepted' ||
-                          t.plRequestStatus == 'Rejected' || t.plRequestStatus == 'Completed' || t.plRequestStatus == 'Ongoing' ||
-                          // t.plTruckDriverName == authPartnerId ||
+  //                         t.plRequestStatus == 'Pending' || t.plRequestStatus == 'Accepted' ||
+  //                         t.plRequestStatus == 'Rejected' || t.plRequestStatus == 'Completed' || t.plRequestStatus == 'Ongoing' ||
+  //                         // t.plTruckDriverName == authPartnerId ||
 
-                          t.dlRequestStatus == 'Pending' || t.dlRequestStatus == 'Accepted' ||
-                          t.dlRequestStatus == 'Rejected' || t.dlRequestStatus == 'Completed' || t.dlRequestStatus == 'Ongoing' ||
-                          // t.dlTruckDriverName == authPartnerId ||
+  //                         t.dlRequestStatus == 'Pending' || t.dlRequestStatus == 'Accepted' ||
+  //                         t.dlRequestStatus == 'Rejected' || t.dlRequestStatus == 'Completed' || t.dlRequestStatus == 'Ongoing' ||
+  //                         // t.dlTruckDriverName == authPartnerId ||
 
-                          t.peRequestStatus == 'Pending' || t.peRequestStatus == 'Accepted' ||
-                          t.peRequestStatus == 'Rejected' || t.peRequestStatus == 'Completed'  || t.peRequestStatus == 'Ongoing';
-                          // t.peTruckDriverName == authPartnerId;
-    // final isAllPending = [
-    //   if(t.deTruckDriverName == authPartnerId) "de",
-    //   if(t.plTruckDriverName == authPartnerId) "pl",
-    //   if(t.dlTruckDriverName == authPartnerId) "dl",
-    //   if(t.peTruckDriverName == authPartnerId) "pe",
-    // ];
-    // if(isAllPending.isNotEmpty){
-    //   print("Assigned to: ${isAllPending.first} for ${t.id}");
-    //   return true;
-    // }
+  //                         t.peRequestStatus == 'Pending' || t.peRequestStatus == 'Accepted' ||
+  //                         t.peRequestStatus == 'Rejected' || t.peRequestStatus == 'Completed'  || t.peRequestStatus == 'Ongoing';
+  //                         // t.peTruckDriverName == authPartnerId;
+
+  //   final arrivalMatchDate = isTodayOrTomorrow(t.arrivalDate);
+  //   final departureMatchDate = isTodayOrTomorrow(t.departureDate);
 
 
-    final isNotFFDispatch = t.dispatchType != "ff";
+  //   final isNotFFDispatch = t.dispatchType != "ff";
 
-    return isAllPending && isNotFFDispatch;
-  }).toList();
+  //   return isAllPending && isNotFFDispatch && (arrivalMatchDate || departureMatchDate);
+  // }).toList();
 
-  return filtered;
+  return fetchFilteredTransactions(ref: ref, endpoint: 'today');
+});
+
+final filteredItemsProviderForTransactionScreen = FutureProvider<List<Transaction>>((ref) async {
+  // final transactions = await ref.watch(bookingProvider.future);
+  // // final authPartnerId = ref.watch(authNotifierProvider).partnerId;
+
+  // // print("🔍 Total transactions before filtering: ${transactions.length}");
+
+  // final filtered = transactions.where((t) {
+    
+  //   final isAllPending =   t.deRequestStatus == 'Ongoing' ||
+  //                         // t.deTruckDriverName == authPartnerId || 
+
+  //                        t.plRequestStatus == 'Ongoing' ||
+  //                         // t.plTruckDriverName == authPartnerId ||
+
+  //                        t.dlRequestStatus == 'Ongoing' ||
+  //                         // t.dlTruckDriverName == authPartnerId ||
+
+  //                         t.peRequestStatus == 'Ongoing';
+  //                         // t.peTruckDriverName == authPartnerId;
+  
+
+  //   final isNotFFDispatch = t.dispatchType != "ff";
+
+  //   return isAllPending && isNotFFDispatch ;
+  // }).toList();
+
+  // return filtered;
+  return fetchFilteredTransactions(ref: ref, endpoint: 'ongoing');
+});
+
+final filteredItemsProviderForHistoryScreen = FutureProvider<List<Transaction>>((ref) async {
+  // final transactions = await ref.watch(bookingProvider.future);
+  // // final authPartnerId = ref.watch(authNotifierProvider).partnerId;
+
+  // // print("🔍 Total transactions before filtering: ${transactions.length}");
+
+  // final filtered = transactions.where((t) {
+    
+  //  final isAllPending =  t.deRequestStatus == 'Rejected' || t.deRequestStatus == 'Completed' ||
+  //                         // t.deTruckDriverName == authPartnerId || 
+                         
+  //                         t.plRequestStatus == 'Rejected' || t.plRequestStatus == 'Completed' || 
+  //                         // t.plTruckDriverName == authPartnerId ||
+
+  //                         t.dlRequestStatus == 'Rejected' || t.dlRequestStatus == 'Completed' || 
+  //                         // t.dlTruckDriverName == authPartnerId ||
+
+  //                         t.peRequestStatus == 'Rejected' || t.peRequestStatus == 'Completed' ;
+  
+
+  //   final isNotFFDispatch = t.dispatchType != "ff";
+
+  //   return isAllPending && isNotFFDispatch ;
+  // }).toList();
+
+  // return filtered;
+  return fetchFilteredTransactions(ref: ref, endpoint: 'history');
+});
+
+final allTransactionProvider = FutureProvider<List<Transaction>>((ref) async {
+  // final transactions = await ref.watch(bookingProvider.future);
+  // // final authPartnerId = ref.watch(authNotifierProvider).partnerId;
+
+  // // print("🔍 Total transactions before filtering: ${transactions.length}");
+
+  // final now = DateTime.now();
+  // final today = DateTime(now.year, now.month, now.day);
+  // final tomorrow = today.add(const Duration(days: 1));
+
+  // bool isTodayOrTomorrow(String? rawDate) {
+  //   if (rawDate == null || rawDate.isEmpty) return false;
+
+  //   try {
+  //     final parsed = DateTime.parse(rawDate);
+  //     final d = DateTime(parsed.year, parsed.month, parsed.day);
+  //     return d == today || d == tomorrow;
+  //   } catch (e) {
+  //     return false;
+  //   }
+  // }
+
+  // final filtered = transactions.where((t) {
+    
+  //   final isAllPending =  t.deRequestStatus == 'Pending' || t.deRequestStatus == 'Accepted' ||
+  //                         t.deRequestStatus == 'Rejected' || t.deRequestStatus == 'Completed' || t.deRequestStatus == 'Ongoing' ||
+  //                         // t.deTruckDriverName == authPartnerId || 
+
+  //                         t.plRequestStatus == 'Pending' || t.plRequestStatus == 'Accepted' ||
+  //                         t.plRequestStatus == 'Rejected' || t.plRequestStatus == 'Completed' || t.plRequestStatus == 'Ongoing' ||
+  //                         // t.plTruckDriverName == authPartnerId ||
+
+  //                         t.dlRequestStatus == 'Pending' || t.dlRequestStatus == 'Accepted' ||
+  //                         t.dlRequestStatus == 'Rejected' || t.dlRequestStatus == 'Completed' || t.dlRequestStatus == 'Ongoing' ||
+  //                         // t.dlTruckDriverName == authPartnerId ||
+
+  //                         t.peRequestStatus == 'Pending' || t.peRequestStatus == 'Accepted' ||
+  //                         t.peRequestStatus == 'Rejected' || t.peRequestStatus == 'Completed'  || t.peRequestStatus == 'Ongoing';
+  //                         // t.peTruckDriverName == authPartnerId;
+
+  //   final arrivalMatchDate = isTodayOrTomorrow(t.arrivalDate);
+  //   final departureMatchDate = isTodayOrTomorrow(t.departureDate);
+
+
+  //   final isNotFFDispatch = t.dispatchType != "ff";
+
+  //   return isAllPending && isNotFFDispatch && (arrivalMatchDate || departureMatchDate);
+  // }).toList();
+
+  return fetchFilteredTransactions(ref: ref, endpoint: 'all-bookings');
 });
 

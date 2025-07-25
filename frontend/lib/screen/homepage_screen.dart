@@ -311,10 +311,20 @@ class HomePage extends ConsumerWidget {
             ],
           ),
         ),
-        body: IndexedStack(
-          index: selectedIndex,
-          children: pages,
-        ),
+       body: Builder(
+        builder: (_) {
+          switch (selectedIndex) {
+            case 0:
+              return TransactionScreen(user: user);
+            case 1:
+              return HomepageScreen(user: user);
+            case 2:
+              return HistoryScreen(user: user);
+            default:
+              return const SizedBox.shrink();
+          }
+        },
+      ),
       bottomNavigationBar: const NavigationMenu(),
       ),
     );

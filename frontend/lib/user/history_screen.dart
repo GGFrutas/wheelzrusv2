@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:frontend/models/transaction_model.dart';
 import 'package:frontend/notifiers/auth_notifier.dart';
 import 'package:frontend/provider/accepted_transaction.dart' as accepted_transaction;
 import 'package:frontend/provider/reject_provider.dart';
@@ -25,17 +26,31 @@ class HistoryScreen extends ConsumerStatefulWidget{
 
 class _HistoryPageState extends ConsumerState<HistoryScreen> {
   String? uid;
-  //  final Map<String, bool> _loadingStates = {};
-   Future<void> _refreshTransaction() async {
+ Future<List<Transaction>>? _futureTransactions;
+
+ @override
+void initState() {
+  super.initState();
+  Future.microtask(() {
+    setState(() {
+      _futureTransactions = ref.read(filteredItemsProviderForHistoryScreen.future);
+    });
+  });
+}
+
+  Future<void> _refreshTransaction() async {
     print("Refreshing transactions");
     try {
-      
-      ref.invalidate(bookingProvider);
+      ref.invalidate(filteredItemsProviderForHistoryScreen);
+      setState(() {
+        _futureTransactions = ref.read(filteredItemsProviderForHistoryScreen.future);
+      });
       print("REFRESHED!");
-    }catch (e){
-      print('DID NOT REFRESHED!');
+    } catch (e) {
+      print('DID NOT REFRESH!');
     }
-   }
+  }
+
 
    String formatDateTime(String? dateString) {
     if (dateString == null || dateString.isEmpty) return "N/A"; // Handle null values
@@ -64,7 +79,7 @@ class _HistoryPageState extends ConsumerState<HistoryScreen> {
   @override
   Widget build(BuildContext context) {
      
-    final transactionold = ref.watch(filteredItemsProvider);
+  
     
     final acceptedTransaction = ref.watch(accepted_transaction.acceptedTransactionProvider);
 
@@ -127,45 +142,29 @@ class _HistoryPageState extends ConsumerState<HistoryScreen> {
             Expanded (
               child: RefreshIndicator(
                 onRefresh: _refreshTransaction,
-                child: transactionold.when(
-                  data: (transactionList) {
-                    // If transactionList is null, we ensure it's an empty list to prevent errors
-                    
-                    final validTransactionList = transactionList;
-
-                    print("Valid Transaction List: ${validTransactionList.length}");
-
-                    // If there are no transactions, show a message
-                    if (validTransactionList.isEmpty) {
-                      return CustomScrollView(
-                          physics: const AlwaysScrollableScrollPhysics(), // Allow scrolling even if the list is empty
-                          slivers: [
-                            SliverFillRemaining(
-                              hasScrollBody: false,
-                              child: Center(
-                                child: Text(
-                                  'No history yet.',
-                                  style: AppTextStyles.subtitle,
-                                ),
-                              ),
-                            )
-                          ]
-                        );
+                child: FutureBuilder<List<Transaction>>(
+                  future: _futureTransactions,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
                     }
+                    if (snapshot.hasError) {
+                      return Center(child: Text('Error: ${snapshot.error}'));
+                    }
+
+                    final transactionList = snapshot.data ?? [];
+
 
                     // If acceptedTransaction is a list, convert it to a Set of IDs for faster lookup
                     final acceptedTransactionIds = acceptedTransaction;
 
                     // Filtered list excluding transactions with IDs in acceptedTransaction
-                    final transaction = validTransactionList.where((t) {
+                    final transaction = transactionList.where((t) {
                       final key = "${t.id}-${t.requestNumber}";
                         return !acceptedTransactionIds.contains(key);
                     }).toList();
 
-                      // If no filtered transactions, show a message
-                    if (transaction.isEmpty) {
-                      return const Center(child: Text('No transactions available that have not been accepted.'));
-                    }
+                   
                     final authPartnerId = ref.watch(authNotifierProvider).partnerId;
                     final driverId = authPartnerId?.toString();
 
@@ -417,8 +416,7 @@ class _HistoryPageState extends ConsumerState<HistoryScreen> {
                       },
                     );
                   }, 
-                  loading: () => const Center(child: CircularProgressIndicator()),  // Show loading spinner while fetching data
-                  error: (e, stack) => Center(child: Text('Error: $e')),  
+                  // Remove loading and error named parameters, handle in builder
                 ),  
               )
             )

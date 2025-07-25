@@ -183,7 +183,7 @@ class Transaction {
   });
 
   factory Transaction.fromJson(Map<String, dynamic> json) {
-    print('knii Raw transaction JSON: $json');
+    // print('knii Raw transaction JSON: $json');
 
     return Transaction(
       id: json['id'] ?? 0,

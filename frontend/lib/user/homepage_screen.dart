@@ -17,6 +17,7 @@ import 'package:frontend/provider/transaction_provider.dart';
 import 'package:frontend/provider/reject_provider.dart';
 import 'package:frontend/theme/colors.dart';
 import 'package:frontend/theme/text_styles.dart';
+import 'package:frontend/user/show_all_booking.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:frontend/user/transaction_details.dart';
 import 'package:intl/intl.dart';
@@ -168,6 +169,39 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                   autoPlayInterval: const Duration(seconds: 4),
                 ),
               ),
+              const SizedBox(height: 20),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical:10.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Bookings',
+                      style:AppTextStyles.title.copyWith(
+                        color: mainColor,
+                        fontWeight: FontWeight.bold
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => AllBookingScreen(uid: uid ?? '', transaction: null,),
+                          ),
+                        );
+                      },
+                      child: Text (
+                        "Show All",
+                        style:AppTextStyles.body.copyWith(
+                          color: mainColor,
+                          fontWeight: FontWeight.bold
+                        ),
+                      )
+                    )
+                  ],
+                ),
+              ),
 
               const SizedBox(height: 20),
 
@@ -195,9 +229,11 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                               hasScrollBody: false,
                               child: Center(
                                 child: Text(
-                                  'No transactions available.',
+                                  'No transactions for the next two days.',
                                   style: AppTextStyles.subtitle,
+                                  textAlign: TextAlign.center,
                                 ),
+                                
                               ),
                             )
                           ]
@@ -348,12 +384,40 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                             hasScrollBody: false,
                             child: Center(
                               child: Text(
-                                'No transactions available.',
+                                'No transactions for July 23 and July 24.',
                                 style: AppTextStyles.subtitle,
                               ),
                             ),
                           )
                           else
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical:10.0),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Bookings',
+                                    style:AppTextStyles.subtitle.copyWith(
+                                      color: mainColor
+                                    ),
+                                  ),
+                                  GestureDetector(
+                                    onTap: () {
+
+                                    },
+                                    child: Text (
+                                      "Show All",
+                                      style:AppTextStyles.subtitle.copyWith(
+                                        color: mainColor
+                                      ),
+                                    )
+                                  )
+                                ],
+                              ),
+                            )
+                          ),
+                          
                           SliverList(
                             delegate: SliverChildBuilderDelegate(
                               (context, index) {

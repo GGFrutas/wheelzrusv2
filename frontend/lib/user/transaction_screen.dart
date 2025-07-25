@@ -93,7 +93,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
   @override
   Widget build(BuildContext context) {
      
-    final transactionold = ref.watch(filteredItemsProvider);
+    final transactionold = ref.watch(filteredItemsProviderForTransactionScreen);
     
     final acceptedTransaction = ref.watch(accepted_transaction.acceptedTransactionProvider);
 
