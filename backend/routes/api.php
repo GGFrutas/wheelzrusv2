@@ -25,7 +25,7 @@ Route::middleware([HandleCors::class])->group(function () {
     Route::post('logout', [AuthenticationController::class, 'logout'])->middleware('auth:sanctum');
     Route::put('update', [AuthenticationController::class, 'updateProfile'])->middleware('auth:sanctum');
     Route::get('/odoo/users', [AuthenticationController::class, 'getUser']);
-    Route::get('/odoo/booking', [TransactionController::class, 'getBooking']);
+    Route::get('/odoo/booking/today', [TransactionController::class, 'getTodayBooking']);
     Route::get('/odoo/history', [TransactionController::class, 'getHistory']);
     Route::get('/odoo/reason', [TransactionController::class, 'getRejectionReason']);
     Route::post('/odoo/{transactionId}/status', [TransactionController::class, 'updateStatus']);
@@ -34,5 +34,8 @@ Route::middleware([HandleCors::class])->group(function () {
     Route::post('/odoo/pod-accepted-to-ongoing', [TransactionController::class, 'uploadPOD']);
     Route::post('/odoo/pod-ongoing-to-complete', [TransactionController::class, 'uploadPOD_sec']);
 
+    Route::get('/odoo/booking/ongoing', [TransactionController::class, 'getOngoingBooking']);
+    Route::get('/odoo/booking/history', [TransactionController::class, 'getHistoryBooking']);
+    Route::get('/odoo/booking/all-bookings', [TransactionController::class, 'getAllBooking']);
 
 });

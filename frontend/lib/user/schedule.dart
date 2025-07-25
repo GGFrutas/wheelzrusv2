@@ -36,126 +36,142 @@ class ScheduleScreen extends ConsumerStatefulWidget {
 
 class _ScheduleState extends ConsumerState<ScheduleScreen> {
   late String uid;
+  MilestoneHistoryModel? schedule;
 
   @override
   void initState() {
     super.initState();
     uid = widget.uid; // Initialize uid
-    // schedule = getPickupAndDeliverySchedule(widget.transaction!) as MilestoneHistoryModel?;
   }
 
   String getNullableValue(String? value, {String fallback = ''}) {
     return value ?? fallback;
   }
-  MilestoneHistoryModel? schedule;
 
+   Map<String, MilestoneHistoryModel?> getPickupAndDeliverySchedule(Transaction? transaction) {
+    final dispatchType = transaction!.dispatchType;
+    final history = transaction.history;
+    final serviceType = transaction.serviceType;
+    final dispatchId = transaction.id;
+    final requestNumber = transaction.requestNumber;
 
-  Map<String, MilestoneHistoryModel?> getPickupAndDeliverySchedule(Transaction transaction) {
-  final dispatchType = transaction.dispatchType;
-  final history = transaction.history;
-  final serviceType = transaction.serviceType;
-  final dispatchId = transaction.id.toString();
-
-  final fclPrefixes = {
-    'ot': {
-      'Full Container Load': {
-        'de': {'delivery': 'TEOT', 'pickup': 'TYOT'} ,
-        'pl': {'delivery': 'CLOT', 'pickup': 'TLOT'},
+    final fclPrefixes = {
+      'ot': {
+        'Full Container Load': {
+          'de': {
+            'delivery': 'TEOT',
+            'pickup': 'TYOT'
+          },
+          'pl': {
+            'delivery': 'CLOT',
+            'pickup': 'TLOT'
+          },
+        },
+        'Less-Than-Container Load': {
+          'pl': {
+            'delivery': 'LCLOT',
+            'pickup': 'LTEOT'
+          },
+        },
       },
-      'Less-Than-Container Load': {
-        'pl': {'delivery': 'LCLOT', 'pickup': 'LTEOT'} ,
-      },
-    },
-    'dt': {
-      'Full Container Load': {
-        'dl': {'delivery': 'CLDT','pickup': 'GYDT'},
-        'pe': {'delivery': 'CYDT', 'pickup':'GLDT'},
-      },
-      'Less-Than-Container Load': {
-        'dl': {'delivery': 'LCLDT','pickup': 'LGYDT'},
-      },
-    },
-  };
+      'dt': {
+        'Full Container Load': {
+          'dl': {
+            'delivery': 'CLDT',
+            'pickup': 'GYDT'
+          },
+          'pe': {
+            'delivery': 'CYDT',
+            'pickup': 'GLDT'
+          },
+        },
+        'Less-Than-Container Load': {
+          'pl': {
+            'delivery': 'LCLOT',
+            'pickup': 'LTEOT'
+          },
+        }
+      }
+    };
 
-  final legs = ['de', 'pl', 'dl', 'pe'];
-  final fieldCodeMap = {
-    'de': transaction.deRequestNumber,
-    'pl': transaction.plRequestNumber,
-    'dl': transaction.dlRequestNumber,
-    'pe': transaction.peRequestNumber,
-  };
+    final fclCodeMap = {
+      'de': transaction.deRequestNumber,
+      'pl': transaction.plRequestNumber,
+      'dl': transaction.dlRequestNumber,
+      'pe': transaction.peRequestNumber,
+    };
 
-  MilestoneHistoryModel? pickup;
-  MilestoneHistoryModel? delivery;
-
-  for (final leg in legs) {
-    final requestNo = fieldCodeMap[leg];
-    if (requestNo == null || requestNo.isEmpty) continue;
-
-    final fclMap = fclPrefixes[dispatchType]?[serviceType]?[leg];
-    if (fclMap == null) continue;
-
-
-    final pickupFcl = fclMap['pickup'];
-    final deliveryFcl = fclMap['delivery'];
-
-    MilestoneHistoryModel? tempPickup;
-    MilestoneHistoryModel? tempDelivery;
-
-    // Find Pickup
-    if (pickupFcl != null) {
-      tempPickup = history.firstWhere(
-        (h) =>
-            h.fclCode.trim().toUpperCase() == pickupFcl.toUpperCase() &&
-            h.dispatchId == dispatchId &&
-            h.serviceType == serviceType,
-        orElse: () => const MilestoneHistoryModel(
-          id: -1,
-          dispatchId: '',
-          dispatchType: '',
-          fclCode: '',
-          scheduledDatetime: '',
-          serviceType: '',
-        ),
-      );
-      if (tempPickup.id == -1) tempPickup = null;
-    }
-
-    // Find Delivery
-    if (deliveryFcl != null) {
-      tempDelivery = history.firstWhere(
-        (h) =>
-            h.fclCode.trim().toUpperCase() == deliveryFcl.toUpperCase() &&
-            h.dispatchId == dispatchId &&
-            h.serviceType == serviceType,
-        orElse: () => const MilestoneHistoryModel(
-          id: -1,
-          dispatchId: '',
-          dispatchType: '',
-          fclCode: '',
-          scheduledDatetime: '',
-          serviceType: '',
-        ),
-      );
-      if (tempDelivery.id == -1) tempDelivery = null;
-
-      if(pickup != null || delivery != null) {
-        pickup = tempPickup;
-        delivery = tempDelivery;
+    String? matchingLegs;
+    for (final entry in fclCodeMap.entries) {
+      if (entry.value !=null && entry.value == requestNumber) {
+        matchingLegs = entry.key;
         break;
       }
     }
 
-    // If both found for this leg, stop
-    if (pickup != null || delivery != null) break;
-  }
+    print("Matching Leg for $requestNumber: $matchingLegs");
 
-  return {
-    'pickup': pickup,
-    'delivery': delivery,
-  };
-}
+    if(matchingLegs != null) {
+      final fclMap = fclPrefixes[dispatchType]?[serviceType]?[matchingLegs];
+      final pickupFcl = fclMap?['pickup'];
+      final deliveryFcl = fclMap?['delivery'];
 
+      MilestoneHistoryModel? pickupSchedule;
+      MilestoneHistoryModel? deliverySchedule;
+
+      if(pickupFcl != null) {
+        pickupSchedule = history.firstWhere(
+          (h) => 
+            h.fclCode.trim().toUpperCase() == pickupFcl.toUpperCase() &&
+            h.dispatchId == dispatchId.toString() &&
+            h.serviceType == serviceType,
+          orElse: () => const MilestoneHistoryModel(
+            id: -1,
+            dispatchId: '',
+            dispatchType: '',
+            fclCode: '',
+            scheduledDatetime: '',
+            serviceType: ''
+          ),
+        );
+        if(pickupSchedule.id == -1) pickupSchedule  = null;
+      }
+
+      if(deliveryFcl != null) {
+        deliverySchedule = history.firstWhere(
+          (h) => 
+            h.fclCode.trim().toUpperCase() == deliveryFcl.toUpperCase() &&
+            h.dispatchId == dispatchId.toString() &&
+            h.serviceType == serviceType,
+          orElse: () => const MilestoneHistoryModel(
+            id: -1,
+            dispatchId: '',
+            dispatchType: '',
+            fclCode: '',
+            scheduledDatetime: '',
+            serviceType: ''
+          ),
+        );
+        if(deliverySchedule.id == -1) deliverySchedule  = null;
+      }
+      return {
+        'pickup': pickupSchedule,
+        'delivery': deliverySchedule,
+      };
+    }
+    return {
+        'pickup': null,
+        'delivery': null,
+      };
+
+
+   }
+  
+
+  
+
+
+  
 
   
 
