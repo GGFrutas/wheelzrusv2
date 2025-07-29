@@ -384,39 +384,14 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                             hasScrollBody: false,
                             child: Center(
                               child: Text(
-                                'No transactions for July 23 and July 24.',
+                                'No transactions for the next two days.',
                                 style: AppTextStyles.subtitle,
                               ),
                             ),
                           )
                           else
-                          SliverToBoxAdapter(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical:10.0),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'Bookings',
-                                    style:AppTextStyles.subtitle.copyWith(
-                                      color: mainColor
-                                    ),
-                                  ),
-                                  GestureDetector(
-                                    onTap: () {
-
-                                    },
-                                    child: Text (
-                                      "Show All",
-                                      style:AppTextStyles.subtitle.copyWith(
-                                        color: mainColor
-                                      ),
-                                    )
-                                  )
-                                ],
-                              ),
-                            )
-                          ),
+                          
+                         
                           
                           SliverList(
                             delegate: SliverChildBuilderDelegate(
