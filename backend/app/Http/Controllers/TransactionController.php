@@ -1361,9 +1361,6 @@ class TransactionController extends Controller
         ]);
     }
    
-
-    
-
     public function getRejectionReason(Request $request)
     {
         $url = $this->url;
@@ -2204,6 +2201,7 @@ class TransactionController extends Controller
                                     [
                                         'actual_datetime' => $actualTime,
                                         'button_readonly' => true, 
+                                        'clicked_by' => $uid,
                                     ]
                                 ]
                             ]
@@ -2620,6 +2618,7 @@ class TransactionController extends Controller
                                     [
                                         'actual_datetime' => $actualTime,
                                         'button_readonly' => true, 
+                                        'clicked_by' => $uid,
                                     ]
                                 ]
                             ]

@@ -423,6 +423,10 @@ final timestamp = DateFormat("yyyy-MM-dd HH:mm:ss").format(adjustedTime);
                 // Navigate to home if system back button is pressed
                 ref.invalidate(bookingProvider);
                 ref.invalidate(filteredItemsProvider);
+                ref.invalidate(ongoingTransactionProvider);
+                ref.invalidate(filteredItemsProviderForTransactionScreen);
+                ref.invalidate(filteredItemsProviderForHistoryScreen);
+                ref.invalidate(allTransactionProvider);
                 Navigator.of(context).popUntil((route) => route.isFirst);
                 ref.read(navigationNotifierProvider.notifier).setSelectedIndex(0);
               }
@@ -469,6 +473,10 @@ final timestamp = DateFormat("yyyy-MM-dd HH:mm:ss").format(adjustedTime);
                           onPressed: () {
                             ref.invalidate(bookingProvider);
                             ref.invalidate(filteredItemsProvider);
+                            ref.invalidate(ongoingTransactionProvider);
+                            ref.invalidate(filteredItemsProviderForTransactionScreen);
+                            ref.invalidate(filteredItemsProviderForHistoryScreen);
+                            ref.invalidate(allTransactionProvider);
                             Navigator.of(context).popUntil((route) => route.isFirst);
                             ref.read(navigationNotifierProvider.notifier).setSelectedIndex(0);
                           },

@@ -250,7 +250,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                   ]
 
                 ],
-                const SizedBox(height: 12), // Add some space between sections
+                const SizedBox(height: 12), 
                 Container(
                   padding: const EdgeInsets.all(12.0),
                   child: Row(
@@ -276,6 +276,42 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                           ),
                           Text(
                             widget.transaction?.requestNumber ?? '',
+                            style: AppTextStyles.subtitle.copyWith(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: mainColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),// Add some space between sections
+                Container(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center, // Align top of icon and text
+                    children: [
+                      const Icon(
+                        Icons.check_circle,
+                        color: mainColor,
+                        size: 30,
+                      ),
+                      const SizedBox(width: 8), // Space between icon and text
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Space between label and value
+                          
+                          Text(
+                            "Dispatch Booking  Number",
+                            style: AppTextStyles.caption.copyWith(
+                              fontSize: 12,
+                              color: mainColor,
+                            ),
+                          ),
+                          Text(
+                            widget.transaction?.bookingRefNo ?? '',
                             style: AppTextStyles.subtitle.copyWith(
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
@@ -335,11 +371,11 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.center, // Center dots with the location pin tip
                             children: List.generate(3, (_) => const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 8.0), // Adjust spacing
+                              padding: EdgeInsets.symmetric(vertical: .0), // Adjust spacing
                               child: Icon(
                                 Icons.circle_rounded,
                                 color: mainColor,
-                                size: 10,
+                                size: 8,
                               ),
                             )),
                           ),
@@ -409,8 +445,8 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                                   )
                                 ),
                                 Text(
-                                  widget.transaction?.dispatchType == 'ot' ? "Departure Date" 
-                                  :  "Arrival Date",
+                                  widget.transaction?.dispatchType == 'ot' ? " Vessel Departure Date" 
+                                  :  "Vessel Arrival Date",
                                   style: AppTextStyles.caption.copyWith(
                                     color: mainColor,
                                   ),

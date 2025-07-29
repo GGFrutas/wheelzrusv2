@@ -77,7 +77,7 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
    bool sameWeekRange(DateTime? target, DateTime weekStart) {
     // Get the start of the week for both dates
     if (target == null) return false; // Handle null target date
-    final weekEnd = weekStart.add(const Duration(days: 6));
+    final weekEnd = weekStart.add(const Duration(days: 5));
     return target.isAfter(weekStart.subtract(const Duration(days: 1))) &&
         target.isBefore(weekEnd.add(const Duration(days: 1)));
    }
