@@ -39,41 +39,42 @@ class HomepageScreen extends ConsumerStatefulWidget {
 class _HomepageScreenState extends ConsumerState<HomepageScreen> {
   String? uid;
   //  final Map<String, bool> _loadingStates = {};
-   Future<void> _refreshTransaction() async {
+  Future<void> _refreshTransaction() async {
     print("Refreshing transactions");
     try {
-      
-      ref.invalidate(bookingProvider);
+      final future = ref.refresh(filteredItemsProvider.future);
+      await future; // Wait for the future to complete
       print("REFRESHED!");
     }catch (e){
       print('DID NOT REFRESHED!');
     }
    }
 
+
    final List<Map<String, String>> carouselItems = [
     {
       "title": "Start Driving Smarter Today.",
       "subtitle": "From Booking to Delivery — Seamless",
       "image": "assets/hand-drawn-transportation-truck-with-delivery-man.png",
-      "color": "#1C7E7B"
+      "color": "#FBC926"
     },
     {
       "title": "More Cargo. More Miles.More Pay.",
       "subtitle": "Book shipments. Accept jobs. Drive your way",
       "image": "assets/illustrated-transport-truck-delivery-side-view-front-view-red-color-delivery-truck.png",
-      "color": "#2D906F"
+      "color": "#ECC237"
     },
     {
       "title": "Loads at your fingertips.",
       "subtitle": "Browse, accept, and deliver — all in one app",
       "image": "assets/box-truck-with-delivery-man-standing-it-vector-illustration.png",
-      "color": "#40CA9C"
+      "color": "#FBDF26"
     },
     {
       "title": "All your Drivers need. In One App.",
       "subtitle": "Booking, tracking, payments, and support.",
       "image": "assets/delivery-truck-boxes-with-isometric-style.png",
-      "color": "#7DE4C2"
+      "color": "#FCE570"
     },
   ];
 
@@ -113,7 +114,7 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                     margin: const EdgeInsets.symmetric(horizontal: 8),
                     color: Color(int.parse(item['color']!.replaceFirst('#', '0xff'))),
                     child: Padding(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(8),
                       child: Row(
                         children: [
                           // 📝 Text column — don't constrain title
@@ -146,7 +147,7 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                             ),
                           ),
                           Container(
-                            height: 50,
+                            height: 70,
                             width: 100,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(12),
@@ -165,7 +166,7 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                   height: 150,
                   enlargeCenterPage: true,
                   autoPlay: true,
-                  viewportFraction: 0.85,
+                  viewportFraction: 0.95,
                   autoPlayInterval: const Duration(seconds: 4),
                 ),
               ),
@@ -314,7 +315,8 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                                 requestNumber: item.deRequestNumber,
                                 requestStatus: item.deRequestStatus,
                                 assignedDate:item.deAssignedDate,
-                                originAddress: "Deliver Empty Container to Shipper"
+                                originAddress: "Deliver Empty Container to Shipper",
+                                freightBookingNumber: item.freightBookingNumber,
                                 // truckPlateNumber: item.deTruckPlateNumber,
                               ),
                               // Second instance: Pickup from Shipper
@@ -328,6 +330,7 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                                 requestStatus: item.plRequestStatus,
                                 assignedDate:item.plAssignedDate,
                                 originAddress: descriptionMsg(item),
+                                freightBookingNumber:item.freightBookingNumber,
                                 // truckPlateNumber: item.plTruckPlateNumber,
                               ),
                           ];
@@ -344,7 +347,8 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                                 requestNumber: item.dlRequestNumber,
                                 requestStatus: item.dlRequestStatus,
                                 assignedDate:item.dlAssignedDate,
-                                originAddress: "Deliver Laden Container to Consignee"
+                                originAddress: "Deliver Laden Container to Consignee",
+                                freightBookingNumber:item.freightBookingNumber,
                                 // truckPlateNumber: item.dlTruckPlateNumber,
                               ),
                             // Second instance: Pickup from Consignee
@@ -356,7 +360,8 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                                 requestNumber: item.peRequestNumber,
                                 requestStatus: item.peRequestStatus,
                                 assignedDate:item.peAssignedDate,
-                                originAddress: "Pickup Empty Container from Consignee"
+                                originAddress: "Pickup Empty Container from Consignee",
+                                freightBookingNumber:item.freightBookingNumber,
                                 // truckPlateNumber: item.peTruckPlateNumber,
                               ),
                           ];  
@@ -373,6 +378,7 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
 
                       final ongoingTransactions = expandedTransactions
                         .where((tx) => tx.requestStatus == "Accepted" || tx.requestStatus == "Assigned" || tx.requestStatus == "Pending")
+                        .take(10)
                         .toList();
                      
                       
@@ -384,39 +390,13 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                             hasScrollBody: false,
                             child: Center(
                               child: Text(
-                                'No transactions for July 23 and July 24.',
+                                'No transactions for the next two days.',
                                 style: AppTextStyles.subtitle,
                               ),
                             ),
                           )
                           else
-                          SliverToBoxAdapter(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical:10.0),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'Bookings',
-                                    style:AppTextStyles.subtitle.copyWith(
-                                      color: mainColor
-                                    ),
-                                  ),
-                                  GestureDetector(
-                                    onTap: () {
-
-                                    },
-                                    child: Text (
-                                      "Show All",
-                                      style:AppTextStyles.subtitle.copyWith(
-                                        color: mainColor
-                                      ),
-                                    )
-                                  )
-                                ],
-                              ),
-                            )
-                          ),
+                          
                           
                           SliverList(
                             delegate: SliverChildBuilderDelegate(
@@ -479,7 +459,29 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                                                         Row(
                                                           children: [
                                                             Text(
-                                                              "Request Number: ",
+                                                              "Freight Booking No.: ",
+                                                              style: AppTextStyles.caption.copyWith(
+                                                                fontWeight: FontWeight.bold,
+                                                                fontSize: 12,
+                                                                color: Colors.white,
+                                                              ),
+                                                            ),
+                                                            Flexible(
+                                                              child: Text(
+                                                               (item.freightBookingNumber?.toString() ?? 'N/A'),
+                                                                style: AppTextStyles.caption.copyWith(
+                                                                  color: Colors.white
+                                                                ),
+                                                                softWrap: true, // Text will wrap if it's too long
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                       
+                                                        Row(
+                                                          children: [
+                                                            Text(
+                                                              "Request No.: ",
                                                               style: AppTextStyles.caption.copyWith(
                                                                 fontWeight: FontWeight.bold,
                                                                 fontSize: 12,

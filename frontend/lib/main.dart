@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/color_palette.dart';
 import 'package:frontend/provider/theme_provider.dart';
 import 'package:frontend/splashscreen.dart';
 import 'package:frontend/theme/text_styles.dart';
 
-void main() {
+void main() async{
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+  ]);
   runApp(const ProviderScope(child: MainApp()));
 }
 

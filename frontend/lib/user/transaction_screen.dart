@@ -42,8 +42,8 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
    Future<void> _refreshTransaction() async {
     print("Refreshing transactions");
     try {
-      
-      ref.invalidate(bookingProvider);
+      final future = ref.refresh(filteredItemsProviderForTransactionScreen.future);
+      await future; // Wait for the future to complete
       print("REFRESHED!");
     }catch (e){
       print('DID NOT REFRESHED!');

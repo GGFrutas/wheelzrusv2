@@ -326,7 +326,7 @@ class Transaction {
 
 
 
-  Transaction copyWith({String? name, String? destination,String? requestNumber,String? origin,String? requestStatus,status, bool? isAccepted, String? truckPlateNumber, String? destinationAddress, String? originAddress, String? rejectedTime, String? completedTime, String? assignedDate}) {
+  Transaction copyWith({String? name, String? destination,String? requestNumber,String? origin,String? requestStatus,status, bool? isAccepted, String? truckPlateNumber, String? destinationAddress, String? originAddress, String? rejectedTime, String? completedTime, String? assignedDate, String? freightBookingNumber}) {
     return Transaction(
       id: id,
       name: name ?? this.name,
