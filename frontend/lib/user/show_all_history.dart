@@ -1,32 +1,38 @@
-// ignore_for_file: unused_import, avoid_print
+// ignore_for_file: unused_import, avoid_print, depend_on_referenced_packages, unnecessary_import
 
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:animated_toggle_switch/animated_toggle_switch.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_custom_clippers/flutter_custom_clippers.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/models/transaction_model.dart';
 import 'package:frontend/notifiers/auth_notifier.dart';
+import 'package:frontend/notifiers/navigation_notifier.dart';
 import 'package:frontend/provider/accepted_transaction.dart' as accepted_transaction;
-import 'package:frontend/provider/reject_provider.dart';
+import 'package:frontend/provider/theme_provider.dart';
+import 'package:frontend/provider/transaction_list_notifier.dart';
 import 'package:frontend/provider/transaction_provider.dart';
+import 'package:frontend/screen/navigation_menu.dart';
 import 'package:frontend/theme/colors.dart';
 import 'package:frontend/theme/text_styles.dart';
 import 'package:frontend/user/history_details.dart';
-import 'package:frontend/user/rejection_details.dart';
-import 'package:frontend/user/show_all_history.dart';
 import 'package:frontend/user/transaction_details.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
-class HistoryScreen extends ConsumerStatefulWidget{
-  final Map<String, dynamic> user;
-  const HistoryScreen({super.key, required this.user});
+class AllHistoryScreen extends ConsumerStatefulWidget{
+  final String uid;
+  final Transaction? transaction; 
+  
+  const AllHistoryScreen( {super.key, required this.uid, required this.transaction});
 
   @override
-  // ignore: library_private_types_in_public_api
-  _HistoryPageState createState() => _HistoryPageState();
+
+  ConsumerState<AllHistoryScreen> createState() => _AllHistoryPageState();
 }
 
-class _HistoryPageState extends ConsumerState<HistoryScreen> {
+class _AllHistoryPageState extends ConsumerState<AllHistoryScreen>{
   String? uid;
  Future<List<Transaction>>? _futureTransactions;
 
@@ -53,7 +59,6 @@ void initState() {
     }
   }
 
-
   Map< String, String> separateDateTime(String? dateTime) {
     if (dateTime == null || dateTime.isEmpty) {
       return {"date": "N/A", "time": "N/A"}; // Return default values if null or empty
@@ -72,6 +77,8 @@ void initState() {
     }
   }
 
+
+   
   Color getStatusColor(String status) {
     switch (status) {
       case 'Completed':
@@ -93,51 +100,14 @@ void initState() {
     final acceptedTransaction = ref.watch(accepted_transaction.acceptedTransactionProvider);
 
     return Scaffold(
+      appBar: AppBar(
+        title: Text("History", style: AppTextStyles.title.copyWith(
+          color: mainColor,
+        )),
+      ),
       body: SafeArea(
         child: Column(
           children: [
-             Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical:10.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Transactions',
-                      style:AppTextStyles.title.copyWith(
-                        color: mainColor,
-                        fontWeight: FontWeight.bold
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => AllHistoryScreen(uid: uid ?? '', transaction: null,),
-                          ),
-                        );
-                      },
-                      child: Text (
-                        "Show All",
-                        style:AppTextStyles.body.copyWith(
-                          color: mainColor,
-                          fontWeight: FontWeight.bold
-                        ),
-                      )
-                    )
-                  ],
-                ),
-              ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 25.0, vertical: 5.0),
-                child: Divider(
-                  color: Colors.grey,
-                  thickness: 1,
-                ),
-              ),
-
-
-           
             Expanded (
               child: RefreshIndicator(
                 onRefresh: _refreshTransaction,
@@ -258,8 +228,7 @@ void initState() {
                     
 
                     final ongoingTransactions = expandedTransactions
-                      .where((tx) => tx.stageId == "Cancelled" || tx.stageId == "Completed")
-                      .take(5)
+                      .where((tx) =>  ['Cancelled', 'Completed'].contains(tx.stageId))
                       .toList();
 
                   
@@ -392,7 +361,8 @@ void initState() {
                                                 ? separateDateTime(item.rejectedTime)['date'] ?? '—'
                                                 : item.requestStatus == 'Completed'
                                                   ? separateDateTime(item.completedTime)['date'] ?? '—'
-                                                  : '—',
+                                                  : item.stageId == 'Cancelled'
+                                                  ? separateDateTime(item.writeDate)['date'] ?? '—' : '—',
                                               style: AppTextStyles.caption.copyWith(
                                                 color: mainColor,
                                                 fontWeight: FontWeight.bold,
@@ -432,7 +402,8 @@ void initState() {
                                                 ? separateDateTime(item.rejectedTime)['time'] ?? '—'
                                                 : item.requestStatus == 'Completed'
                                                   ? separateDateTime(item.completedTime)['time'] ?? '—'
-                                                  : '—',
+                                                  : item.stageId == 'Cancelled'
+                                                  ? separateDateTime(item.writeDate)['time'] ?? '—' : '—',
                                               style: AppTextStyles.caption.copyWith(
                                                 color: mainColor,
                                                 fontWeight: FontWeight.bold,
@@ -459,152 +430,18 @@ void initState() {
               
           ],
         )
-      ) 
+      ), 
+      bottomNavigationBar: const Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            
+            NavigationMenu(),
+          ],
+          
+        )
     );
    
 
-   
-    //       return Scaffold(
-    //          body: Padding(
-    //           padding: const EdgeInsets.all(16),
-    //           child: ListView.builder(
-    //             itemCount: ongoingTransactions.length,
-    //             itemBuilder: (context, index) {
-    //               final item = ongoingTransactions[index];
-    //               return Container(
-    //                 margin: const EdgeInsets.only(bottom: 20),
-    //                 decoration: BoxDecoration(
-    //                   color: bgColor,
-    //                   borderRadius: BorderRadius.circular(12),
-    //                   boxShadow: const [
-    //                     BoxShadow(
-    //                       color: darkerBgColor,
-    //                       blurRadius: 6,
-    //                       offset: Offset(0, 3)
-    //                     )
-    //                   ]
-    //                 ),
-                    
-    //                 child: InkWell(
-    //                   onTap: () {
-    //                     Navigator.of(context).push(
-    //                       PageRouteBuilder(
-    //                         pageBuilder: (context, animation, secondaryAnimation) => HistoryDetailScreen(
-    //                           transaction: item,
-    //                           uid: uid ?? '',
-    //                         ),
-    //                         transitionsBuilder: (context, animation, secondaryAnimation, child) {
-    //                           const begin = Offset(1.0, 0.0); // from right
-    //                           const end = Offset.zero;
-    //                           const curve = Curves.ease;
-
-    //                           final tween =
-    //                               Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-    //                           final offsetAnimation = animation.drive(tween);
-
-    //                           return SlideTransition(
-    //                             position: offsetAnimation,
-    //                             child: child,
-    //                           );
-    //                         },
-    //                       ),
-    //                     );
-
-    //                   },
-    //                   child: Container(
-    //                     padding: const EdgeInsets.all(16),
-    //                     child: Column(
-    //                       crossAxisAlignment: CrossAxisAlignment.start,
-    //                       children: [
-                            
-    //                         Row(
-    //                           children: [
-    //                             const SizedBox(width: 20), // Space between icon and text
-    //                             Column(
-    //                               crossAxisAlignment: CrossAxisAlignment.start,
-    //                               children: [
-    //                                 // Space between label and value
-    //                                 Text(
-    //                                   "Request Number",
-    //                                   style: AppTextStyles.caption.copyWith(
-    //                                     color: darkerBgColor,
-    //                                   ),
-    //                                 ),
-    //                                 Text(
-    //                                   (item.requestNumber?.toString() ?? 'No Request Number Available'),
-    //                                   style: AppTextStyles.body.copyWith(
-    //                                     color: mainColor,
-    //                                     fontWeight: FontWeight.bold,
-    //                                   ),
-    //                                 ),
-    //                               ],
-    //                             ),
-    //                           ],
-    //                         ),
-    //                         const SizedBox(height: 20),
-    //                         Row(
-    //                           children: [
-    //                             const SizedBox(width: 20), // Space between icon and text
-    //                             Expanded(
-    //                               child: Column(
-    //                                 crossAxisAlignment: CrossAxisAlignment.start,
-    //                                 children: [
-    //                                   // Space between label and value
-    //                                   Text(
-    //                                     "Date Delivered",
-    //                                     style: AppTextStyles.caption.copyWith(
-    //                                       color: darkerBgColor,
-    //                                     ),
-    //                                   ),
-    //                                   Text(
-    //                                     formatDateTime(item.deliveryDate),
-    //                                     style: AppTextStyles.body.copyWith(
-    //                                       color: mainColor,
-    //                                       fontWeight: FontWeight.bold,
-    //                                     ),
-    //                                   ),
-    //                                 ],
-    //                               ),
-    //                             ),
-    //                             Container(
-    //                               constraints: const BoxConstraints(
-    //                                 minWidth: 150,
-    //                               ),
-    //                               decoration: BoxDecoration(
-    //                                 borderRadius: BorderRadius.circular(20),
-    //                                 color: getStatusColor(item.requestStatus ?? ''),
-    //                               ),
-    //                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-    //                               child: Text(
-    //                                 item.requestStatus ?? '',
-    //                                 style: AppTextStyles.caption.copyWith(
-    //                                   color: Colors.white,
-    //                                   fontWeight: FontWeight.bold
-    //                                 ),
-    //                                 textAlign: TextAlign.center,
-    //                               ),
-    //                             ),
-    //                           ],
-    //                         ),
-                           
-    //                      ],
-    //                   ),
-    //                 ),
-    //               ),
-    //             );
-                    
-    //           },
-             
-    //         ),
-    //       ),
-    //     );
-
-    //   },
-    //   loading: () => const Center(child: CircularProgressIndicator()),  // Show loading spinner while fetching data
-    //   error: (e, stack) => Center(child: Text('Error: $e')),  // Display error message if an error occurs
-    //   ),
-    // );
-    
   }
 
 }
