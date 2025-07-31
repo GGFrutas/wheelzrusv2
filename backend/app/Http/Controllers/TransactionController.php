@@ -202,7 +202,7 @@ class TransactionController extends Controller
                         "pickup_date", "departure_date","origin", "destination", "de_rejection_time", "pl_rejection_time", "dl_rejection_time", "pe_rejection_time", "de_completion_time", 
                         "pl_completion_time", "dl_completion_time", "pe_completion_time", "shipper_province","shipper_city","shipper_barangay","shipper_street", 
                         "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime", "service_type", "booking_service",
-                        "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time",
+                        "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time", "name"
                     ]],
                 ]
             ],
@@ -466,7 +466,7 @@ class TransactionController extends Controller
                         "pickup_date", "departure_date","origin", "destination", "de_rejection_time", "pl_rejection_time", "dl_rejection_time", "pe_rejection_time", "de_completion_time", 
                         "pl_completion_time", "dl_completion_time", "pe_completion_time", "shipper_province","shipper_city","shipper_barangay","shipper_street", 
                         "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime", "service_type", "booking_service",
-                        "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time",
+                        "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time", "name"
                     ]],
                 ]
             ],
@@ -505,7 +505,7 @@ class TransactionController extends Controller
             "pickup_date", "departure_date","origin", "destination","de_rejection_time", "pl_rejection_time", "dl_rejection_time", "pe_rejection_time", "de_completion_time", 
             "pl_completion_time", "dl_completion_time", "pe_completion_time","shipper_province","shipper_city","shipper_barangay","shipper_street",
             "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime",  "service_type","booking_service",
-            "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time",
+            "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time"
         ];
 
         $jobResponses = [];
@@ -708,15 +708,15 @@ class TransactionController extends Controller
                     [[
                         "&",  // AND all of the following
                             // Grouped ORs for Completed or Rejected
-                        //  "|",
+                         "|",
                             // Group 1: Completed statuses
-                            // "|", 
-                            //     ["de_request_status", "=", "Completed"],
-                            //     "|",
-                            //         ["pl_request_status", "=", "Completed"],
-                            //         "|",
-                            //             ["dl_request_status", "=", "Completed"],
-                            //             ["pe_request_status", "=", "Completed"],
+                            "|", 
+                                ["de_request_status", "=", "Completed"],
+                                "|",
+                                    ["pl_request_status", "=", "Completed"],
+                                    "|",
+                                        ["dl_request_status", "=", "Completed"],
+                                        ["pe_request_status", "=", "Completed"],
 
                             // Group 2: Rejected statuses
                             "|", ["stage_id", "=", 6], ["stage_id", "=", 7],
@@ -739,7 +739,7 @@ class TransactionController extends Controller
                         "pickup_date", "departure_date","origin", "destination", "de_rejection_time", "pl_rejection_time", "dl_rejection_time", "pe_rejection_time", "de_completion_time", 
                         "pl_completion_time", "dl_completion_time", "pe_completion_time", "shipper_province","shipper_city","shipper_barangay","shipper_street", 
                         "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime", "service_type", "booking_service",
-                        "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time", "stage_id", "write_date", 
+                        "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time", "stage_id", "write_date", "name"
                     ]],
                 ]
             ],
@@ -1000,7 +1000,7 @@ class TransactionController extends Controller
                         "pickup_date", "departure_date","origin", "destination", "de_rejection_time", "pl_rejection_time", "dl_rejection_time", "pe_rejection_time", "de_completion_time", 
                         "pl_completion_time", "dl_completion_time", "pe_completion_time", "shipper_province","shipper_city","shipper_barangay","shipper_street", 
                         "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime", "service_type", "booking_service",
-                        "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time",
+                        "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time", "name"
                     ]],
                 ]
             ],

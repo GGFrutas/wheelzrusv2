@@ -96,7 +96,7 @@ class RejectionDetails extends StatelessWidget {
                   Row(
                     children: [
                       const Text(
-                        "Booking Reference No: ",
+                        "Booking Ref. No: ",
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,

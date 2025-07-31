@@ -178,9 +178,10 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                         ),
                       ),
                     ),
+             
                     Padding(
-                      // color: Colors.green[500], // Set background color for this section
-                      padding: const EdgeInsets.all(8.0),
+                 
+                      padding: const EdgeInsets.symmetric(horizontal: 12.0),
                       child: Text(
                         widget.transaction!.originAddress.toUpperCase(), // Section Title
                         style: AppTextStyles.caption.copyWith(
@@ -259,7 +260,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                       const Icon(
                         Icons.check_circle,
                         color: mainColor,
-                        size: 30,
+                        size: 20,
                       ),
                       const SizedBox(width: 8), // Space between icon and text
                       Column(
@@ -295,7 +296,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                       const Icon(
                         Icons.check_circle,
                         color: mainColor,
-                        size: 30,
+                        size: 20,
                       ),
                       const SizedBox(width: 8), // Space between icon and text
                       Column(
@@ -323,177 +324,138 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                     ],
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.all(12.0), // Add padding inside the container
-                  child: Column( // Use a Column to arrange the widgets vertically
-                    crossAxisAlignment: CrossAxisAlignment.start, // Align text to the left
-                    children: [
-                      //  Placeholder for the Map
-                      
-                      Container(
-                        padding: const EdgeInsets.all(12.0),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center, // Align top of icon and text
-                          children: [
-                            const Icon(
-                              Icons.location_on,
-                              color: mainColor,
-                              size: 30,
-                            ),
-                            const SizedBox(width: 8), // Space between icon and text
-                            Expanded (
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Space between label and value
-                                  Text(
-                                    widget.transaction?.origin ?? '',
-                                    style: AppTextStyles.subtitle.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: mainColor,
-                                    ),
-                                  ),
-                                Text(
-                                    "Pick-up Address",
-                                    style: AppTextStyles.caption.copyWith(
-                                      color: mainColor,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )
-                          ],
-                        ),
-                      ),
-                      Row(
+                Column( // Use a Column to arrange the widgets vertically
+                  crossAxisAlignment: CrossAxisAlignment.center, // Align text to the left
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(7.0),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center, // Align top of icon and text
                         children: [
-                          const SizedBox(width: 21), // Match left padding with location icon
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.center, // Center dots with the location pin tip
-                            children: List.generate(3, (_) => const Padding(
-                              padding: EdgeInsets.symmetric(vertical: .0), // Adjust spacing
-                              child: Icon(
-                                Icons.circle_rounded,
-                                color: mainColor,
-                                size: 8,
-                              ),
-                            )),
+                          const Icon(
+                            Icons.location_on,
+                            color: mainColor,
+                            size: 30,
                           ),
-                        ],
-                      ),
-                      
-                      // const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.all(7.9),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center, // Align top of icon and text
-                          children: [
-                            const SizedBox(width: 8),
-                            const Icon(
-                              Icons.circle_rounded,
-                              color: mainColor,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8), // Space between icon and text
-                            Expanded (
-                              child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Space between label and value
-                                  Text(
-                                    widget.transaction?.destination ?? '',
-                                    style: AppTextStyles.subtitle.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: mainColor,
-                                    )
-                                  ),
-                                  Text(
-                                    "Delivery Address",
-                                    style: AppTextStyles.caption.copyWith(
-                                      color: mainColor,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )
-                          ],
-                        ),
-                      ),
-
-                      Container(
-                        padding: const EdgeInsets.all(7.9),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center, // Align top of icon and text
-                          children: [
-                            const SizedBox(width: 8),
-                            const Icon(
-                              Icons.calendar_today_outlined,
-                              color: mainColor,
-                              size: 24,
-                            ),
-                            const SizedBox(width: 8), // Space between icon and text
-                            Column(
+                          const SizedBox(width: 8), // Space between icon and text
+                          Expanded (
+                            child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 // Space between label and value
-                                Text( 
-                                  widget.transaction?.dispatchType == 'ot' ? formatDateTime(widget.transaction?.departureDate)
-                                  : formatDateTime(widget.transaction?.arrivalDate),
+                                Text(
+                                  widget.transaction?.origin ?? '',
                                   style: AppTextStyles.subtitle.copyWith(
                                     fontWeight: FontWeight.bold,
                                     color: mainColor,
-                                  )
+                                  ),
                                 ),
-                                Text(
-                                  widget.transaction?.dispatchType == 'ot' ? " Vessel Departure Date" 
-                                  :  "Vessel Arrival Date",
+                              Text(
+                                  "Pick-up Address",
                                   style: AppTextStyles.caption.copyWith(
                                     color: mainColor,
                                   ),
                                 ),
                               ],
                             ),
-                          ],
-                        ),
+                          )
+                        ],
                       ),
-                      const SizedBox(height: 8),
-                      // Container(
-                      //   height: 250, // Height of the map container
-                      //   width: double.infinity,
-                      //   decoration: BoxDecoration(
-                      //     color: Colors.grey[600], // Placeholder color
-                      //     borderRadius: BorderRadius.circular(10),
-                      //   ),
-                      //   child: gmaps.GoogleMap(
-                      //     initialCameraPosition: const gmaps.CameraPosition(
-                      //       target: _pointA,
-                      //       zoom: 13,
-                      //     ),
-                          
-                      //     markers: {
-                      //         gmaps.Marker(
-                      //           markerId: const gmaps.MarkerId("current_location"),
-                      //           position: _pointA,
-                      //           icon: gmaps.BitmapDescriptor.defaultMarkerWithHue(gmaps.BitmapDescriptor.hueRed),
-                      //         ),
-                              
-                      //      gmaps.Marker(
-                      //           markerId: const gmaps.MarkerId("source_location"),
-                      //           position: _pointB,
-                      //           icon: gmaps.BitmapDescriptor.defaultMarkerWithHue(gmaps.BitmapDescriptor.hueGreen),
-                      //         ),
-                      //     },
-                      //     myLocationEnabled: true,
-                      //     myLocationButtonEnabled: true,
-                      //     zoomGesturesEnabled: true,
-                      //     zoomControlsEnabled: false,
-                      //   ),
-                      // ),
-                      
-
-
-                    ],
-                  ),
+                    ),
+                    Row(
+                      children: [
+                        const SizedBox(width: 21), // Match left padding with location icon
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.center, // Center dots with the location pin tip
+                          children: List.generate(3, (_) => const Padding(
+                            padding: EdgeInsets.symmetric(vertical: .0), // Adjust spacing
+                            child: Icon(
+                              Icons.circle_rounded,
+                              color: mainColor,
+                              size: 8,
+                            ),
+                          )),
+                        ),
+                      ],
+                    ),
+                    
+                    // const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(7.9),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center, // Align top of icon and text
+                        children: [
+                          const SizedBox(width: 8),
+                          const Icon(
+                            Icons.circle_rounded,
+                            color: mainColor,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8), // Space between icon and text
+                          Expanded (
+                            child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Space between label and value
+                                Text(
+                                  widget.transaction?.destination ?? '',
+                                  style: AppTextStyles.subtitle.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: mainColor,
+                                  )
+                                ),
+                                Text(
+                                  "Delivery Address",
+                                  style: AppTextStyles.caption.copyWith(
+                                    color: mainColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        ],
+                      ),
+                    ),
+                
+                    Container(
+                      padding: const EdgeInsets.all(7.9),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center, // Align top of icon and text
+                        children: [
+                          const SizedBox(width: 8),
+                          const Icon(
+                            Icons.calendar_today_outlined,
+                            color: mainColor,
+                            size: 24,
+                          ),
+                          const SizedBox(width: 8), // Space between icon and text
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Space between label and value
+                              Text( 
+                                widget.transaction?.dispatchType == 'ot' ? formatDateTime(widget.transaction?.departureDate)
+                                : formatDateTime(widget.transaction?.arrivalDate),
+                                style: AppTextStyles.subtitle.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: mainColor,
+                                )
+                              ),
+                              Text(
+                                widget.transaction?.dispatchType == 'ot' ? " Vessel Departure Date" 
+                                :  "Vessel Arrival Date",
+                                style: AppTextStyles.caption.copyWith(
+                                  color: mainColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                
+                  ],
                 ),
                 SizedBox(
                         height: 300,

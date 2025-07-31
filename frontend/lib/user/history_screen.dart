@@ -76,8 +76,10 @@ void initState() {
     switch (status) {
       case 'Completed':
         return const Color.fromARGB(255, 28, 157, 114);
-      case 'Rejected':
+      case 'Cancelled':
         return  Colors.red;
+      case 'Rejected':
+        return  Colors.grey;
       default:
       return Colors.grey;
     }
@@ -129,7 +131,7 @@ void initState() {
                 ),
               ),
               const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 25.0, vertical: 5.0),
+                padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 3.0),
                 child: Divider(
                   color: Colors.grey,
                   thickness: 1,
@@ -245,9 +247,9 @@ void initState() {
 
                     expandedTransactions.sort((a,b){
                       DateTime dateACompleted = DateTime.tryParse(a.completedTime ?? '') ?? DateTime(0);
-                      DateTime dateARejected = DateTime.tryParse(a.rejectedTime ?? '') ?? DateTime(0);
+                      DateTime dateARejected = DateTime.tryParse(a.writeDate ?? '') ?? DateTime(0);
                       DateTime dateBCompleted = DateTime.tryParse(b.completedTime ?? '') ?? DateTime(0);
-                      DateTime dateBRejected = DateTime.tryParse(b.rejectedTime ?? '') ?? DateTime(0);
+                      DateTime dateBRejected = DateTime.tryParse(b.writeDate ?? '') ?? DateTime(0);
 
                       DateTime latestA = dateACompleted.isAfter(dateARejected) ? dateACompleted : dateARejected;
                       DateTime latestB = dateBCompleted.isAfter(dateBRejected) ? dateBCompleted : dateBRejected;
@@ -258,7 +260,7 @@ void initState() {
                     
 
                     final ongoingTransactions = expandedTransactions
-                      .where((tx) => tx.stageId == "Cancelled" || tx.stageId == "Completed")
+                      .where((tx) => tx.stageId == "Cancelled" || tx.stageId == "Completed" || tx.requestStatus == "Completed")
                       .take(5)
                       .toList();
 
@@ -285,10 +287,17 @@ void initState() {
                       );
                       
                     }
+                    
                     return ListView.builder(
                       itemCount: ongoingTransactions.length,
                       itemBuilder: (context, index) {
                         final item = ongoingTransactions[index];
+                        final statusLabel =
+                        item.requestStatus == 'Completed'
+                            ? item.requestStatus
+                            : item.stageId == 'Completed' || item.stageId == 'Cancelled'
+                                ? item.stageId
+                                : '—';
                         return Container(
                           margin: const EdgeInsets.only(bottom: 20),
                          
@@ -318,14 +327,58 @@ void initState() {
                               );
                             },
                             child: Container(
-                              padding: const EdgeInsets.all(16),
+                              padding: const EdgeInsets.all(3),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
                                     children: [
-                                      const SizedBox(width: 20), // Space between icon and text
+                                    
                                       // Space between label and value
+                                      Text(
+                                        "Dispatch No.: ",
+                                        style: AppTextStyles.caption.copyWith(
+                                          color: darkerBgColor,
+                                        ),
+                                      ),
+                                      Text(
+                                        item.bookingRefNo ?? '—',
+                                        style: AppTextStyles.caption.copyWith(
+                                          color: mainColor,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const Spacer(),
+                                      Container(
+                                        decoration: BoxDecoration(
+                                          color: getStatusColor((statusLabel ?? 'Unknown').trim()),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.end,
+                                          children: [
+                                            Text(
+                                             (item.requestStatus == 'Completed' || item.stageId == 'Completed')
+                                              ? 'Completed'
+                                              : item.stageId == 'Cancelled'
+                                                ? 'Cancelled'
+                                                : '—',
+                                              style: AppTextStyles.caption.copyWith(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold
+                                              ),
+                                              textAlign: TextAlign.center,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Row(
+                                    children: [
+                                     
+
                                       Text(
                                         "Request ID: ",
                                         style: AppTextStyles.caption.copyWith(
@@ -344,52 +397,14 @@ void initState() {
                                         constraints: const BoxConstraints(
                                           minWidth: 150,
                                         ),
+                                       
                                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                         child: Column(
                                           crossAxisAlignment: CrossAxisAlignment.end,
                                           children: [
                                             Text(
-                                              item.stageId ?? '',
-                                              style: AppTextStyles.caption.copyWith(
-                                                color: mainColor,
-                                                fontWeight: FontWeight.bold
-                                              ),
-                                              textAlign: TextAlign.center,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  Row(
-                                    children: [
-                                      const SizedBox(width: 20), // Space between icon and text
-
-                                      Text(
-                                        "Dispatch No.: ",
-                                        style: AppTextStyles.caption.copyWith(
-                                          color: darkerBgColor,
-                                        ),
-                                      ),
-                                      Text(
-                                        item.bookingRefNo ?? '—',
-                                        style: AppTextStyles.caption.copyWith(
-                                          color: mainColor,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      const Spacer(),
-                                      Container(
-                                        constraints: const BoxConstraints(
-                                          minWidth: 150,
-                                        ),
-                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.end,
-                                          children: [
-                                            Text(
-                                              item.requestStatus == 'Rejected'
-                                                ? separateDateTime(item.rejectedTime)['date'] ?? '—'
+                                              item.stageId == 'Cancelled'
+                                                ? separateDateTime(item.writeDate)['date'] ?? '—'
                                                 : item.requestStatus == 'Completed'
                                                   ? separateDateTime(item.completedTime)['date'] ?? '—'
                                                   : '—',
@@ -408,8 +423,6 @@ void initState() {
                                  
                                   Row(
                                     children: [
-                                      const SizedBox(width: 20), // Space between icon and text
-
                                       Text(
                                         "View Details →",
                                         style: AppTextStyles.caption.copyWith(
@@ -428,8 +441,8 @@ void initState() {
                                           crossAxisAlignment: CrossAxisAlignment.end,
                                           children: [
                                             Text(
-                                              item.requestStatus == 'Rejected'
-                                                ? separateDateTime(item.rejectedTime)['time'] ?? '—'
+                                              item.stageId == 'Cancelled'
+                                                ? separateDateTime(item.writeDate)['time'] ?? '—'
                                                 : item.requestStatus == 'Completed'
                                                   ? separateDateTime(item.completedTime)['time'] ?? '—'
                                                   : '—',
@@ -461,149 +474,6 @@ void initState() {
         )
       ) 
     );
-   
-
-   
-    //       return Scaffold(
-    //          body: Padding(
-    //           padding: const EdgeInsets.all(16),
-    //           child: ListView.builder(
-    //             itemCount: ongoingTransactions.length,
-    //             itemBuilder: (context, index) {
-    //               final item = ongoingTransactions[index];
-    //               return Container(
-    //                 margin: const EdgeInsets.only(bottom: 20),
-    //                 decoration: BoxDecoration(
-    //                   color: bgColor,
-    //                   borderRadius: BorderRadius.circular(12),
-    //                   boxShadow: const [
-    //                     BoxShadow(
-    //                       color: darkerBgColor,
-    //                       blurRadius: 6,
-    //                       offset: Offset(0, 3)
-    //                     )
-    //                   ]
-    //                 ),
-                    
-    //                 child: InkWell(
-    //                   onTap: () {
-    //                     Navigator.of(context).push(
-    //                       PageRouteBuilder(
-    //                         pageBuilder: (context, animation, secondaryAnimation) => HistoryDetailScreen(
-    //                           transaction: item,
-    //                           uid: uid ?? '',
-    //                         ),
-    //                         transitionsBuilder: (context, animation, secondaryAnimation, child) {
-    //                           const begin = Offset(1.0, 0.0); // from right
-    //                           const end = Offset.zero;
-    //                           const curve = Curves.ease;
-
-    //                           final tween =
-    //                               Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-    //                           final offsetAnimation = animation.drive(tween);
-
-    //                           return SlideTransition(
-    //                             position: offsetAnimation,
-    //                             child: child,
-    //                           );
-    //                         },
-    //                       ),
-    //                     );
-
-    //                   },
-    //                   child: Container(
-    //                     padding: const EdgeInsets.all(16),
-    //                     child: Column(
-    //                       crossAxisAlignment: CrossAxisAlignment.start,
-    //                       children: [
-                            
-    //                         Row(
-    //                           children: [
-    //                             const SizedBox(width: 20), // Space between icon and text
-    //                             Column(
-    //                               crossAxisAlignment: CrossAxisAlignment.start,
-    //                               children: [
-    //                                 // Space between label and value
-    //                                 Text(
-    //                                   "Request Number",
-    //                                   style: AppTextStyles.caption.copyWith(
-    //                                     color: darkerBgColor,
-    //                                   ),
-    //                                 ),
-    //                                 Text(
-    //                                   (item.requestNumber?.toString() ?? 'No Request Number Available'),
-    //                                   style: AppTextStyles.body.copyWith(
-    //                                     color: mainColor,
-    //                                     fontWeight: FontWeight.bold,
-    //                                   ),
-    //                                 ),
-    //                               ],
-    //                             ),
-    //                           ],
-    //                         ),
-    //                         const SizedBox(height: 20),
-    //                         Row(
-    //                           children: [
-    //                             const SizedBox(width: 20), // Space between icon and text
-    //                             Expanded(
-    //                               child: Column(
-    //                                 crossAxisAlignment: CrossAxisAlignment.start,
-    //                                 children: [
-    //                                   // Space between label and value
-    //                                   Text(
-    //                                     "Date Delivered",
-    //                                     style: AppTextStyles.caption.copyWith(
-    //                                       color: darkerBgColor,
-    //                                     ),
-    //                                   ),
-    //                                   Text(
-    //                                     formatDateTime(item.deliveryDate),
-    //                                     style: AppTextStyles.body.copyWith(
-    //                                       color: mainColor,
-    //                                       fontWeight: FontWeight.bold,
-    //                                     ),
-    //                                   ),
-    //                                 ],
-    //                               ),
-    //                             ),
-    //                             Container(
-    //                               constraints: const BoxConstraints(
-    //                                 minWidth: 150,
-    //                               ),
-    //                               decoration: BoxDecoration(
-    //                                 borderRadius: BorderRadius.circular(20),
-    //                                 color: getStatusColor(item.requestStatus ?? ''),
-    //                               ),
-    //                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-    //                               child: Text(
-    //                                 item.requestStatus ?? '',
-    //                                 style: AppTextStyles.caption.copyWith(
-    //                                   color: Colors.white,
-    //                                   fontWeight: FontWeight.bold
-    //                                 ),
-    //                                 textAlign: TextAlign.center,
-    //                               ),
-    //                             ),
-    //                           ],
-    //                         ),
-                           
-    //                      ],
-    //                   ),
-    //                 ),
-    //               ),
-    //             );
-                    
-    //           },
-             
-    //         ),
-    //       ),
-    //     );
-
-    //   },
-    //   loading: () => const Center(child: CircularProgressIndicator()),  // Show loading spinner while fetching data
-    //   error: (e, stack) => Center(child: Text('Error: $e')),  // Display error message if an error occurs
-    //   ),
-    // );
     
   }
 

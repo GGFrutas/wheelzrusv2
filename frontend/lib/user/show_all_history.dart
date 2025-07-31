@@ -83,8 +83,10 @@ void initState() {
     switch (status) {
       case 'Completed':
         return const Color.fromARGB(255, 28, 157, 114);
-      case 'Rejected':
+      case 'Cancelled':
         return  Colors.red;
+      case 'Rejected':
+        return  Colors.grey;
       default:
       return Colors.grey;
     }
@@ -228,7 +230,7 @@ void initState() {
                     
 
                     final ongoingTransactions = expandedTransactions
-                      .where((tx) =>  ['Cancelled', 'Completed'].contains(tx.stageId))
+                      .where((tx) =>  ['Cancelled', 'Completed'].contains(tx.stageId) || tx.requestStatus == 'Completed')
                       .toList();
 
                   
@@ -258,6 +260,12 @@ void initState() {
                       itemCount: ongoingTransactions.length,
                       itemBuilder: (context, index) {
                         final item = ongoingTransactions[index];
+                        final statusLabel =
+                        item.requestStatus == 'Completed'
+                            ? item.requestStatus
+                            : item.stageId == 'Completed' || item.stageId == 'Cancelled'
+                                ? item.stageId
+                                : '—';
                         return Container(
                           margin: const EdgeInsets.only(bottom: 20),
                          
@@ -287,14 +295,59 @@ void initState() {
                               );
                             },
                             child: Container(
-                              padding: const EdgeInsets.all(16),
+                              padding: const EdgeInsets.all(3),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
                                     children: [
-                                      const SizedBox(width: 20), // Space between icon and text
+                                    
                                       // Space between label and value
+                                      Text(
+                                        "Dispatch No.: ",
+                                        style: AppTextStyles.caption.copyWith(
+                                          color: darkerBgColor,
+                                        ),
+                                      ),
+                                      Text(
+                                        item.bookingRefNo ?? '—',
+                                        style: AppTextStyles.caption.copyWith(
+                                          color: mainColor,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const Spacer(),
+                                    
+                                      Container(
+                                        decoration: BoxDecoration(
+                                          color: getStatusColor((statusLabel ?? 'Unknown').trim()),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.end,
+                                          children: [
+                                            Text(
+                                            (item.requestStatus == 'Completed' || item.stageId == 'Completed')
+                                              ? 'Completed'
+                                              : item.stageId == 'Cancelled'
+                                                ? 'Cancelled'
+                                                : '—',
+                                              style: AppTextStyles.caption.copyWith(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold
+                                              ),
+                                              textAlign: TextAlign.center,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Row(
+                                    children: [
+                                     
+
                                       Text(
                                         "Request ID: ",
                                         style: AppTextStyles.caption.copyWith(
@@ -313,56 +366,17 @@ void initState() {
                                         constraints: const BoxConstraints(
                                           minWidth: 150,
                                         ),
+                                       
                                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                         child: Column(
                                           crossAxisAlignment: CrossAxisAlignment.end,
                                           children: [
                                             Text(
-                                              item.stageId ?? '',
-                                              style: AppTextStyles.caption.copyWith(
-                                                color: mainColor,
-                                                fontWeight: FontWeight.bold
-                                              ),
-                                              textAlign: TextAlign.center,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  Row(
-                                    children: [
-                                      const SizedBox(width: 20), // Space between icon and text
-
-                                      Text(
-                                        "Dispatch No.: ",
-                                        style: AppTextStyles.caption.copyWith(
-                                          color: darkerBgColor,
-                                        ),
-                                      ),
-                                      Text(
-                                        item.bookingRefNo ?? '—',
-                                        style: AppTextStyles.caption.copyWith(
-                                          color: mainColor,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      const Spacer(),
-                                      Container(
-                                        constraints: const BoxConstraints(
-                                          minWidth: 150,
-                                        ),
-                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.end,
-                                          children: [
-                                            Text(
-                                              item.requestStatus == 'Rejected'
-                                                ? separateDateTime(item.rejectedTime)['date'] ?? '—'
+                                              item.stageId == 'Cancelled'
+                                                ? separateDateTime(item.writeDate)['date'] ?? '—'
                                                 : item.requestStatus == 'Completed'
                                                   ? separateDateTime(item.completedTime)['date'] ?? '—'
-                                                  : item.stageId == 'Cancelled'
-                                                  ? separateDateTime(item.writeDate)['date'] ?? '—' : '—',
+                                                  : '—',
                                               style: AppTextStyles.caption.copyWith(
                                                 color: mainColor,
                                                 fontWeight: FontWeight.bold,
@@ -378,7 +392,7 @@ void initState() {
                                  
                                   Row(
                                     children: [
-                                      const SizedBox(width: 20), // Space between icon and text
+                                    
 
                                       Text(
                                         "View Details →",
@@ -398,12 +412,11 @@ void initState() {
                                           crossAxisAlignment: CrossAxisAlignment.end,
                                           children: [
                                             Text(
-                                              item.requestStatus == 'Rejected'
-                                                ? separateDateTime(item.rejectedTime)['time'] ?? '—'
+                                              item.stageId == 'Cancelled'
+                                                ? separateDateTime(item.writeDate)['time'] ?? '—'
                                                 : item.requestStatus == 'Completed'
                                                   ? separateDateTime(item.completedTime)['time'] ?? '—'
-                                                  : item.stageId == 'Cancelled'
-                                                  ? separateDateTime(item.writeDate)['time'] ?? '—' : '—',
+                                                  : '—',
                                               style: AppTextStyles.caption.copyWith(
                                                 color: mainColor,
                                                 fontWeight: FontWeight.bold,
