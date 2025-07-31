@@ -43,10 +43,10 @@ function jsonRpcRequest($url, $payload){
 
 class TransactionController extends Controller
 {
-    protected $url = "https://jralejandria-beta-dev-yxe.odoo.com";
-    protected $db = 'jralejandria-beta-dev-yxe-production-beta-21746751';
+    protected $url = "https://jralejandria-alpha-dev-yxe.odoo.com";
+    protected $db = 'jralejandria-alpha-dev-yxe1-production-alpha-22456968';
     // protected $odoo_url = "http://192.168.118.102:8000/odoo/jsonrpc";
-    protected $odoo_url = "https://jralejandria-beta-dev-yxe.odoo.com/jsonrpc";
+    protected $odoo_url = "https://jralejandria-alpha-dev-yxe.odoo.com/jsonrpc";
 
     public function getTodayBooking(Request $request)
     {
@@ -708,24 +708,18 @@ class TransactionController extends Controller
                     [[
                         "&",  // AND all of the following
                             // Grouped ORs for Completed or Rejected
-                         "|",
+                        //  "|",
                             // Group 1: Completed statuses
-                            "|", 
-                                ["de_request_status", "=", "Completed"],
-                                "|",
-                                    ["pl_request_status", "=", "Completed"],
-                                    "|",
-                                        ["dl_request_status", "=", "Completed"],
-                                        ["pe_request_status", "=", "Completed"],
+                            // "|", 
+                            //     ["de_request_status", "=", "Completed"],
+                            //     "|",
+                            //         ["pl_request_status", "=", "Completed"],
+                            //         "|",
+                            //             ["dl_request_status", "=", "Completed"],
+                            //             ["pe_request_status", "=", "Completed"],
 
                             // Group 2: Rejected statuses
-                            "|", 
-                                ["de_request_status", "=", "Rejected"],
-                                "|",
-                                    ["pl_request_status", "=", "Rejected"],
-                                    "|",
-                                        ["dl_request_status", "=", "Rejected"],
-                                        ["pe_request_status", "=", "Rejected"],
+                            "|", ["stage_id", "=", 6], ["stage_id", "=", 7],
 
                             "|", "|", "|",  // OR: driver match
                                 ["de_truck_driver_name", "=", $partnerId],
@@ -745,7 +739,7 @@ class TransactionController extends Controller
                         "pickup_date", "departure_date","origin", "destination", "de_rejection_time", "pl_rejection_time", "dl_rejection_time", "pe_rejection_time", "de_completion_time", 
                         "pl_completion_time", "dl_completion_time", "pe_completion_time", "shipper_province","shipper_city","shipper_barangay","shipper_street", 
                         "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime", "service_type", "booking_service",
-                        "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time",
+                        "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time", "stage_id", "write_date", 
                     ]],
                 ]
             ],
@@ -784,7 +778,7 @@ class TransactionController extends Controller
             "pickup_date", "departure_date","origin", "destination","de_rejection_time", "pl_rejection_time", "dl_rejection_time", "pe_rejection_time", "de_completion_time", 
             "pl_completion_time", "dl_completion_time", "pe_completion_time","shipper_province","shipper_city","shipper_barangay","shipper_street",
             "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime",  "service_type","booking_service",
-            "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time",
+            "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time","stage_id", "write_date"
         ];
 
         $jobResponses = [];

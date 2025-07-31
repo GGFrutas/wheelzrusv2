@@ -49,6 +49,7 @@ class Transaction {
   final String? peTruckType;
   final String? contactPerson;
   final String? vehicleName;
+  
 
   final String? contactNumber;
 
@@ -91,6 +92,8 @@ class Transaction {
   final String? peAssignedDate;
 
   final String? landTransport;
+
+ final String? writeDate;
 
   final List<MilestoneHistoryModel> history;
 
@@ -180,6 +183,7 @@ class Transaction {
     required this.login,
     required this.history,
     required this.landTransport,
+    required this.writeDate,
   });
 
   factory Transaction.fromJson(Map<String, dynamic> json) {
@@ -299,6 +303,8 @@ class Transaction {
       history: (json['history'] is List) 
         ? (json['history'] as List).map((e) => MilestoneHistoryModel.fromJson(e)).toList() : [],
 
+      writeDate: json['write_date']?.toString() ?? 'Unknown Date', // Provide a default value
+
       isAccepted: false,  // set default or map from API
       
     );
@@ -414,6 +420,7 @@ class Transaction {
       dlAssignedDate: dlAssignedDate,
       peAssignedDate: peAssignedDate,
       landTransport: landTransport,
+      writeDate: writeDate,
       
 
       login: login,

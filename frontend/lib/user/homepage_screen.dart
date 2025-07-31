@@ -62,19 +62,19 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
       "title": "More Cargo. More Miles.More Pay.",
       "subtitle": "Book shipments. Accept jobs. Drive your way",
       "image": "assets/illustrated-transport-truck-delivery-side-view-front-view-red-color-delivery-truck.png",
-      "color": "#ECC237"
+      "color": "#2D906F"
     },
     {
       "title": "Loads at your fingertips.",
       "subtitle": "Browse, accept, and deliver — all in one app",
       "image": "assets/box-truck-with-delivery-man-standing-it-vector-illustration.png",
-      "color": "#FBDF26"
+      "color": "#FBC926"
     },
     {
       "title": "All your Drivers need. In One App.",
       "subtitle": "Booking, tracking, payments, and support.",
       "image": "assets/delivery-truck-boxes-with-isometric-style.png",
-      "color": "#FCE570"
+      "color": "#2D906F"
     },
   ];
 
@@ -136,7 +136,7 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                                   child: Text(
                                     item['subtitle']!,
                                     style: AppTextStyles.caption.copyWith(
-                                      color: Colors.white70,
+                                      color: Colors.white,
                                       fontWeight: FontWeight.bold,
                                     ),
                                     maxLines: 2,
@@ -392,6 +392,7 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                               child: Text(
                                 'No transactions for the next two days.',
                                 style: AppTextStyles.subtitle,
+                                textAlign: TextAlign.center,
                               ),
                             ),
                           )
@@ -459,7 +460,7 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                                                         Row(
                                                           children: [
                                                             Text(
-                                                              "Freight Booking No.: ",
+                                                              "Booking Reference No.: ",
                                                               style: AppTextStyles.caption.copyWith(
                                                                 fontWeight: FontWeight.bold,
                                                                 fontSize: 12,
