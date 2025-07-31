@@ -40,15 +40,16 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
   String? uid;
    Future<List<Transaction>>? _futureTransactions;
 
- @override
-void initState() {
-  super.initState();
-  Future.microtask(() {
-    setState(() {
-      _futureTransactions = ref.read(filteredItemsProviderForTransactionScreen.future);
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      ref.invalidate(filteredItemsProviderForTransactionScreen);
+      setState(() {
+        _futureTransactions = ref.read(filteredItemsProviderForTransactionScreen.future);
+      });
     });
-  });
-}
+  }
 
   Future<void> _refreshTransaction() async {
     print("Refreshing transactions");
@@ -106,7 +107,7 @@ void initState() {
   @override
   Widget build(BuildContext context) {
      
-    final transactionold = ref.watch(filteredItemsProviderForTransactionScreen);
+    // final transactionold = ref.watch(filteredItemsProviderForTransactionScreen);
     
     final acceptedTransaction = ref.watch(accepted_transaction.acceptedTransactionProvider);
 

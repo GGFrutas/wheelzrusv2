@@ -201,7 +201,7 @@ class Transaction {
       containerNumber: json['container_number'].toString(),
       freightBlNumber: json['freight_bl_number'].toString(),
       sealNumber: json['seal_number'].toString(),
-      bookingRefNo: json ['booking_reference_no'] ?? 'Unknown Booking Reference Number',
+      bookingRefNo: json ['name'] ?? 'N/A',
       transportForwarderName: json['origin_forwarder_name'] != null && json['origin_forwarder_name'].isNotEmpty
                             ? _extractName(json ['origin_forwarder_name']) : _extractName(json ['destination_forwarder_name']),
       freightBookingNumber: json ['freight_booking_number'],
