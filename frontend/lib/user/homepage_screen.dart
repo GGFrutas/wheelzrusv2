@@ -460,7 +460,7 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                                                         Row(
                                                           children: [
                                                             Text(
-                                                              "Booking Ref. No.: ",
+                                                              "Bkg Ref. No.: ",
                                                               style: AppTextStyles.caption.copyWith(
                                                                 fontWeight: FontWeight.bold,
                                                                 fontSize: 12,
