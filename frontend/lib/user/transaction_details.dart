@@ -364,7 +364,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                     ),
                     Row(
                       children: [
-                        const SizedBox(width: 21), // Match left padding with location icon
+                        const SizedBox(width: 18), // Match left padding with location icon
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.center, // Center dots with the location pin tip
                           children: List.generate(3, (_) => const Padding(
@@ -381,11 +381,11 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                     
                     // const SizedBox(height: 8),
                     Container(
-                      padding: const EdgeInsets.all(7.9),
+                      padding: const EdgeInsets.all(7.0),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.center, // Align top of icon and text
                         children: [
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 5),
                           const Icon(
                             Icons.circle_rounded,
                             color: mainColor,
@@ -418,11 +418,11 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
                     ),
                 
                     Container(
-                      padding: const EdgeInsets.all(7.9),
+                      padding: const EdgeInsets.all(7.0),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.center, // Align top of icon and text
                         children: [
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 5),
                           const Icon(
                             Icons.calendar_today_outlined,
                             color: mainColor,

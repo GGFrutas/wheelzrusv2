@@ -66,8 +66,9 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
   Future<void> _refreshTransaction() async {
     print("Refreshing transactions");
     try {
-      
+      await Future.delayed(const Duration(seconds: 3));
       ref.invalidate(bookingProvider);
+      ref.invalidate(allTransactionProvider);
       print("REFRESHED!");
     }catch (e){
       print('DID NOT REFRESHED!');
@@ -149,8 +150,9 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
   Widget _buildWeekContent(DateTime date) {
     final allTransaction = ref.watch(allTransactionProvider);
     final acceptedTransaction = ref.watch(accepted_transaction.acceptedTransactionProvider);
- 
-    return RefreshIndicator(
+
+    return Expanded(
+      child: RefreshIndicator(
         onRefresh: _refreshTransaction,
         child: allTransaction.when(
           data: (transactionList) {
@@ -162,18 +164,26 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
 
             // If there are no transactions, show a message
             if (validTransactionList.isEmpty) {
-              return CustomScrollView(
+              return ListView(
                 physics: const AlwaysScrollableScrollPhysics(), // Allow scrolling even if the list is empty
-                slivers: [
-                  SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: Center(
-                      child: Text(
-                        'No transaction for this week.',
-                        style: AppTextStyles.subtitle,
-                      ),
-                    ),
-                  )
+                children: [
+                  // SliverFillRemaining(
+                  //   hasScrollBody: false,
+                  //   child: Center(
+                  //     child: Text(
+                  //       'No transaction for this week.',
+                  //       style: AppTextStyles.subtitle,
+                  //     ),
+                  //   ),
+                  // )
+                  Container(
+        height: MediaQuery.of(context).size.height * 0.6, // Enough height to allow pull gesture
+        alignment: Alignment.center,
+        child: Text(
+          'No transaction for this week.',
+          style: AppTextStyles.subtitle,
+        ),
+      ),
                 ]
               );
             }
@@ -463,9 +473,8 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
           loading: () => const Center(child: CircularProgressIndicator()),  // Show loading spinner while fetching data
           error: (e, stack) => Center(child: Text('Error: $e')),  
         ),  
-      );
-    
-    
+      )
+    );
   }
 
 }
