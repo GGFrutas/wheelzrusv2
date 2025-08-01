@@ -388,7 +388,7 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                       final ongoingTransactions = expandedTransactions
                           .where((tx) {
                             final statusOk = tx.requestStatus == "Accepted" || tx.requestStatus == "Assigned" || tx.requestStatus == "Pending";
-
+                            final notCancelled = tx.stageId != "Cancelled";
                             // Get the relevant date depending on dispatch type
                             String? dateStr;
                             if (tx.dispatchType == 'ot') {
@@ -404,7 +404,7 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
 
                             final dateOnly = DateTime(date.year, date.month, date.day);
 
-                            return statusOk && (dateOnly == today || dateOnly == tomorrow);
+                            return statusOk && notCancelled && (dateOnly == today || dateOnly == tomorrow);
                           })
                           .take(5)
                           .toList();
