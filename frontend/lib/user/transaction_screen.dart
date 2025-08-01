@@ -38,11 +38,12 @@ class TransactionScreen extends ConsumerStatefulWidget {
 
 class _TransactionScreenState extends ConsumerState<TransactionScreen> {
   String? uid;
-   Future<List<Transaction>>? _futureTransactions;
+  Future<List<Transaction>>? _futureTransactions;
 
   @override
   void initState() {
     super.initState();
+   
     Future.microtask(() {
       ref.invalidate(filteredItemsProviderForTransactionScreen);
       setState(() {
@@ -54,10 +55,11 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
   Future<void> _refreshTransaction() async {
     print("Refreshing transactions");
     try {
-      ref.invalidate(filteredItemsProviderForTransactionScreen);
-      setState(() {
-        _futureTransactions = ref.read(filteredItemsProviderForTransactionScreen.future);
-      });
+      ref.invalidate(bookingProvider);
+      final freshFuture = ref.refresh(filteredItemsProviderForTransactionScreen.future);
+    setState(() {
+      _futureTransactions = freshFuture;
+    });
       print("REFRESHED!");
     } catch (e) {
       print('DID NOT REFRESH!');
@@ -110,6 +112,8 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
     // final transactionold = ref.watch(filteredItemsProviderForTransactionScreen);
     
     final acceptedTransaction = ref.watch(accepted_transaction.acceptedTransactionProvider);
+
+    final asyncTx = ref.watch(filteredItemsProviderForTransactionScreen.future);
 
      return Scaffold(
       body: SafeArea(
@@ -171,7 +175,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
               child: RefreshIndicator(
                 onRefresh: _refreshTransaction,
                 child: FutureBuilder<List<Transaction>>(
-                  future: _futureTransactions,
+                  future: asyncTx,
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
@@ -304,17 +308,10 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                   }).toList();
 
                     expandedTransactions.sort((a,b){
-                      DateTime dateACompleted = DateTime.tryParse(a.completedTime ?? '') ?? DateTime(0);
-                      DateTime dateARejected = DateTime.tryParse(a.rejectedTime ?? '') ?? DateTime(0);
-                      DateTime dateBCompleted = DateTime.tryParse(b.completedTime ?? '') ?? DateTime(0);
-                      DateTime dateBRejected = DateTime.tryParse(b.rejectedTime ?? '') ?? DateTime(0);
-
-                      DateTime latestA = dateACompleted.isAfter(dateARejected) ? dateACompleted : dateARejected;
-                      DateTime latestB = dateBCompleted.isAfter(dateBRejected) ? dateBCompleted : dateBRejected;
-                      
-                      return latestB.compareTo(latestA);
-                      
-                    });
+            DateTime dateA = DateTime.tryParse(a.deliveryDate) ?? DateTime(0);
+            DateTime dateB = DateTime.tryParse(b.deliveryDate) ?? DateTime(0);
+            return dateB.compareTo(dateA);
+          });
                     
 
                     final ongoingTransactions = expandedTransactions
@@ -332,7 +329,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                                 height: constraints.maxHeight, // Adjust height as needed
                                 child: Center(
                                   child: Text(
-                                    'No history transactions yet.',
+                                    'No transactions yet.',
                                     style: AppTextStyles.subtitle,
                                     textAlign: TextAlign.center,
                                   ),
@@ -345,157 +342,155 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                       
                     }
                     return ListView.builder(
-                itemCount: ongoingTransactions.length,
-                itemBuilder: (context, index) {
-                  final item = ongoingTransactions[index];
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 20),
-                    decoration: BoxDecoration(
-                      color: bgColor,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: darkerBgColor,
-                          blurRadius: 6,
-                          offset: Offset(0, 3)
-                        )
-                      ]
-                    ),
-                      
-                    child: InkWell(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => TransactionDetails(
-                              transaction: item,
-                              id: item.id,
-                              uid: uid ?? '',
-                            ),
+                      itemCount: ongoingTransactions.length,
+                      itemBuilder: (context, index) {
+                        final item = ongoingTransactions[index];
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 20),
+                          decoration: BoxDecoration(
+                            color: bgColor,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: darkerBgColor,
+                                blurRadius: 6,
+                                offset: Offset(0, 3)
+                              )
+                            ]
                           ),
-                        );
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                const SizedBox(width: 20),
-                                Expanded(
-                                  child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // Space between label and value
-                                    Text(
-                                      '${item.origin} - ${item.destination}',
-                                      style: AppTextStyles.body.copyWith(
-                                        color: mainColor,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    Text(
-                                      formatDateTime(item.arrivalDate),
-                                      style: AppTextStyles.caption.copyWith(
-                                        color: darkerBgColor,
-                                      ),
-                                    ),
-                                  ],
+                            
+                          child: InkWell(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => TransactionDetails(
+                                    transaction: item,
+                                    id: item.id,
+                                    uid: uid ?? '',
+                                  ),
                                 ),
-                                ) // Space between icon and text
-                                
-                              ],
-                            ),
-                            const SizedBox(height: 20),
-                            Row(
-                              children: [
-                                const SizedBox(width: 20), // Space between icon and text
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // Space between label and value
-                                    Text(
-                                      "Request Number",
-                                      style: AppTextStyles.caption.copyWith(
-                                        color: darkerBgColor,
-                                      ),
-                                    ),
-                                    Text(
-                                      (item.requestNumber?.toString() ?? 'No Request Number Available'),
-                                      style: AppTextStyles.body.copyWith(
-                                        color: mainColor,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 20),
-                            Row(
-                              children: [
-                                const SizedBox(width: 20), // Space between icon and text
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
                                     children: [
-                                      // Space between label and value
-                                      Text(
-                                        "Truck Number",
-                                        style: AppTextStyles.caption.copyWith(
-                                          color: darkerBgColor,
+                                      const SizedBox(width: 20),
+                                      Expanded(
+                                        child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          // Space between label and value
+                                          Text(
+                                            '${item.origin} - ${item.destination}',
+                                            style: AppTextStyles.body.copyWith(
+                                              color: mainColor,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          Text(
+                                            formatDateTime(item.arrivalDate),
+                                            style: AppTextStyles.caption.copyWith(
+                                              color: darkerBgColor,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      ) // Space between icon and text
+                                      
+                                    ],
+                                  ),
+                                  const SizedBox(height: 20),
+                                  Row(
+                                    children: [
+                                      const SizedBox(width: 20), // Space between icon and text
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          // Space between label and value
+                                          Text(
+                                            "Request Number",
+                                            style: AppTextStyles.caption.copyWith(
+                                              color: darkerBgColor,
+                                            ),
+                                          ),
+                                          Text(
+                                            (item.requestNumber?.toString() ?? 'No Request Number Available'),
+                                            style: AppTextStyles.body.copyWith(
+                                              color: mainColor,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 20),
+                                  Row(
+                                    children: [
+                                      const SizedBox(width: 20), // Space between icon and text
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            // Space between label and value
+                                            Text(
+                                              "Truck Number",
+                                              style: AppTextStyles.caption.copyWith(
+                                                color: darkerBgColor,
+                                              ),
+                                            ),
+                                            Text(
+                                              (item.truckPlateNumber?.isNotEmpty ?? false)
+                                                ? item.truckPlateNumber! : '—',
+                                              style: AppTextStyles.body.copyWith(
+                                                color: mainColor,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                      Text(
-                                        (item.truckPlateNumber?.isNotEmpty ?? false)
-                                          ? item.truckPlateNumber! : '—',
-                                        style: AppTextStyles.body.copyWith(
-                                          color: mainColor,
-                                          fontWeight: FontWeight.bold,
+                                      Container(
+                                        constraints: const BoxConstraints(
+                                          minWidth: 150,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(20),
+                                          gradient: LinearGradient(
+                                            colors: [
+                                              getStatusColor(item.requestStatus ?? ''),
+                                              Colors.grey,
+                                            ],
+                                            stops: [
+                                              getStatusProgress(item.requestStatus ?? ''),
+                                              getStatusProgress(item.requestNumber ?? '')
+                                            ],
+                                          ),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                        child: Text(
+                                          item.requestStatus ?? '',
+                                          style: AppTextStyles.caption.copyWith(
+                                            color: Colors.black,
+                                            fontWeight: FontWeight.bold
+                                          ),
+                                          textAlign: TextAlign.center,
                                         ),
                                       ),
                                     ],
                                   ),
-                                ),
-                                Container(
-                                  constraints: const BoxConstraints(
-                                    minWidth: 150,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(20),
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        getStatusColor(item.requestStatus ?? ''),
-                                        Colors.grey,
-                                      ],
-                                      stops: [
-                                        getStatusProgress(item.requestStatus ?? ''),
-                                        getStatusProgress(item.requestNumber ?? '')
-                                      ],
-                                    ),
-                                  ),
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                  child: Text(
-                                    item.requestStatus ?? '',
-                                    style: AppTextStyles.caption.copyWith(
-                                      color: Colors.black,
-                                      fontWeight: FontWeight.bold
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                      
-                },
-              
-              );
+                          ),
+                        );
+                      },
+                    );
                   }, 
                   // Remove loading and error named parameters, handle in builder
                 ),  

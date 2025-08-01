@@ -376,10 +376,38 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                         return dateB.compareTo(dateA);
                       });
 
+                      // final ongoingTransactions = expandedTransactions
+                      //   .where((tx) => tx.requestStatus == "Accepted" || tx.requestStatus == "Assigned" || tx.requestStatus == "Pending")
+                      //   .take(10)
+                      //   .toList();
+
+                      final now = DateTime.now();
+                      final today = DateTime(now.year, now.month, now.day);
+                      final tomorrow = today.add(const Duration(days: 1));
+
                       final ongoingTransactions = expandedTransactions
-                        .where((tx) => tx.requestStatus == "Accepted" || tx.requestStatus == "Assigned" || tx.requestStatus == "Pending")
-                        .take(10)
-                        .toList();
+                          .where((tx) {
+                            final statusOk = tx.requestStatus == "Accepted" || tx.requestStatus == "Assigned" || tx.requestStatus == "Pending";
+
+                            // Get the relevant date depending on dispatch type
+                            String? dateStr;
+                            if (tx.dispatchType == 'ot') {
+                              dateStr = tx.departureDate;
+                            } else if (tx.dispatchType == 'dt') {
+                              dateStr = tx.arrivalDate;
+                            }
+
+                            if (dateStr == null || dateStr.isEmpty) return false;
+
+                            final date = DateTime.tryParse(dateStr);
+                            if (date == null) return false;
+
+                            final dateOnly = DateTime(date.year, date.month, date.day);
+
+                            return statusOk && (dateOnly == today || dateOnly == tomorrow);
+                          })
+                          .take(5)
+                          .toList();
                      
                       
                       return CustomScrollView(
