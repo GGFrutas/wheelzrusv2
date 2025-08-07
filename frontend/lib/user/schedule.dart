@@ -48,7 +48,7 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
     return value ?? fallback;
   }
 
-   Map<String, MilestoneHistoryModel?> getPickupAndDeliverySchedule(Transaction? transaction) {
+  Map<String, MilestoneHistoryModel?> getPickupAndDeliverySchedule(Transaction? transaction) {
     final dispatchType = transaction!.dispatchType;
     final history = transaction.history;
     final serviceType = transaction.serviceType;
@@ -131,7 +131,9 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
             dispatchType: '',
             fclCode: '',
             scheduledDatetime: '',
-            serviceType: ''
+            actualDatetime: '',
+            serviceType: '',
+           
           ),
         );
         if(pickupSchedule.id == -1) pickupSchedule  = null;
@@ -149,7 +151,9 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
             dispatchType: '',
             fclCode: '',
             scheduledDatetime: '',
-            serviceType: ''
+            actualDatetime: '',
+            serviceType: '',
+            
           ),
         );
         if(deliverySchedule.id == -1) deliverySchedule  = null;
@@ -160,18 +164,12 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
       };
     }
     return {
-        'pickup': null,
-        'delivery': null,
-      };
+      'pickup': null,
+      'delivery': null,
+    };
 
 
    }
-  
-
-  
-
-
-  
 
   
 

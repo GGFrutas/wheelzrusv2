@@ -36,11 +36,18 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
 
   late final List<DateTime> weekStartDates;
 
+  final ScrollController _scrollableController = ScrollController();
+
   @override
   void initState() {
     super.initState();
     weekStartDates = _generateWeekStartDates();
     _expandedTabIndex =0;
+    _scrollableController.addListener(() {
+      if (_scrollableController.position.pixels == _scrollableController.position.maxScrollExtent) {
+        ref.read(paginatedTransactionProvider('all-bookings'));
+      }
+    });
   }
 
   List<DateTime> _generateWeekStartDates() {
@@ -167,23 +174,14 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
               return ListView(
                 physics: const AlwaysScrollableScrollPhysics(), // Allow scrolling even if the list is empty
                 children: [
-                  // SliverFillRemaining(
-                  //   hasScrollBody: false,
-                  //   child: Center(
-                  //     child: Text(
-                  //       'No transaction for this week.',
-                  //       style: AppTextStyles.subtitle,
-                  //     ),
-                  //   ),
-                  // )
                   Container(
-        height: MediaQuery.of(context).size.height * 0.6, // Enough height to allow pull gesture
-        alignment: Alignment.center,
-        child: Text(
-          'No transaction for this week.',
-          style: AppTextStyles.subtitle,
-        ),
-      ),
+                    height: MediaQuery.of(context).size.height * 0.6, // Enough height to allow pull gesture
+                    alignment: Alignment.center,
+                    child: Text(
+                      'No transaction for this week.',
+                      style: AppTextStyles.subtitle,
+                    ),
+                  ),
                 ]
               );
             }
@@ -360,6 +358,7 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
               
             }
             return ListView.builder(
+              controller: _scrollableController,
               itemCount: ongoingTransactions.length,
               itemBuilder: (context, index) {
                 final item = ongoingTransactions[index];
@@ -408,6 +407,27 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
                                       maxLines: 2,
                                     ),
                                     const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        Text(
+                                          "Bkg Ref. No.: ",
+                                          style: AppTextStyles.caption.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 12,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        Flexible(
+                                          child: Text(
+                                            (item.freightBookingNumber?.toString() ?? 'N/A'),
+                                            style: AppTextStyles.caption.copyWith(
+                                              color: Colors.white
+                                            ),
+                                            softWrap: true, // Text will wrap if it's too long
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                     Row(
                                       children: [
                                         Text(

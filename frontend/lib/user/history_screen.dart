@@ -182,6 +182,21 @@ void initState() {
                           .where((e) => e.isNotEmpty && e.toLowerCase() != 'ph') //filters out empty strings and 'ph'
                           .join(', '); // joins the remaining parts back together
                       }
+
+                       String descriptionMsg(Transaction item) {
+                          if (item.landTransport == 'transport'){
+                            return 'Deliver Laden Container to Consignee';
+                          } else {
+                            return 'Pickup Laden Container from Shipper';
+                          }
+                        }
+                        String newName(Transaction item) {
+                          if (item.landTransport == 'transport'){
+                            return 'Deliver to Consignee';
+                          } else {
+                            return 'Pickup from Shipper';
+                          }
+                        }
     
                       if (item.dispatchType == "ot") {
                         return [
@@ -195,7 +210,8 @@ void initState() {
                               requestNumber: item.deRequestNumber,
                               requestStatus: item.deRequestStatus,
                               rejectedTime: item.deRejectedTime,
-                              completedTime: item.deCompletedTime
+                              completedTime: item.deCompletedTime,
+                              originAddress: "Deliver Empty Container to Shipper",
 
                               // truckPlateNumber: item.deTruckPlateNumber,
                             ),
@@ -203,13 +219,14 @@ void initState() {
                           if ( item.plTruckDriverName == driverId) // Filter out if accepted
                             // if (item.plTruckDriverName == authPartnerId)
                               item.copyWith(
-                              name: "Pickup from Shipper",
+                              name: newName(item),
                               destination: cleanAddress(item.origin),
                               origin: cleanAddress(item.destination),
                               requestNumber: item.plRequestNumber,
                               requestStatus: item.plRequestStatus,
                               rejectedTime: item.plRejectedTime,
-                              completedTime: item.plCompletedTime
+                              completedTime: item.plCompletedTime,
+                              originAddress: descriptionMsg(item),
                               // truckPlateNumber: item.plTruckPlateNumber,
                               ),
                         ];
@@ -224,7 +241,8 @@ void initState() {
                               requestNumber: item.dlRequestNumber,
                               requestStatus: item.dlRequestStatus,
                               rejectedTime: item.dlRejectedTime,
-                              completedTime: item.dlCompletedTime
+                              completedTime: item.dlCompletedTime,
+                              originAddress: "Deliver Laden Container to Consignee",
                               // truckPlateNumber: item.dlTruckPlateNumber,
                             ),
                           // Second instance: Pickup from Consignee
@@ -236,7 +254,8 @@ void initState() {
                               requestNumber: item.peRequestNumber,
                               requestStatus: item.peRequestStatus,
                               rejectedTime: item.peRejectedTime,
-                              completedTime: item.peCompletedTime
+                              completedTime: item.peCompletedTime,
+                              originAddress: "Deliver Laden Container to Consignee",
                               // truckPlateNumber: item.peTruckPlateNumber,
                             ),
                         ]; 
