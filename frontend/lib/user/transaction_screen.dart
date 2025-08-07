@@ -256,8 +256,8 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                             requestNumber: item.deRequestNumber,
                             requestStatus: item.deRequestStatus,
                             assignedDate:item.deAssignedDate,
-                            originAddress: "Deliver Empty Container to Shipper"
-                            // truckPlateNumber: item.deTruckPlateNumber,
+                            originAddress: "Deliver Empty Container to Shipper",
+                            truckPlateNumber: item.deTruckPlateNumber,
                           ),
                           // Second instance: Pickup from Shipper
                         if ( item.plTruckDriverName == driverId) // Filter out if accepted
@@ -270,7 +270,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                             requestStatus: item.plRequestStatus,
                             assignedDate:item.plAssignedDate,
                             originAddress: descriptionMsg(item),
-                            // truckPlateNumber: item.plTruckPlateNumber,
+                            truckPlateNumber: item.plTruckPlateNumber,
                             ),
                       ];
                     } else if (item.dispatchType == "dt") {
@@ -286,8 +286,8 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                             requestNumber: item.dlRequestNumber,
                             requestStatus: item.dlRequestStatus,
                             assignedDate:item.dlAssignedDate,
-                            originAddress: "Deliver Laden Container to Consignee"
-                            // truckPlateNumber: item.dlTruckPlateNumber,
+                            originAddress: "Deliver Laden Container to Consignee",
+                            truckPlateNumber: item.dlTruckPlateNumber,
                           ),
                         // Second instance: Pickup from Consignee
                         if (item.peTruckDriverName == driverId) // Filter out if accepted
@@ -298,8 +298,8 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                             requestNumber: item.peRequestNumber,
                             requestStatus: item.peRequestStatus,
                             assignedDate:item.peAssignedDate,
-                            originAddress: "Pickup Empty Container from Consignee"
-                            // truckPlateNumber: item.peTruckPlateNumber,
+                            originAddress: "Pickup Empty Container from Consignee",
+                            truckPlateNumber: item.peTruckPlateNumber,
                           ),
                       ]; 
                     }

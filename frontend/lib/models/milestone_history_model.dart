@@ -5,6 +5,7 @@ class MilestoneHistoryModel {
   final String fclCode;
   final String scheduledDatetime;
   final String serviceType;
+  final String actualDatetime;
 
   const MilestoneHistoryModel({
     required this.id,
@@ -12,7 +13,8 @@ class MilestoneHistoryModel {
     required this.dispatchType,
     required this.fclCode,
     required this.scheduledDatetime,
-    required this.serviceType
+    required this.serviceType,
+    required this.actualDatetime
   });
 
   factory MilestoneHistoryModel.fromJson(Map<String, dynamic> json) {
@@ -29,8 +31,13 @@ class MilestoneHistoryModel {
         ? serviceTypeRaw[1].toString()
         : '',
 
+        actualDatetime: (json['actual_datetime'] is String && json['actual_datetime'].isNotEmpty)
+        ? json['actual_datetime']
+        : '',
+
     );
   }
+  
 
 
   static int? _extractId(dynamic field) {
@@ -50,7 +57,8 @@ class MilestoneHistoryModel {
       dispatchType: dispatchType,
      fclCode: fclCode,
      scheduledDatetime: scheduledDatetime,
-     serviceType: serviceType
+     serviceType: serviceType,
+     actualDatetime: actualDatetime
 
     );
   }

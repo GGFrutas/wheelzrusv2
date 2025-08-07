@@ -36,22 +36,30 @@ class _AllHistoryPageState extends ConsumerState<AllHistoryScreen>{
   String? uid;
  Future<List<Transaction>>? _futureTransactions;
 
+  final ScrollController _scrollableController = ScrollController();
+
  @override
 void initState() {
   super.initState();
   Future.microtask(() {
     setState(() {
-      _futureTransactions = ref.read(filteredItemsProviderForHistoryScreen.future);
+      _futureTransactions = ref.read(allHistoryProvider.future);
     });
   });
+
+  _scrollableController.addListener(() {
+      if (_scrollableController.position.pixels == _scrollableController.position.maxScrollExtent) {
+        ref.read(paginatedTransactionProvider('all-history').notifier).fetchNextPage();
+      }
+    });
 }
 
   Future<void> _refreshTransaction() async {
     print("Refreshing transactions");
     try {
-      ref.invalidate(filteredItemsProviderForHistoryScreen);
+      ref.invalidate(allHistoryProvider);
       setState(() {
-        _futureTransactions = ref.read(filteredItemsProviderForHistoryScreen.future);
+        _futureTransactions = ref.read(allHistoryProvider.future);
       });
       print("REFRESHED!");
     } catch (e) {
@@ -165,9 +173,9 @@ void initState() {
                               requestNumber: item.deRequestNumber,
                               requestStatus: item.deRequestStatus,
                               rejectedTime: item.deRejectedTime,
-                              completedTime: item.deCompletedTime
+                              completedTime: item.deCompletedTime,
 
-                              // truckPlateNumber: item.deTruckPlateNumber,
+                              truckPlateNumber: item.deTruckPlateNumber,
                             ),
                             // Second instance: Pickup from Shipper
                           if ( item.plTruckDriverName == driverId) // Filter out if accepted
@@ -179,8 +187,8 @@ void initState() {
                               requestNumber: item.plRequestNumber,
                               requestStatus: item.plRequestStatus,
                               rejectedTime: item.plRejectedTime,
-                              completedTime: item.plCompletedTime
-                              // truckPlateNumber: item.plTruckPlateNumber,
+                              completedTime: item.plCompletedTime,
+                              truckPlateNumber: item.plTruckPlateNumber,
                               ),
                         ];
                       } else if (item.dispatchType == "dt") {
@@ -194,8 +202,8 @@ void initState() {
                               requestNumber: item.dlRequestNumber,
                               requestStatus: item.dlRequestStatus,
                               rejectedTime: item.dlRejectedTime,
-                              completedTime: item.dlCompletedTime
-                              // truckPlateNumber: item.dlTruckPlateNumber,
+                              completedTime: item.dlCompletedTime,
+                              truckPlateNumber: item.dlTruckPlateNumber,
                             ),
                           // Second instance: Pickup from Consignee
                           if (item.peTruckDriverName == driverId) // Filter out if accepted
@@ -206,8 +214,8 @@ void initState() {
                               requestNumber: item.peRequestNumber,
                               requestStatus: item.peRequestStatus,
                               rejectedTime: item.peRejectedTime,
-                              completedTime: item.peCompletedTime
-                              // truckPlateNumber: item.peTruckPlateNumber,
+                              completedTime: item.peCompletedTime,
+                              truckPlateNumber: item.peTruckPlateNumber,
                             ),
                         ]; 
                       }
@@ -257,8 +265,16 @@ void initState() {
                       
                     }
                     return ListView.builder(
-                      itemCount: ongoingTransactions.length,
+                      controller: _scrollableController,
+                      itemCount: ongoingTransactions.length + 1,
                       itemBuilder: (context, index) {
+                        if (index == ongoingTransactions.length) {
+                          // Show a loading indicator at the end of the list
+                          return const Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: Center(child: CircularProgressIndicator()),
+                          );
+                        }
                         final item = ongoingTransactions[index];
                         final statusLabel =
                         item.requestStatus == 'Completed'
