@@ -578,12 +578,13 @@ class TransactionController extends Controller
 
             $jobResponses[] = $manager;
 
-            $totalCount = count($jobResponses);
-            $totalPages = ceil($totalCount / $limit);
-            $hasMore = $page < $totalPages;
-
-            $pageResponse = array_slice($jobResponses, $offset, $limit);
+            
         }
+        $totalCount = count($jobResponses);
+        $totalPages = ceil($totalCount / $limit);
+        $hasMore = $page < $totalPages;
+
+        $pageResponse = array_slice($jobResponses, $offset, $limit);
 
         // ✅ Final return
         return response()->json([

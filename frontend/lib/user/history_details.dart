@@ -332,16 +332,13 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
                 child: Padding(
                   padding: const EdgeInsets.all(20.0),
                     child: Text(
-                      'No transactions for the next two days.',
+                      'This booking was cancelled.',
                       style: AppTextStyles.subtitle,
                       textAlign: TextAlign.center,
                     ),
                   )
-                                
-                                
-                              )
-                        : 
-                Column(
+                )
+                : Column(
                   children: [
                     Row(
                         children: List.generate(tabTitles.length, (index) {

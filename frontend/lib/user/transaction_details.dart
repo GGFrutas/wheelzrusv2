@@ -543,74 +543,80 @@ final delivery = scheduleMap['delivery'];
                         ],
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.all(7.0),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center, // Align top of icon and text
-                        children: [
-                          const SizedBox(width: 5),
-                          const Icon(
-                            Icons.calendar_today_outlined,
-                            color: mainColor,
-                            size: 24,
-                          ),
-                          const SizedBox(width: 8), // Space between icon and text
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Space between label and value
-                              Text( 
-                                formatDateTime(pickup?.scheduledDatetime),
-                                style: AppTextStyles.subtitle.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: mainColor,
-                                )
-                              ),
-                              Text(
-                                "Pick-up Date",
-                                style: AppTextStyles.caption.copyWith(
-                                  color: mainColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.all(7.0),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center, // Align top of icon and text
-                        children: [
-                          const SizedBox(width: 5),
-                          const Icon(
-                            Icons.calendar_today_outlined,
-                            color: mainColor,
-                            size: 24,
-                          ),
-                          const SizedBox(width: 8), // Space between icon and text
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Space between label and value
-                              Text( 
-                               formatDateTime(delivery?.scheduledDatetime),
-                                style: AppTextStyles.subtitle.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: mainColor,
-                                )
-                              ),
-                              Text(
-                               "Delivery Date",
-                                style: AppTextStyles.caption.copyWith(
-                                  color: mainColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
+                    Column(
+  children: [
+    if (!(widget.transaction?.serviceType == "Less-Than-Container Load" && widget.transaction?.dispatchType == 'DT')) // Show pickup unless serviceType=2 and dispatchType=DT
+      Container(
+        padding: const EdgeInsets.all(7.0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const SizedBox(width: 5),
+            const Icon(
+              Icons.calendar_today_outlined,
+              color: mainColor,
+              size: 24,
+            ),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  formatDateTime(pickup?.scheduledDatetime),
+                  style: AppTextStyles.subtitle.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: mainColor,
+                  ),
+                ),
+                Text(
+                  "Pick-up Date",
+                  style: AppTextStyles.caption.copyWith(
+                    color: mainColor,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+
+    if (!(widget.transaction?.serviceType == "Less-Than-Container Load" && widget.transaction?.dispatchType == 'OT')) // Show delivery unless serviceType=2 and dispatchType=OT
+      Container(
+        padding: const EdgeInsets.all(7.0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const SizedBox(width: 5),
+            const Icon(
+              Icons.calendar_today_outlined,
+              color: mainColor,
+              size: 24,
+            ),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  formatDateTime(delivery?.scheduledDatetime),
+                  style: AppTextStyles.subtitle.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: mainColor,
+                  ),
+                ),
+                Text(
+                  "Delivery Date",
+                  style: AppTextStyles.caption.copyWith(
+                    color: mainColor,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+  ],
+),
+
                 
                     Container(
                       padding: const EdgeInsets.all(7.0),
