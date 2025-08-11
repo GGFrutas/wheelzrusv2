@@ -304,10 +304,14 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                         if (item.dispatchType == "ot") {
                           final shipperOrigin = buildShipperAddress(item);
                           final shipperDestination = cleanAddress([item.destination]);
-                          return [
-                            // First instance: Deliver to Shipper
-                            if (item.deTruckDriverName == driverId) // Filter out if accepted
-                              // Check if the truck driver is the same as the authPartnerId
+                
+                        return[
+
+                        
+                          // First instance: Deliver to Shipper
+                          if (item.deTruckDriverName == driverId && item.deRequestStatus != "Completed" || item.deRequestStatus != "Ongoing")
+                            // Check if the truck driver is the same as the authPartnerId
+                            // return [ 
                               item.copyWith(
                                 name: "Deliver to Shipper",
                                 origin:shipperDestination,
@@ -316,12 +320,14 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                                 requestStatus: item.deRequestStatus,
                                 assignedDate:item.deAssignedDate,
                                 originAddress: "Deliver Empty Container to Shipper",
-                                freightBookingNumber: item.freightBookingNumber,
+                                freightBookingNumber:item.freightBookingNumber,
                                 // truckPlateNumber: item.deTruckPlateNumber,
                               ),
-                              // Second instance: Pickup from Shipper
-                            if ( item.plTruckDriverName == driverId) // Filter out if accepted
-                              // if (item.plTruckDriverName == authPartnerId)
+                          //   ];
+                          // }
+                            // Second instance: Pickup from Shipper
+                          if ( item.plTruckDriverName == driverId && item.plRequestStatus != "Completed" || item.plRequestStatus != "Ongoing" )
+                            // return [
                               item.copyWith(
                                 name: newName(item),
                                 origin:shipperOrigin,
@@ -333,13 +339,17 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                                 freightBookingNumber:item.freightBookingNumber,
                                 // truckPlateNumber: item.plTruckPlateNumber,
                               ),
-                          ];
+                            ];
+                          // }
+                          // return [];
+                    
                         } else if (item.dispatchType == "dt") {
                           final consigneeOrigin = buildConsigneeAddress(item);
                           final consigneeDestination = cleanAddress([item.origin]);
-                          return [
+                        return [
                             // First instance: Deliver to Consignee
-                            if (item.dlTruckDriverName == driverId) // Filter out if accepted
+                          if (item.dlTruckDriverName == driverId && item.dlRequestStatus != "Completed" || item.dlRequestStatus != "Ongoing")
+                            // return [
                               item.copyWith(
                                 name: "Deliver to Consignee",
                                 origin:  consigneeDestination,
@@ -351,8 +361,11 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                                 freightBookingNumber:item.freightBookingNumber,
                                 // truckPlateNumber: item.dlTruckPlateNumber,
                               ),
-                            // Second instance: Pickup from Consignee
-                            if (item.peTruckDriverName == driverId) // Filter out if accepted
+                          //   ];
+                          // }
+                          // Second instance: Pickup from Consignee
+                          if (item.peTruckDriverName == driverId && item.peRequestStatus != "Completed" || item.peRequestStatus != "Ongoing")
+                            // return [
                               item.copyWith(
                                 name: "Pickup from Consignee",
                                 origin: consigneeOrigin,
@@ -364,7 +377,9 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                                 freightBookingNumber:item.freightBookingNumber,
                                 // truckPlateNumber: item.peTruckPlateNumber,
                               ),
-                          ];  
+                            ];  
+                          // }
+                          // return [];
                         }
                         // Return as-is if no match
                         return [item];

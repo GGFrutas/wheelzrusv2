@@ -35,6 +35,7 @@ Future<List<Transaction>> fetchFilteredTransactions( {
   }
 
   final url = '$baseUrl/api/odoo/booking/$endpoint?uid=$uid';
+  print("URL: $url" );
 
   final response = await http.get(Uri.parse(url), headers: {
     'Content-Type': 'application/json',

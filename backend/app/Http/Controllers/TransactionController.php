@@ -43,10 +43,10 @@ function jsonRpcRequest($url, $payload){
 
 class TransactionController extends Controller
 {
-    protected $url = "https://jralejandria-alpha-dev-yxe.odoo.com";
-    protected $db = 'jralejandria-alpha-dev-yxe1-production-alpha-22456968';
+    protected $url = "https://jralejandria-beta-dev-yxe.odoo.com";
+    protected $db = 'jralejandria-beta-dev-yxe-production-beta-22570487';
     // protected $odoo_url = "http://192.168.118.102:8000/odoo/jsonrpc";
-    protected $odoo_url = "https://jralejandria-alpha-dev-yxe.odoo.com/jsonrpc";
+    protected $odoo_url = "https://jralejandria-beta-dev-yxe.odoo.com/jsonrpc";
 
    
 
@@ -190,7 +190,13 @@ class TransactionController extends Controller
                                 ["de_truck_driver_name", "=", $partnerId],
                                 ["dl_truck_driver_name", "=", $partnerId],
                                 ["pe_truck_driver_name", "=", $partnerId],
-                                ["pl_truck_driver_name", "=", $partnerId]
+                                ["pl_truck_driver_name", "=", $partnerId],
+
+                         "|", "|", "|",  // OR: driver match
+                                ["de_request_status", "!=", "Completed"],
+                                ["dl_request_status", "!=", "Completed"],
+                                ["pe_request_status", "!=", "Completed"],
+                                ["pl_request_status", "!=", "Completed"]
                     ]],
 
                     ["fields" => [
