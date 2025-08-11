@@ -465,8 +465,8 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
       if (widget.transaction?.requestNumber == widget.transaction?.deRequestNumber) {
         yardSignBase64 = widget.transaction?.peSign;
         yardProofBase64 = widget.transaction?.peProof;
-        signBase64 = widget.transaction?.dlSign;
-        proofBase64 = widget.transaction?.dlProof;
+        signBase64 = widget.transaction?.deSign;
+        proofBase64 = widget.transaction?.deProof;
         yardName =  widget.transaction?.peReleasedBy;
         name = widget.transaction?.deReleasedBy;
         yardactualdate = formatDateTime(pickup?.actualDatetime);
@@ -474,8 +474,8 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
       } else if (widget.transaction?.requestNumber == widget.transaction?.plRequestNumber) {
         yardSignBase64 = widget.transaction?.dlSign;
         yardProofBase64 = widget.transaction?.dlProof;
-        signBase64 = widget.transaction?.peSign;
-        proofBase64 = widget.transaction?.peProof;
+        signBase64 = widget.transaction?.plSign;
+        proofBase64 = widget.transaction?.plProof;
         yardName =  widget.transaction?.plReceivedBy;
         name = widget.transaction?.dlReceivedBy;
         yardactualdate = formatDateTime(pickup?.actualDatetime);

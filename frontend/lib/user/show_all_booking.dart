@@ -258,7 +258,8 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
                       requestNumber: item.deRequestNumber,
                       requestStatus: item.deRequestStatus,
                       assignedDate:item.deAssignedDate,
-                      originAddress: "Deliver Empty Container to Shipper"
+                      originAddress: "Deliver Empty Container to Shipper",
+                      freightBookingNumber:item.freightBookingNumber,
                       // truckPlateNumber: item.deTruckPlateNumber,
                     ),
                     // Second instance: Pickup from Shipper
@@ -272,6 +273,7 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
                       requestStatus: item.plRequestStatus,
                       assignedDate:item.plAssignedDate,
                       originAddress: descriptionMsg(item),
+                      freightBookingNumber:item.freightBookingNumber,
                       // truckPlateNumber: item.plTruckPlateNumber,
                     ),
                 ];
@@ -288,7 +290,8 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
                       requestNumber: item.dlRequestNumber,
                       requestStatus: item.dlRequestStatus,
                       assignedDate:item.dlAssignedDate,
-                      originAddress: "Deliver Laden Container to Consignee"
+                      originAddress: "Deliver Laden Container to Consignee",
+                      freightBookingNumber:item.freightBookingNumber,
                       // truckPlateNumber: item.dlTruckPlateNumber,
                     ),
                   // Second instance: Pickup from Consignee
@@ -300,7 +303,8 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
                       requestNumber: item.peRequestNumber,
                       requestStatus: item.peRequestStatus,
                       assignedDate:item.peAssignedDate,
-                      originAddress: "Pickup Empty Container from Consignee"
+                      originAddress: "Pickup Empty Container from Consignee",
+                      freightBookingNumber:item.freightBookingNumber,
                       // truckPlateNumber: item.peTruckPlateNumber,
                     ),
                 ];  
