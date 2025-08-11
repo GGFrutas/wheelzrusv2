@@ -316,7 +316,7 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                                 requestStatus: item.deRequestStatus,
                                 assignedDate:item.deAssignedDate,
                                 originAddress: "Deliver Empty Container to Shipper",
-                                freightBookingNumber: item.freightBookingNumber,
+                                freightBookingNumber:item.freightBookingNumber,
                                 // truckPlateNumber: item.deTruckPlateNumber,
                               ),
                               // Second instance: Pickup from Shipper
@@ -333,11 +333,14 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                                 freightBookingNumber:item.freightBookingNumber,
                                 // truckPlateNumber: item.plTruckPlateNumber,
                               ),
-                          ];
+                            ];
+                          // }
+                          // return [];
+                    
                         } else if (item.dispatchType == "dt") {
                           final consigneeOrigin = buildConsigneeAddress(item);
                           final consigneeDestination = cleanAddress([item.origin]);
-                          return [
+                        return [
                             // First instance: Deliver to Consignee
                             if (item.dlTruckDriverName == driverId && item.dlRequestStatus != "Completed" && item.dlRequestStatus != "Ongoing")
                               item.copyWith(
@@ -364,7 +367,9 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                                 freightBookingNumber:item.freightBookingNumber,
                                 // truckPlateNumber: item.peTruckPlateNumber,
                               ),
-                          ];  
+                            ];  
+                          // }
+                          // return [];
                         }
                         // Return as-is if no match
                         return [item];
