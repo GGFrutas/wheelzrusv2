@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/models/transaction_model.dart';
+import 'package:frontend/models/week_query.dart';
 import 'package:frontend/notifiers/auth_notifier.dart';
 import 'package:frontend/notifiers/navigation_notifier.dart';
 import 'package:frontend/provider/accepted_transaction.dart' as accepted_transaction;
@@ -155,8 +156,22 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
   }
 
   Widget _buildWeekContent(DateTime date) {
-    final allTransaction = ref.watch(allTransactionProvider);
+    
+    // final acceptedTransaction = ref.watch(accepted_transaction.acceptedTransactionProvider);
+    // DateTime now = DateTime.now();
+    // int daysSinceSunday = now.weekday % 7;
+    // DateTime sunday = now.subtract(Duration(days: daysSinceSunday));
+
+    // // Define the week range: Sunday to Saturday
+    // DateTime weekStart = sunday;
+    // DateTime weekEnd = sunday.add(const Duration(days: 6));
+
+
+    // final query = WeekQuery(start: weekStart, end: weekEnd, page: 1, limit: 5);
+    // final allTransaction = ref.watch(allTransactionProvider(query));
+     final allTransaction = ref.watch(allTransactionProvider);
     final acceptedTransaction = ref.watch(accepted_transaction.acceptedTransactionProvider);
+
 
     return Expanded(
       child: RefreshIndicator(

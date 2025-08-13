@@ -104,7 +104,7 @@ void initState() {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Transactions',
+                      'History',
                       style:AppTextStyles.title.copyWith(
                         color: mainColor,
                         fontWeight: FontWeight.bold

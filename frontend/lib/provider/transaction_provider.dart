@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:frontend/models/week_query.dart';
 import 'package:frontend/notifiers/navigation_notifier.dart';
 import 'package:frontend/notifiers/paginated_notifier.dart';
 import 'package:frontend/notifiers/paginated_state.dart';
@@ -22,7 +23,7 @@ import 'package:frontend/notifiers/auth_notifier.dart';
 
 Future<List<Transaction>> fetchFilteredTransactions( {
   required FutureProviderRef<List<Transaction>> ref,
-  required String endpoint,
+  required String endpoint, required Map<String, dynamic> queryParams,
 }) async {
   final baseUrl = ref.watch(baseUrlProvider);
   final auth = ref.watch(authNotifierProvider);
@@ -165,34 +166,44 @@ final bookingProvider = FutureProvider<List<Transaction>>((ref) async {
 
   // print('✅ Retrieved UID in bookingProvider: $uid'); // Debugging
 
-  return fetchFilteredTransactions(ref: ref, endpoint: 'today'); // Provide required named parameters
+  return fetchFilteredTransactions(ref: ref, endpoint: 'today', queryParams: {}); // Provide required named parameters
 });
 
 final filteredItemsProvider = FutureProvider<List<Transaction>>((ref) async {
   
-  return fetchFilteredTransactions(ref: ref, endpoint: 'today');
+  return fetchFilteredTransactions(ref: ref, endpoint: 'today', queryParams: {});
 });
 
 final filteredItemsProviderForTransactionScreen = FutureProvider<List<Transaction>>((ref) async {
   
-  return fetchFilteredTransactions(ref: ref, endpoint: 'ongoing');
+  return fetchFilteredTransactions(ref: ref, endpoint: 'ongoing', queryParams: {});
 });
 
 final filteredItemsProviderForHistoryScreen = FutureProvider<List<Transaction>>((ref) async {
  
-  return fetchFilteredTransactions(ref: ref, endpoint: 'history');
+  return fetchFilteredTransactions(ref: ref, endpoint: 'history', queryParams: {});
 });
+
+// final allTransactionProvider = FutureProvider.family<List<Transaction>, WeekQuery>((ref, query) async {
+//   return fetchFilteredTransactions(
+// ref: ref, endpoint: 'all-bookings',  queryParams: {
+//       'start': query.start.toIso8601String(),
+//       'end': query.end.toIso8601String(),
+//       'page': query.page.toString(),
+//       'limit': query.limit.toString(),
+//     },);
+// });
 
 final allTransactionProvider = FutureProvider<List<Transaction>>((ref) async {
   
 
-  return fetchFilteredTransactions(ref: ref, endpoint: 'all-bookings');
+  return fetchFilteredTransactions(ref: ref, endpoint: 'all-bookings', queryParams: {});
 });
 
 final allHistoryProvider = FutureProvider<List<Transaction>>((ref) async {
   
 
-  return fetchFilteredTransactions(ref: ref, endpoint: 'all-history');
+  return fetchFilteredTransactions(ref: ref, endpoint: 'all-history', queryParams: {});
 });
 
 
