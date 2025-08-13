@@ -309,7 +309,7 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
 
                         
                           // First instance: Deliver to Shipper
-                          if (item.deTruckDriverName == driverId && item.deRequestStatus != "Completed" || item.deRequestStatus != "Ongoing")
+                          if (item.deTruckDriverName == driverId)
                             // Check if the truck driver is the same as the authPartnerId
                             // return [ 
                               item.copyWith(
@@ -326,7 +326,7 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                           //   ];
                           // }
                             // Second instance: Pickup from Shipper
-                          if ( item.plTruckDriverName == driverId && item.plRequestStatus != "Completed" || item.plRequestStatus != "Ongoing" )
+                          if ( item.plTruckDriverName == driverId)
                             // return [
                               item.copyWith(
                                 name: newName(item),
@@ -348,7 +348,7 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                           final consigneeDestination = cleanAddress([item.origin]);
                         return [
                             // First instance: Deliver to Consignee
-                          if (item.dlTruckDriverName == driverId && item.dlRequestStatus != "Completed" || item.dlRequestStatus != "Ongoing")
+                          if (item.dlTruckDriverName == driverId)
                             // return [
                               item.copyWith(
                                 name: "Deliver to Consignee",
@@ -364,7 +364,7 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                           //   ];
                           // }
                           // Second instance: Pickup from Consignee
-                          if (item.peTruckDriverName == driverId && item.peRequestStatus != "Completed" || item.peRequestStatus != "Ongoing")
+                          if (item.peTruckDriverName == driverId)
                             // return [
                               item.copyWith(
                                 name: "Pickup from Consignee",

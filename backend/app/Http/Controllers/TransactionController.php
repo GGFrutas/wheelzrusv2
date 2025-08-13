@@ -192,11 +192,7 @@ class TransactionController extends Controller
                                 ["pe_truck_driver_name", "=", $partnerId],
                                 ["pl_truck_driver_name", "=", $partnerId],
 
-                         "|", "|", "|",  // OR: driver match
-                                ["de_request_status", "!=", "Completed"],
-                                ["dl_request_status", "!=", "Completed"],
-                                ["pe_request_status", "!=", "Completed"],
-                                ["pl_request_status", "!=", "Completed"]
+                         
                     ]],
 
                     ["fields" => [
@@ -1271,6 +1267,8 @@ class TransactionController extends Controller
             return response()->json(['success' => false, 'message' => 'Not a driver'], 403);
         }
 
+        $today = date('Y-m-d');
+        
         
         // Step 4: Find all dispatch.manager records where driver name matches
         $dispatchRes =jsonRpcRequest("$odooUrl", [
@@ -1292,6 +1290,10 @@ class TransactionController extends Controller
                         ["dl_truck_driver_name", "=", $partnerId],
                         ["pe_truck_driver_name", "=", $partnerId],
                         ["pl_truck_driver_name", "=", $partnerId],
+
+                        "|",
+                        ['arrival_date', ">=", $today],
+                        ['departure_date', ">=", $today],
                     
                         
                     
@@ -1415,13 +1417,13 @@ class TransactionController extends Controller
             $jobResponses[] = $manager;
 
 
-            $totalCount = count($jobResponses);
-            $totalPages = ceil($totalCount / $limit);
-            $hasMore = $page < $totalPages;
-
-            $pageResponse = array_slice($jobResponses, $offset, $limit);
+           
         }
-      
+        $totalCount = count($jobResponses);
+        $totalPages = ceil($totalCount / $limit);
+        $hasMore = $page < $totalPages;
+
+        $pageResponse = array_slice($jobResponses, $offset, $limit);
 
         return response()->json([
             'data' => [
