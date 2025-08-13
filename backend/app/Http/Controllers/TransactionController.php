@@ -13,6 +13,7 @@ use PhpXmlRpc\Request as XmlRpcRequest;
 use Ripcord\Ripcord; 
 use Illuminate\Support\Facades\Http;
 use GuzzleHttp\Guzzle;
+use Carbon\Carbon;
 
 function jsonRpcRequest($url, $payload){
     
@@ -1159,8 +1160,16 @@ class TransactionController extends Controller
         $url = $this->url;
         $db = $this->db;
 
-         $page = (int) request()->query('page', 1);
-        $limit = (int) request()->query('limit', 10);
+        $inputStart =  Carbon::parse($request->input('start'));
+
+        $start =$inputStart->copy()->subDays($inputStart->dayOfWeek % 7)->startOfDay();
+
+        $end = $start->copy()->addDays(6)->endOfDay();
+
+       
+
+        $page = (int) request()->query('page', 1);
+        $limit = (int) request()->query('limit', 5);
         $offset = ($page - 1) * $limit;
       
         $uid = $request->query('uid') ;
@@ -1311,7 +1320,8 @@ class TransactionController extends Controller
                         "pl_completion_time", "dl_completion_time", "pe_completion_time", "shipper_province","shipper_city","shipper_barangay","shipper_street", 
                         "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime", "service_type", "booking_service",
                         "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time", "name", "stage_id"
-                    ]],
+                    ]
+                    ]
                 ]
             ],
             'id' => 4
@@ -1427,6 +1437,8 @@ class TransactionController extends Controller
 
         return response()->json([
             'data' => [
+                 'week' => $start->toDateString() . ' to ' . $end->toDateString(),
+
                 'transactions' => $jobResponses,
                 'pagination' => [
                     'current_page' => $page,
