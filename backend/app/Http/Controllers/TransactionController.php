@@ -193,6 +193,7 @@ class TransactionController extends Controller
                                 ["pl_truck_driver_name", "=", $partnerId],
 
                          
+                         
                     ]],
 
                     ["fields" => [
@@ -1290,6 +1291,10 @@ class TransactionController extends Controller
                         ["dl_truck_driver_name", "=", $partnerId],
                         ["pe_truck_driver_name", "=", $partnerId],
                         ["pl_truck_driver_name", "=", $partnerId],
+
+                        "|",
+                        ['arrival_date', ">=", $today],
+                        ['departure_date', ">=", $today],
 
                         "|",
                         ['arrival_date', ">=", $today],

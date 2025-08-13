@@ -304,10 +304,14 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                         if (item.dispatchType == "ot") {
                           final shipperOrigin = buildShipperAddress(item);
                           final shipperDestination = cleanAddress([item.destination]);
-                          return [
-                            // First instance: Deliver to Shipper
-                            if (item.deTruckDriverName == driverId && item.deRequestStatus != "Completed" && item.deRequestStatus != "Ongoing")
-                              // Check if the truck driver is the same as the authPartnerId
+                
+                        return[
+
+                        
+                          // First instance: Deliver to Shipper
+                          if (item.deTruckDriverName == driverId)
+                            // Check if the truck driver is the same as the authPartnerId
+                            // return [ 
                               item.copyWith(
                                 name: "Deliver to Shipper",
                                 origin:shipperDestination,
@@ -319,9 +323,11 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                                 freightBookingNumber:item.freightBookingNumber,
                                 // truckPlateNumber: item.deTruckPlateNumber,
                               ),
-                              // Second instance: Pickup from Shipper
-                            if ( item.plTruckDriverName == driverId && item.plRequestStatus != "Completed" && item.plRequestStatus != "Ongoing")
-                              // if (item.plTruckDriverName == authPartnerId)
+                          //   ];
+                          // }
+                            // Second instance: Pickup from Shipper
+                          if ( item.plTruckDriverName == driverId)
+                            // return [
                               item.copyWith(
                                 name: newName(item),
                                 origin:shipperOrigin,
@@ -342,7 +348,8 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                           final consigneeDestination = cleanAddress([item.origin]);
                         return [
                             // First instance: Deliver to Consignee
-                            if (item.dlTruckDriverName == driverId && item.dlRequestStatus != "Completed" && item.dlRequestStatus != "Ongoing")
+                          if (item.dlTruckDriverName == driverId)
+                            // return [
                               item.copyWith(
                                 name: "Deliver to Consignee",
                                 origin:  consigneeDestination,
@@ -354,8 +361,11 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                                 freightBookingNumber:item.freightBookingNumber,
                                 // truckPlateNumber: item.dlTruckPlateNumber,
                               ),
-                            // Second instance: Pickup from Consignee
-                            if (item.peTruckDriverName == driverId && item.peRequestStatus != "Completed" && item.peRequestStatus != "Ongoing")
+                          //   ];
+                          // }
+                          // Second instance: Pickup from Consignee
+                          if (item.peTruckDriverName == driverId)
+                            // return [
                               item.copyWith(
                                 name: "Pickup from Consignee",
                                 origin: consigneeOrigin,
