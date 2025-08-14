@@ -524,7 +524,27 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
             );
           }, 
           loading: () => const Center(child: CircularProgressIndicator()),  // Show loading spinner while fetching data
-          error: (e, stack) => Center(child: Text('Error: $e')),  
+          error: (err, stack) => RefreshIndicator (
+            onRefresh: _refreshTransaction,
+            child: Center(
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.all(16),
+                  child: Text(
+                    err is Exception
+                    ? err.toString().replaceFirst('Exception: ', '')
+                    : err.toString(),
+                    style: AppTextStyles.body.copyWith(
+                      fontWeight: FontWeight.bold
+                    ),
+                    textAlign: TextAlign.center,
+                  )
+                )
+              )
+            )
+          )
         ),  
       )
     );
