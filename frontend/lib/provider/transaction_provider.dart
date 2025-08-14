@@ -1,6 +1,7 @@
 // ignore_for_file: unused_import, deprecated_member_use, depend_on_referenced_packages
 
 import 'dart:convert';
+import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -38,20 +39,28 @@ Future<List<Transaction>> fetchFilteredTransactions( {
   final url = '$baseUrl/api/odoo/booking/$endpoint?uid=$uid';
   print("URL: $url" );
 
-  final response = await http.get(Uri.parse(url), headers: {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-    'password': password,
-    'login': login,
-  });
 
-  if (response.statusCode == 200) {
-    final decoded = json.decode(response.body);
-    final transactions = decoded['data']['transactions'] as List;
-    return transactions.map((json) => Transaction.fromJson(json)).toList();
+  try{
+    final response = await http.get(Uri.parse(url), headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'password': password,
+      'login': login,
+    });
+
+
+
+    if (response.statusCode == 200) {
+      final decoded = json.decode(response.body);
+      final transactions = decoded['data']['transactions'] as List;
+      return transactions.map((json) => Transaction.fromJson(json)).toList();
+    }
+
+    throw Exception("Failed to fetch filtered transactions: ${response.statusCode}");
+  } on SocketException {
+    throw Exception("Please check your internet connection.");
   }
-
-  throw Exception("Failed to fetch filtered transactions: ${response.statusCode}");
+  
 }
 
 // Future<Transaction> fetchTransactionDetails(FutureProviderRef<List<Transaction>> ref, {required uid, required bookingId}) async {
