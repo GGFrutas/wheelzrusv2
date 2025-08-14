@@ -49,9 +49,7 @@ class TransactionController extends Controller
     // protected $odoo_url = "http://192.168.118.102:8000/odoo/jsonrpc";
     protected $odoo_url = "https://jralejandria-beta-dev-yxe.odoo.com/jsonrpc";
 
-   
-
-    public function getTodayBooking(Request $request)
+    private function authenticateDriver(Request $request)
     {
         $url = $this->url;
         $db = $this->db;
@@ -159,6 +157,31 @@ class TransactionController extends Controller
             Log::warning("❌ Partner $partnerId is not a driver");
             return response()->json(['success' => false, 'message' => 'Not a driver'], 403);
         }
+
+        return [
+            'uid' => $uid,
+            'login' => $login,
+            'partner_id' => $partnerId,
+            'partner_name' => $userData['partner_id'][1] ?? '',
+        ];
+    }
+
+   
+
+    public function getTodayBooking(Request $request)
+    {
+        
+        $user = $this->authenticateDriver($request);
+        if(!is_array($user)) return $user;
+
+        $url = $this->url;
+        $db = $this->db;
+        $odooUrl = $this->odoo_url;  
+
+        $uid = $user['uid'];
+        $odooPassword = $request->header('password');
+        $partnerId = $user['partner_id'];
+        $partnerName = $user['partner_name'];
 
         $today = date('Y-m-d');
         $tomorrow = date('Y-m-d', strtotime('+1 day'));
@@ -324,116 +347,21 @@ class TransactionController extends Controller
     }
     public function getOngoingBooking(Request $request)
     {
+        $user = $this->authenticateDriver($request);
+        if(!is_array($user)) return $user;
+
         $url = $this->url;
         $db = $this->db;
+        $odooUrl = $this->odoo_url;  
+
+        $uid = $user['uid'];
+        $odooPassword = $request->header('password');
+        $partnerId = $user['partner_id'];
+        $partnerName = $user['partner_name'];
 
         $page = (int) request()->query('page', 1);
         $limit = (int) request()->query('limit', 10);
         $offset = ($page - 1) * $limit;
-      
-        $uid = $request->query('uid') ;
-        $login = $request->header('login'); 
-        $odooPassword = $request->header('password');
-        Log::info('🔐 Login request', [
-            'uid' => $request->query('uid'),
-            'headers' => [
-                'login' => $request->header('login'),
-                'password' => $request->header('password'), // ⚠️ don't log in production
-            ],
-            'body' => $request->all(), // This shows form or JSON body content
-        ]);
-        
-        Log::info("Login is {$login}, UID is {$uid}, Password is {$odooPassword}");
-        
-        if (!$uid) {
-            return response()->json(['success' => false, 'message' => 'UID is required'], 400);
-        }
-
-        $odooUrl = "{$this->url}/jsonrpc"; 
-       
-        
-        $response = jsonRpcRequest("$odooUrl", [
-            'jsonrpc' => '2.0',
-            'method' => 'call',
-            'params' => [
-                'service' => 'common',
-                'method' => 'login',
-                'args' => [$db, $login, $odooPassword],
-            ],
-            'id' => 1
-        ]);
-      
-
-        if (!isset($response['result']) || !is_numeric($response['result'])) {
-            Log::error('❌ Auth failed', [
-                'login' => $login,
-                'db' => $db,
-                'response' => $response
-            ]);
-            return response()->json(['success' => false, 'message' => 'Login failed'], 403);
-        }
-
-      
-        $uid = $response['result'];
-
-        // Step 2: Get res.users to find partner_id
-        $userRes = jsonRpcRequest("$odooUrl", [
-            'jsonrpc' => '2.0',
-            'method' => 'call',
-            'params' => [
-                'service' => 'object',
-                'method' => 'execute_kw',
-                'args' => [
-                    $db,
-                    $uid,
-                    $odooPassword,
-                    'res.users',
-                    'search_read',
-                    [[['id', '=', $uid]]],
-                    ['fields' => ['partner_id', 'login']]
-                ]
-            ],
-            'id' => 2
-        ]);
-
-        $userData = $userRes['result'][0] ?? null;
-        if (!$userData || !isset($userData['partner_id'][0])) {
-            Log::error("❌ No partner_id for user $uid");
-            return response()->json(['success' => false, 'message' => 'No partner found'], 404);
-        }
-
-        $partnerId = $userData['partner_id'][0];
-        $partnerName = $userData['partner_id'][1] ?? '';
-        $user = [
-            'id' => $uid,
-            'login' => $login
-        ];
-
-        // Step 3: Get res.partner to check driver_access
-        $partnerRes = jsonRpcRequest("$odooUrl", [
-            'jsonrpc' => '2.0',
-            'method' => 'call',
-            'params' => [
-                'service' => 'object',
-                'method' => 'execute_kw',
-                'args' => [
-                    $db,
-                    $uid,
-                    $odooPassword,
-                    'res.partner',
-                    'search_read',
-                    [[['id', '=', $partnerId]]],
-                    ['fields' => ['name', 'driver_access']]
-                ]
-            ],
-            'id' => 3
-        ]);
-
-        $isDriver = $partnerRes['result'][0]['driver_access'] ?? false;
-        if (!$isDriver) {
-            Log::warning("❌ Partner $partnerId is not a driver");
-            return response()->json(['success' => false, 'message' => 'Not a driver'], 403);
-        }
 
         $today = date('Y-m-d');
         $tomorrow = date('Y-m-d', strtotime('+1 day'));

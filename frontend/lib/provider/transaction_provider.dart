@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,6 +19,7 @@ import 'package:frontend/user/map_api.dart';
 import 'package:http/http.dart' as http;
 import 'package:frontend/models/transaction_model.dart';
 import 'package:frontend/notifiers/auth_notifier.dart';
+import 'package:http/http.dart';
 
 
 
@@ -56,11 +58,12 @@ Future<List<Transaction>> fetchFilteredTransactions( {
       return transactions.map((json) => Transaction.fromJson(json)).toList();
     }
 
-    throw Exception("Failed to fetch filtered transactions: ${response.statusCode}");
+    throw Exception("An error occured in the system.");
   } on SocketException {
     throw Exception("Please check your internet connection.");
+  } on ClientException {
+    throw Exception("Connection lost. Please try again.");
   }
-  
 }
 
 // Future<Transaction> fetchTransactionDetails(FutureProviderRef<List<Transaction>> ref, {required uid, required bookingId}) async {

@@ -150,7 +150,26 @@ void initState() {
                       return const Center(child: CircularProgressIndicator());
                     }
                     if (snapshot.hasError) {
-                      return Center(child: Text('Error: ${snapshot.error}'));
+                      final message = snapshot.error.toString().replaceFirst('Exception: ', '');
+                      return RefreshIndicator (
+                        onRefresh: _refreshTransaction,
+                        child: Center(
+                          child: SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              margin: const EdgeInsets.all(16),
+                              child: Text(
+                                message,
+                                style: AppTextStyles.body.copyWith(
+                                  fontWeight: FontWeight.bold
+                                ),
+                                textAlign: TextAlign.center,
+                              )
+                            )
+                          )
+                        )
+                      );
                     }
 
                     final transactionList = snapshot.data ?? [];
