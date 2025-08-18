@@ -2,7 +2,6 @@
 
 import 'dart:convert';
 import 'dart:io';
-import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -58,9 +57,9 @@ Future<List<Transaction>> fetchFilteredTransactions( {
       return transactions.map((json) => Transaction.fromJson(json)).toList();
     }
 
-    throw Exception("An error occured in the system.");
+    throw Exception("Unable to load transactions. Please try again.");
   } on SocketException {
-    throw Exception("Please check your internet connection.");
+    throw Exception("Network error. Please check your internet connection.");
   } on ClientException {
     throw Exception("Connection lost. Please try again.");
   }
