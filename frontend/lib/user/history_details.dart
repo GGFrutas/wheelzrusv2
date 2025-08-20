@@ -439,6 +439,8 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
     String? yardName;
     String? yardactualdate;
     String? actualdate;
+    String? yardtitle;
+    String? title;
   
 
     if (isDT) {
@@ -451,6 +453,8 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
         name = widget.transaction?.deReleasedBy;
         yardactualdate = formatDateTime(pickup?.actualDatetime);
         actualdate = formatDateTime(delivery?.actualDatetime);
+        yardtitle = "Yard/Port";
+        title = "Consignee";
       } else if (widget.transaction?.requestNumber == widget.transaction?.peRequestNumber) {
         yardSignBase64 = widget.transaction?.deSign;
         yardProofBase64 = widget.transaction?.deProof;
@@ -460,26 +464,32 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
         name = widget.transaction?.dlReceivedBy;
         yardactualdate = formatDateTime(pickup?.actualDatetime);
         actualdate = formatDateTime(delivery?.actualDatetime);
+        yardtitle = "Consignee";
+        title = "Yard/Port";
       }
     } else {
       if (widget.transaction?.requestNumber == widget.transaction?.deRequestNumber) {
         yardSignBase64 = widget.transaction?.peSign;
         yardProofBase64 = widget.transaction?.peProof;
-        signBase64 = widget.transaction?.dlSign;
-        proofBase64 = widget.transaction?.dlProof;
+        signBase64 = widget.transaction?.deSign;
+        proofBase64 = widget.transaction?.deProof;
         yardName =  widget.transaction?.peReleasedBy;
         name = widget.transaction?.deReleasedBy;
         yardactualdate = formatDateTime(pickup?.actualDatetime);
         actualdate = formatDateTime(delivery?.actualDatetime);
+        yardtitle = "Yard/Port";
+        title = "Shipper";
       } else if (widget.transaction?.requestNumber == widget.transaction?.plRequestNumber) {
         yardSignBase64 = widget.transaction?.dlSign;
         yardProofBase64 = widget.transaction?.dlProof;
-        signBase64 = widget.transaction?.peSign;
-        proofBase64 = widget.transaction?.peProof;
+        signBase64 = widget.transaction?.plSign;
+        proofBase64 = widget.transaction?.plProof;
         yardName =  widget.transaction?.plReceivedBy;
         name = widget.transaction?.dlReceivedBy;
         yardactualdate = formatDateTime(pickup?.actualDatetime);
         actualdate = formatDateTime(delivery?.actualDatetime);
+        yardtitle = "Shipper";
+        title = "Yard/Port";
       }
     }
 
@@ -494,7 +504,7 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-        'Yard/Port',
+        yardtitle!,
           style: AppTextStyles.body.copyWith(
             color: mainColor,
             fontWeight: FontWeight.bold, 
@@ -569,7 +579,8 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
 
         // SHIPPER CONSIGNEE
           Text(
-         isDT ? 'Consignee' : 'Shipper',
+        //  isDT ? 'Consignee' : 'Shipper',
+        title!,
           style: AppTextStyles.body.copyWith(
             color: mainColor,
             fontWeight: FontWeight.bold, 
@@ -599,7 +610,7 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
                 Image.memory(proofBytes, height:200),
                 const SizedBox(height: 20),
                 Text(
-                  'Released by: ${name ?? '—'} ',
+                  'Received by: ${name ?? '—'} ',
                   style: AppTextStyles.body.copyWith(
                     color: mainColor,
                   )

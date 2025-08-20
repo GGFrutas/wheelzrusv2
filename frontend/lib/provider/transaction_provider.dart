@@ -1,9 +1,11 @@
 // ignore_for_file: unused_import, deprecated_member_use, depend_on_referenced_packages
 
 import 'dart:convert';
+import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:frontend/models/week_query.dart';
 import 'package:frontend/notifiers/navigation_notifier.dart';
 import 'package:frontend/notifiers/paginated_notifier.dart';
 import 'package:frontend/notifiers/paginated_state.dart';
@@ -16,13 +18,14 @@ import 'package:frontend/user/map_api.dart';
 import 'package:http/http.dart' as http;
 import 'package:frontend/models/transaction_model.dart';
 import 'package:frontend/notifiers/auth_notifier.dart';
+import 'package:http/http.dart';
 
 
 
 
 Future<List<Transaction>> fetchFilteredTransactions( {
   required FutureProviderRef<List<Transaction>> ref,
-  required String endpoint,
+  required String endpoint, required Map<String, dynamic> queryParams,
 }) async {
   final baseUrl = ref.watch(baseUrlProvider);
   final auth = ref.watch(authNotifierProvider);
@@ -35,21 +38,31 @@ Future<List<Transaction>> fetchFilteredTransactions( {
   }
 
   final url = '$baseUrl/api/odoo/booking/$endpoint?uid=$uid';
+  print("URL: $url" );
 
-  final response = await http.get(Uri.parse(url), headers: {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-    'password': password,
-    'login': login,
-  });
 
-  if (response.statusCode == 200) {
-    final decoded = json.decode(response.body);
-    final transactions = decoded['data']['transactions'] as List;
-    return transactions.map((json) => Transaction.fromJson(json)).toList();
+  try{
+    final response = await http.get(Uri.parse(url), headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'password': password,
+      'login': login,
+    });
+
+
+
+    if (response.statusCode == 200) {
+      final decoded = json.decode(response.body);
+      final transactions = decoded['data']['transactions'] as List;
+      return transactions.map((json) => Transaction.fromJson(json)).toList();
+    }
+
+    throw Exception("Unable to load transactions. Please try again.");
+  } on SocketException {
+    throw Exception("Network error. Please check your internet connection.");
+  } on ClientException {
+    throw Exception("Connection lost. Please try again.");
   }
-
-  throw Exception("Failed to fetch filtered transactions: ${response.statusCode}");
 }
 
 // Future<Transaction> fetchTransactionDetails(FutureProviderRef<List<Transaction>> ref, {required uid, required bookingId}) async {
@@ -164,34 +177,44 @@ final bookingProvider = FutureProvider<List<Transaction>>((ref) async {
 
   // print('✅ Retrieved UID in bookingProvider: $uid'); // Debugging
 
-  return fetchFilteredTransactions(ref: ref, endpoint: 'today'); // Provide required named parameters
+  return fetchFilteredTransactions(ref: ref, endpoint: 'today', queryParams: {}); // Provide required named parameters
 });
 
 final filteredItemsProvider = FutureProvider<List<Transaction>>((ref) async {
   
-  return fetchFilteredTransactions(ref: ref, endpoint: 'today');
+  return fetchFilteredTransactions(ref: ref, endpoint: 'today', queryParams: {});
 });
 
 final filteredItemsProviderForTransactionScreen = FutureProvider<List<Transaction>>((ref) async {
   
-  return fetchFilteredTransactions(ref: ref, endpoint: 'ongoing');
+  return fetchFilteredTransactions(ref: ref, endpoint: 'ongoing', queryParams: {});
 });
 
 final filteredItemsProviderForHistoryScreen = FutureProvider<List<Transaction>>((ref) async {
  
-  return fetchFilteredTransactions(ref: ref, endpoint: 'history');
+  return fetchFilteredTransactions(ref: ref, endpoint: 'history', queryParams: {});
 });
+
+// final allTransactionProvider = FutureProvider.family<List<Transaction>, WeekQuery>((ref, query) async {
+//   return fetchFilteredTransactions(
+// ref: ref, endpoint: 'all-bookings',  queryParams: {
+//       'start': query.start.toIso8601String(),
+//       'end': query.end.toIso8601String(),
+//       'page': query.page.toString(),
+//       'limit': query.limit.toString(),
+//     },);
+// });
 
 final allTransactionProvider = FutureProvider<List<Transaction>>((ref) async {
   
 
-  return fetchFilteredTransactions(ref: ref, endpoint: 'all-bookings');
+  return fetchFilteredTransactions(ref: ref, endpoint: 'all-bookings', queryParams: {});
 });
 
 final allHistoryProvider = FutureProvider<List<Transaction>>((ref) async {
   
 
-  return fetchFilteredTransactions(ref: ref, endpoint: 'all-history');
+  return fetchFilteredTransactions(ref: ref, endpoint: 'all-history', queryParams: {});
 });
 
 

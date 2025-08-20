@@ -304,10 +304,14 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                         if (item.dispatchType == "ot") {
                           final shipperOrigin = buildShipperAddress(item);
                           final shipperDestination = cleanAddress([item.destination]);
-                          return [
-                            // First instance: Deliver to Shipper
-                            if (item.deTruckDriverName == driverId) // Filter out if accepted
-                              // Check if the truck driver is the same as the authPartnerId
+                
+                        return[
+
+                        
+                          // First instance: Deliver to Shipper
+                          if (item.deTruckDriverName == driverId)
+                            // Check if the truck driver is the same as the authPartnerId
+                            // return [ 
                               item.copyWith(
                                 name: "Deliver to Shipper",
                                 origin:shipperDestination,
@@ -316,12 +320,14 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                                 requestStatus: item.deRequestStatus,
                                 assignedDate:item.deAssignedDate,
                                 originAddress: "Deliver Empty Container to Shipper",
-                                freightBookingNumber: item.freightBookingNumber,
+                                freightBookingNumber:item.freightBookingNumber,
                                 // truckPlateNumber: item.deTruckPlateNumber,
                               ),
-                              // Second instance: Pickup from Shipper
-                            if ( item.plTruckDriverName == driverId) // Filter out if accepted
-                              // if (item.plTruckDriverName == authPartnerId)
+                          //   ];
+                          // }
+                            // Second instance: Pickup from Shipper
+                          if ( item.plTruckDriverName == driverId)
+                            // return [
                               item.copyWith(
                                 name: newName(item),
                                 origin:shipperOrigin,
@@ -333,13 +339,17 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                                 freightBookingNumber:item.freightBookingNumber,
                                 // truckPlateNumber: item.plTruckPlateNumber,
                               ),
-                          ];
+                            ];
+                          // }
+                          // return [];
+                    
                         } else if (item.dispatchType == "dt") {
                           final consigneeOrigin = buildConsigneeAddress(item);
                           final consigneeDestination = cleanAddress([item.origin]);
-                          return [
+                        return [
                             // First instance: Deliver to Consignee
-                            if (item.dlTruckDriverName == driverId) // Filter out if accepted
+                          if (item.dlTruckDriverName == driverId)
+                            // return [
                               item.copyWith(
                                 name: "Deliver to Consignee",
                                 origin:  consigneeDestination,
@@ -351,8 +361,11 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                                 freightBookingNumber:item.freightBookingNumber,
                                 // truckPlateNumber: item.dlTruckPlateNumber,
                               ),
-                            // Second instance: Pickup from Consignee
-                            if (item.peTruckDriverName == driverId) // Filter out if accepted
+                          //   ];
+                          // }
+                          // Second instance: Pickup from Consignee
+                          if (item.peTruckDriverName == driverId)
+                            // return [
                               item.copyWith(
                                 name: "Pickup from Consignee",
                                 origin: consigneeOrigin,
@@ -364,7 +377,9 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                                 freightBookingNumber:item.freightBookingNumber,
                                 // truckPlateNumber: item.peTruckPlateNumber,
                               ),
-                          ];  
+                            ];  
+                          // }
+                          // return [];
                         }
                         // Return as-is if no match
                         return [item];
@@ -577,7 +592,28 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                       );
                     }, 
                     loading: () => const Center(child: CircularProgressIndicator()),  // Show loading spinner while fetching data
-                    error: (e, stack) => Center(child: Text('Error: $e')),  // Display error message if an error occur
+                    error: (err, stack) => RefreshIndicator (
+                      onRefresh: _refreshTransaction,
+                      child: Center(
+                        child: SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            margin: const EdgeInsets.all(16),
+                            child: Text(
+                              err is Exception
+                              ? err.toString().replaceFirst('Exception: ', '')
+                              : err.toString(),
+                              style: AppTextStyles.body.copyWith(
+                                fontWeight: FontWeight.bold
+                              ),
+                              textAlign: TextAlign.center,
+                            )
+                          )
+                        )
+                      )
+                    )
+                     // Display error message if an error occur
                   ),
                 )
               )

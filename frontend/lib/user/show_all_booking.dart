@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/models/transaction_model.dart';
+import 'package:frontend/models/week_query.dart';
 import 'package:frontend/notifiers/auth_notifier.dart';
 import 'package:frontend/notifiers/navigation_notifier.dart';
 import 'package:frontend/provider/accepted_transaction.dart' as accepted_transaction;
@@ -155,8 +156,22 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
   }
 
   Widget _buildWeekContent(DateTime date) {
-    final allTransaction = ref.watch(allTransactionProvider);
+    
+    // final acceptedTransaction = ref.watch(accepted_transaction.acceptedTransactionProvider);
+    // DateTime now = DateTime.now();
+    // int daysSinceSunday = now.weekday % 7;
+    // DateTime sunday = now.subtract(Duration(days: daysSinceSunday));
+
+    // // Define the week range: Sunday to Saturday
+    // DateTime weekStart = sunday;
+    // DateTime weekEnd = sunday.add(const Duration(days: 6));
+
+
+    // final query = WeekQuery(start: weekStart, end: weekEnd, page: 1, limit: 5);
+    // final allTransaction = ref.watch(allTransactionProvider(query));
+     final allTransaction = ref.watch(allTransactionProvider);
     final acceptedTransaction = ref.watch(accepted_transaction.acceptedTransactionProvider);
+
 
     return Expanded(
       child: RefreshIndicator(
@@ -258,7 +273,8 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
                       requestNumber: item.deRequestNumber,
                       requestStatus: item.deRequestStatus,
                       assignedDate:item.deAssignedDate,
-                      originAddress: "Deliver Empty Container to Shipper"
+                      originAddress: "Deliver Empty Container to Shipper",
+                      freightBookingNumber:item.freightBookingNumber,
                       // truckPlateNumber: item.deTruckPlateNumber,
                     ),
                     // Second instance: Pickup from Shipper
@@ -272,6 +288,7 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
                       requestStatus: item.plRequestStatus,
                       assignedDate:item.plAssignedDate,
                       originAddress: descriptionMsg(item),
+                      freightBookingNumber:item.freightBookingNumber,
                       // truckPlateNumber: item.plTruckPlateNumber,
                     ),
                 ];
@@ -288,7 +305,8 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
                       requestNumber: item.dlRequestNumber,
                       requestStatus: item.dlRequestStatus,
                       assignedDate:item.dlAssignedDate,
-                      originAddress: "Deliver Laden Container to Consignee"
+                      originAddress: "Deliver Laden Container to Consignee",
+                      freightBookingNumber:item.freightBookingNumber,
                       // truckPlateNumber: item.dlTruckPlateNumber,
                     ),
                   // Second instance: Pickup from Consignee
@@ -300,7 +318,8 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
                       requestNumber: item.peRequestNumber,
                       requestStatus: item.peRequestStatus,
                       assignedDate:item.peAssignedDate,
-                      originAddress: "Pickup Empty Container from Consignee"
+                      originAddress: "Pickup Empty Container from Consignee",
+                      freightBookingNumber:item.freightBookingNumber,
                       // truckPlateNumber: item.peTruckPlateNumber,
                     ),
                 ];  
@@ -358,7 +377,7 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
               
             }
             return ListView.builder(
-              controller: _scrollableController,
+              // controller: _scrollableController,
               itemCount: ongoingTransactions.length,
               itemBuilder: (context, index) {
                 final item = ongoingTransactions[index];
@@ -493,7 +512,27 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
             );
           }, 
           loading: () => const Center(child: CircularProgressIndicator()),  // Show loading spinner while fetching data
-          error: (e, stack) => Center(child: Text('Error: $e')),  
+          error: (err, stack) => RefreshIndicator (
+            onRefresh: _refreshTransaction,
+            child: Center(
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.all(16),
+                  child: Text(
+                    err is Exception
+                    ? err.toString().replaceFirst('Exception: ', '')
+                    : err.toString(),
+                    style: AppTextStyles.body.copyWith(
+                      fontWeight: FontWeight.bold
+                    ),
+                    textAlign: TextAlign.center,
+                  )
+                )
+              )
+            )
+          )
         ),  
       )
     );

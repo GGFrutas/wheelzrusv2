@@ -47,11 +47,11 @@ void initState() {
     });
   });
 
-  _scrollableController.addListener(() {
-      if (_scrollableController.position.pixels == _scrollableController.position.maxScrollExtent) {
-        ref.read(paginatedTransactionProvider('all-history').notifier).fetchNextPage();
-      }
-    });
+  // _scrollableController.addListener(() {
+  //     if (_scrollableController.position.pixels == _scrollableController.position.maxScrollExtent) {
+  //       ref.read(paginatedTransactionProvider('all-history').notifier).fetchNextPage();
+  //     }
+  //   });
 }
 
   Future<void> _refreshTransaction() async {
@@ -128,7 +128,26 @@ void initState() {
                       return const Center(child: CircularProgressIndicator());
                     }
                     if (snapshot.hasError) {
-                      return Center(child: Text('Error: ${snapshot.error}'));
+                      final message = snapshot.error.toString().replaceFirst('Exception: ', '');
+                      return RefreshIndicator (
+                        onRefresh: _refreshTransaction,
+                        child: Center(
+                          child: SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              margin: const EdgeInsets.all(16),
+                              child: Text(
+                                message,
+                                style: AppTextStyles.body.copyWith(
+                                  fontWeight: FontWeight.bold
+                                ),
+                                textAlign: TextAlign.center,
+                              )
+                            )
+                          )
+                        )
+                      );
                     }
 
                     final transactionList = snapshot.data ?? [];
@@ -272,7 +291,7 @@ void initState() {
                           // Show a loading indicator at the end of the list
                           return const Padding(
                             padding: EdgeInsets.all(8.0),
-                            child: Center(child: CircularProgressIndicator()),
+                            // child: Center(child: CircularProgressIndicator()),
                           );
                         }
                         final item = ongoingTransactions[index];
