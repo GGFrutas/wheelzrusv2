@@ -42,13 +42,15 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
   late final String uid;
 
  String? _enteredName;
+  String? _enteredContainerNumber;
    
   final SignatureController _controller = SignatureController(
     penStrokeWidth: 5,
     penColor: Colors.black,
     exportBackgroundColor: Colors.white,
   );
-
+ 
+ final TextEditingController _containerController = TextEditingController();
   
 
   Future<void> _printFilenames() async {
@@ -60,6 +62,7 @@ final adjustedTime = now.subtract(const Duration(hours: 8));
 final timestamp = DateFormat("yyyy-MM-dd HH:mm:ss").format(adjustedTime);
 
     String? enteredName = _enteredName;
+    String? enteredContainerNumber = _enteredContainerNumber;
 
 
     if(_controller.isNotEmpty){
@@ -80,6 +83,7 @@ final timestamp = DateFormat("yyyy-MM-dd HH:mm:ss").format(adjustedTime);
     final baseUrl = ref.watch(baseUrlProvider);
     
     print("Entered Name: $enteredName");
+     print("Entered Container number: $enteredContainerNumber");
     print("Current Status: $currentStatus");
     Uri url;
   
@@ -114,6 +118,7 @@ final timestamp = DateFormat("yyyy-MM-dd HH:mm:ss").format(adjustedTime);
         'request_number': widget.transaction?.requestNumber,
         'timestamp': timestamp,
         'enteredName': enteredName,
+        'enteredContainerNumber': enteredContainerNumber
       }),
     );
     print("Response status code: ${response.statusCode}");
@@ -154,7 +159,7 @@ final timestamp = DateFormat("yyyy-MM-dd HH:mm:ss").format(adjustedTime);
       print('Updated to Ongoing: ${updatedTransaction.requestStatus}');
 
       Navigator.of(context).pop(); // Close the loading dialog
-      showSuccessDialog(context, "Proof of delivery has been successfully uploaded!");
+      showSuccessDialog(context, "Success!");
       
     } else {
       showSuccessDialog(context, "Failed to upload files!");
@@ -175,6 +180,9 @@ final timestamp = DateFormat("yyyy-MM-dd HH:mm:ss").format(adjustedTime);
       }
       setState(() {}); // Rebuild to update the visibility of the Clear button
     });
+    if(widget.transaction!.containerNumber != null && widget.transaction!.containerNumber!.isNotEmpty) {
+      _containerController.text = widget.transaction!.containerNumber!;
+    }
   }
 
   @override
@@ -231,6 +239,39 @@ final timestamp = DateFormat("yyyy-MM-dd HH:mm:ss").format(adjustedTime);
                 ),
               ),
             ),
+           const SizedBox(height: 20),
+           if(widget.transaction?.requestNumber == widget.transaction?.deRequestNumber) ... [
+            Text(
+              "Container Number: ",
+              style: AppTextStyles.subtitle.copyWith(
+                color: mainColor
+              ),
+            ),
+            const SizedBox(height: 10),
+            
+            Container (
+              width: MediaQuery.of(context).size.width * 0.9,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: TextField(
+                // onChanged: (val){
+                //   setState(() {
+                //     _enteredContainerNumber = val;
+                //   });
+                // },
+                controller: _containerController,
+                decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  hintText: 'Enter container number',
+                  hintStyle: AppTextStyles.body, // Use caption style for hint text
+                ),
+              ),
+            ),
+           ],
+            
+          
            const SizedBox(height: 20),
             Text(
               'Please provide your signature below:',

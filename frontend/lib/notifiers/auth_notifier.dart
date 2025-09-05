@@ -24,6 +24,12 @@ class AuthState {
   final String? driverName;
   final String? driverNumber;
   final String? login;
+  final String? partnerImageBase64;
+  final String? driverphone;
+  final String? companyName;
+  final String? licenseNumber;
+  final String? licenseExpiry;
+  final String? licenseStatus;
 
   AuthState({
     required this.isLoading,
@@ -33,13 +39,20 @@ class AuthState {
     required this.partnerId,
     required this.driverName,
     required this.driverNumber,
-    required this.login
+    required this.login,
+    required this.partnerImageBase64,
+    required this.driverphone,
+    required this.companyName,
+    required this.licenseNumber,
+    required this.licenseExpiry,
+    required this.licenseStatus,
   });
 
   
 
   // Helper method to copy the state with updated values
-  AuthState copyWith({bool? isLoading, bool? isError, String? uid, String? password, String? partnerId, String? driverName, String? driverNumber, String? login}) {
+  AuthState copyWith({bool? isLoading, bool? isError, String? uid, String? password, String? partnerId, String? driverName, String? driverNumber, String? login, String? partnerImageBase64, String? driverphone,
+  String? companyName, String? licenseNumber, String? licenseExpiry, String? licenseStatus}) {
     return AuthState(
       isLoading: isLoading ?? this.isLoading,
       isError: isError ?? this.isError,
@@ -49,6 +62,12 @@ class AuthState {
       driverName: driverName ?? this.driverName,
       driverNumber: driverNumber ?? this.driverNumber,
       login: login ?? this.login,
+      partnerImageBase64: partnerImageBase64 ?? this.partnerImageBase64,
+      driverphone: driverphone ?? this.driverphone,
+      companyName: companyName ?? this.companyName,
+      licenseNumber: licenseNumber ?? this.licenseNumber,
+      licenseExpiry: licenseExpiry ?? this.licenseExpiry,
+      licenseStatus: licenseStatus ?? this.licenseStatus,
     );
   }
 }
@@ -57,7 +76,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
   final AuthService _authService;
 
   AuthNotifier(this._authService)
-      : super(AuthState(isLoading: false, isError: false, uid: null, password: null, partnerId: null, driverName: '', driverNumber: null, login: null)) {
+      : super(AuthState(isLoading: false, isError: false, uid: null, password: null, partnerId: null, driverName: '', driverNumber: null, login: null, partnerImageBase64: '', driverphone: null, companyName: '',
+      licenseNumber: null, licenseExpiry: null, licenseStatus: null)) {
     // loadUid();  
     _initialize(); // Load UID from SharedPreferences when the notifier is created
   }
@@ -90,10 +110,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
         final String partnerId = partnerData[0].toString(); // 👈 this gets just the ID (e.g., "238")
         final String partnerFullName = partnerData[1].toString();
 
-        // 👇 Extract "Driver 1" from "Z Transport, Driver 1"
+        // 👇 Extract "Driver 1" from "XXX Company, Driver Name"
         final String driverName = partnerFullName.split(',').length > 1
             ? partnerFullName.split(',')[1].trim()
             : partnerFullName;
+
+         // 👇 Extract company from "XXX Company, Driver Name"
+        final String companyName = partnerFullName.split(',')[0].trim();
 
         
         final String rawDriverNumber = data['mobile']?.toString().trim().toLowerCase() ?? '';
@@ -101,8 +124,20 @@ class AuthNotifier extends StateNotifier<AuthState> {
             ? rawDriverNumber
             : '—';
 
+        final String rawDriverphone = data['phone']?.toString().trim().toLowerCase() ?? '';
+        final String driverphone =  (rawDriverphone.isNotEmpty && rawDriverphone != 'false')
+            ? rawDriverphone
+            : '—';
+
+        final String? rawImage = data['user']['image_1920']?.toString();
+        final String partnerImageBase64 = (rawImage != null && rawImage.isNotEmpty && rawImage != 'false') ? rawImage : '';
+
 
         final String login = user['login'].toString();
+
+        final String licenseNumber = data['license_number']?.toString() ?? '';
+        final String licenseExpiry = data['license_expiry']?.toString().trim().toLowerCase() ?? '';
+        final String licenseStatus = data['license_status']?.toString().trim().toUpperCase() ?? '';
 
 
         if (user == null) {
@@ -117,6 +152,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
         await prefs.setString('driver_name', driverName);
         await prefs.setString('mobile', driverNumber);
         await prefs.setString('login', login);
+        await prefs.setString('partner_image', partnerImageBase64);
+        await prefs.setString('phone', driverphone);
+        await prefs.setString('company_name', companyName);
+        await prefs.setString('license_number', licenseNumber);
+        await prefs.setString('license_expiry', licenseExpiry);
+        await prefs.setString('license_status', licenseStatus);
+
 
         if (context.mounted) {
           Navigator.pushReplacement(
@@ -127,7 +169,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
           );
         }
 
-        state = state.copyWith(isLoading: false, isError: false, uid: uid, password: password, partnerId: partnerId, driverName: driverName, driverNumber: driverNumber, login: login); // ✅ Store both uid and password
+        state = state.copyWith(isLoading: false, isError: false, uid: uid, password: password, partnerId: partnerId, driverName: driverName, driverNumber: driverNumber, login: login, partnerImageBase64: partnerImageBase64,
+        driverphone: driverphone, companyName: companyName, licenseNumber: licenseNumber,licenseExpiry: licenseExpiry, licenseStatus: licenseStatus); // ✅ Store both uid and password
       } catch (e) {
         // print('Login Error: $e');
         state = state.copyWith(isLoading: false, isError: true);
@@ -143,12 +186,20 @@ class AuthNotifier extends StateNotifier<AuthState> {
     final storedDriverName = prefs.getString('driver_name') ?? ''; 
     final storedDriverNumber = prefs.getString('mobile') ?? ''; 
     final storedLogin = prefs.getString('login') ?? ''; 
+    final storedPartnerImageBase64 = prefs.getString('partner_image') ?? '';
+    final storedDriverphone = prefs.getString('phone') ?? '';
+    final storedCompanyName = prefs.getString('company_name') ?? '';
+    final storedLicenseNumber = prefs.getString('license_number') ?? '';
+    final storedLicenseExpiry = prefs.getString('license_expiry') ?? '';
+    final storedLicenseStatus = prefs.getString('license_status') ?? '';
+
 
     if (storedUid != null && storedUid.isNotEmpty && storedPassword != null) {
       // print('✅ Loaded UID: $storedUid');
       // print('✅ Loaded Partner ID: $storedPartnerId'); 
 
-      state = state.copyWith(uid: storedUid, password: storedPassword, partnerId:storedPartnerId, driverName: storedDriverName, driverNumber: storedDriverNumber, login: storedLogin); // ✅ Store both
+      state = state.copyWith(uid: storedUid, password: storedPassword, partnerId:storedPartnerId, driverName: storedDriverName, driverNumber: storedDriverNumber, login: storedLogin, partnerImageBase64: storedPartnerImageBase64,
+      driverphone: storedDriverphone, companyName: storedCompanyName, licenseNumber: storedLicenseNumber,licenseExpiry: storedLicenseExpiry, licenseStatus: storedLicenseStatus); // ✅ Store both
     } else {
       // print('❌ Missing UID or Password in storage.');
     } 

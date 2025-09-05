@@ -44,10 +44,10 @@ function jsonRpcRequest($url, $payload){
 
 class TransactionController extends Controller
 {
-    protected $url = "https://jralejandria-beta-dev-yxe.odoo.com";
-    protected $db = 'jralejandria-beta-dev-yxe-production-beta-22570487';
+    protected $url = "http://gsq-ibx-rda:8068";
+    protected $db = 'rda_beta_7';
     // protected $odoo_url = "http://192.168.118.102:8000/odoo/jsonrpc";
-    protected $odoo_url = "https://jralejandria-beta-dev-yxe.odoo.com/jsonrpc";
+    protected $odoo_url = "http://gsq-ibx-rda:8068/jsonrpc";
 
     private function authenticateDriver(Request $request)
     {
@@ -216,6 +216,7 @@ class TransactionController extends Controller
                                 ["pe_truck_driver_name", "=", $partnerId],
                                 ["pl_truck_driver_name", "=", $partnerId],
 
+                         
                          
                     ]],
 
@@ -537,109 +538,17 @@ class TransactionController extends Controller
         $url = $this->url;
         $db = $this->db;
       
-        $uid = $request->query('uid') ;
-        $login = $request->header('login'); 
+         $user = $this->authenticateDriver($request);
+        if(!is_array($user)) return $user;
+
+        $url = $this->url;
+        $db = $this->db;
+        $odooUrl = $this->odoo_url;  
+
+        $uid = $user['uid'];
         $odooPassword = $request->header('password');
-        Log::info('🔐 Login request', [
-            'uid' => $request->query('uid'),
-            'headers' => [
-                'login' => $request->header('login'),
-                'password' => $request->header('password'), // ⚠️ don't log in production
-            ],
-            'body' => $request->all(), // This shows form or JSON body content
-        ]);
-        
-        Log::info("Login is {$login}, UID is {$uid}, Password is {$odooPassword}");
-        
-        if (!$uid) {
-            return response()->json(['success' => false, 'message' => 'UID is required'], 400);
-        }
-
-        $odooUrl = "{$this->url}/jsonrpc"; 
-       
-        
-        $response = jsonRpcRequest("$odooUrl", [
-            'jsonrpc' => '2.0',
-            'method' => 'call',
-            'params' => [
-                'service' => 'common',
-                'method' => 'login',
-                'args' => [$db, $login, $odooPassword],
-            ],
-            'id' => 1
-        ]);
-      
-
-        if (!isset($response['result']) || !is_numeric($response['result'])) {
-            Log::error('❌ Auth failed', [
-                'login' => $login,
-                'db' => $db,
-                'response' => $response
-            ]);
-            return response()->json(['success' => false, 'message' => 'Login failed'], 403);
-        }
-
-      
-        $uid = $response['result'];
-
-        // Step 2: Get res.users to find partner_id
-        $userRes = jsonRpcRequest("$odooUrl", [
-            'jsonrpc' => '2.0',
-            'method' => 'call',
-            'params' => [
-                'service' => 'object',
-                'method' => 'execute_kw',
-                'args' => [
-                    $db,
-                    $uid,
-                    $odooPassword,
-                    'res.users',
-                    'search_read',
-                    [[['id', '=', $uid]]],
-                    ['fields' => ['partner_id', 'login']]
-                ]
-            ],
-            'id' => 2
-        ]);
-
-        $userData = $userRes['result'][0] ?? null;
-        if (!$userData || !isset($userData['partner_id'][0])) {
-            Log::error("❌ No partner_id for user $uid");
-            return response()->json(['success' => false, 'message' => 'No partner found'], 404);
-        }
-
-        $partnerId = $userData['partner_id'][0];
-        $partnerName = $userData['partner_id'][1] ?? '';
-        $user = [
-            'id' => $uid,
-            'login' => $login
-        ];
-
-        // Step 3: Get res.partner to check driver_access
-        $partnerRes = jsonRpcRequest("$odooUrl", [
-            'jsonrpc' => '2.0',
-            'method' => 'call',
-            'params' => [
-                'service' => 'object',
-                'method' => 'execute_kw',
-                'args' => [
-                    $db,
-                    $uid,
-                    $odooPassword,
-                    'res.partner',
-                    'search_read',
-                    [[['id', '=', $partnerId]]],
-                    ['fields' => ['name', 'driver_access']]
-                ]
-            ],
-            'id' => 3
-        ]);
-
-        $isDriver = $partnerRes['result'][0]['driver_access'] ?? false;
-        if (!$isDriver) {
-            Log::warning("❌ Partner $partnerId is not a driver");
-            return response()->json(['success' => false, 'message' => 'Not a driver'], 403);
-        }
+        $partnerId = $user['partner_id'];
+        $partnerName = $user['partner_name'];
 
         $today = date('Y-m-d');
         $tomorrow = date('Y-m-d', strtotime('+1 day'));
@@ -681,15 +590,12 @@ class TransactionController extends Controller
 
                     ["fields" => [
                         "id", "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
-                        "dispatch_type", "de_truck_driver_name", "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name",
-                        "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", "origin_port_terminal_address", "destination_port_terminal_address", "arrival_date", "delivery_date",
+                        "dispatch_type",
+                        "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", 
                         "container_number", "seal_number", "booking_reference_no", "origin_forwarder_name", "destination_forwarder_name", "freight_booking_number",
                         "origin_container_location", "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
-                        "freight_forwarder_name", "shipper_phone", "consignee_phone", "dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", "pl_truck_plate_no",
-                        "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
-                        "pickup_date", "departure_date","origin", "destination", "de_rejection_time", "pl_rejection_time", "dl_rejection_time", "pe_rejection_time", "de_completion_time", 
-                        "pl_completion_time", "dl_completion_time", "pe_completion_time", "shipper_province","shipper_city","shipper_barangay","shipper_street", 
-                        "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime", "service_type", "booking_service",
+                        "freight_forwarder_name","origin", "destination", "de_rejection_time", "pl_rejection_time", "dl_rejection_time", "pe_rejection_time", "de_completion_time", 
+                        "pl_completion_time", "dl_completion_time", "pe_completion_time", "service_type", "booking_service",
                         "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time", "stage_id", "write_date", "name", "pe_release_by", "de_release_by",
                         "dl_receive_by", "pl_receive_by"
                     ]],
@@ -721,16 +627,13 @@ class TransactionController extends Controller
         // Step 5: Queue a job for each dispatch.manager record
         $fieldsToString = [
             "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
-            "dispatch_type", 
-            "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", "origin_port_terminal_address", "destination_port_terminal_address", "arrival_date", "delivery_date",
-            "container_number", "seal_number", "booking_reference_no", "origin_forwarder_name", "destination_forwarder_name", "freight_booking_number",
-            "origin_container_location", "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
-            "freight_forwarder_name", "shipper_phone", "consignee_phone", "dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", "pl_truck_plate_no",
-            "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
-            "pickup_date", "departure_date","origin", "destination","de_rejection_time", "pl_rejection_time", "dl_rejection_time", "pe_rejection_time", "de_completion_time", 
-            "pl_completion_time", "dl_completion_time", "pe_completion_time","shipper_province","shipper_city","shipper_barangay","shipper_street",
-            "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime",  "service_type","booking_service",
-            "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time","stage_id", "write_date",
+                        "dispatch_type",
+                        "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", 
+                        "container_number", "seal_number", "booking_reference_no", "origin_forwarder_name", "destination_forwarder_name", "freight_booking_number",
+                        "origin_container_location", "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
+                        "freight_forwarder_name","origin", "destination", "de_rejection_time", "pl_rejection_time", "dl_rejection_time", "pe_rejection_time", "de_completion_time", 
+                        "pl_completion_time", "dl_completion_time", "pe_completion_time", "service_type", "booking_service",
+                        "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time", "stage_id", "write_date",
         ];
 
         $jobResponses = [];
@@ -760,7 +663,7 @@ class TransactionController extends Controller
                 'id' => 5
             ]);
 
-              $dispatchId = $manager['id'];
+            $dispatchId = $manager['id'];
 
             
 
@@ -1231,6 +1134,10 @@ class TransactionController extends Controller
                         "|",
                         ['arrival_date', ">=", $today],
                         ['departure_date', ">=", $today],
+
+                        "|",
+                        ['arrival_date', ">=", $today],
+                        ['departure_date', ">=", $today],
                     
                         
                     
@@ -1355,7 +1262,7 @@ class TransactionController extends Controller
             $jobResponses[] = $manager;
 
 
-           
+            
         }
         $totalCount = count($jobResponses);
         $totalPages = ceil($totalCount / $limit);
@@ -2209,6 +2116,7 @@ class TransactionController extends Controller
         $actualTime = $request->input('timestamp');
         $enteredName = $request->input('enteredName');
         $newStatus = $request->input('newStatus');
+        $containerNumber = $request->input('enteredContainerNumber');
 
         Log::info('Received file uplodad request', [
             'uid' => $uid,
@@ -2283,6 +2191,7 @@ class TransactionController extends Controller
                 "pe_release_by" => $enteredName,
                 "stage_id" => 5,
                 "de_request_status" => $newStatus,
+                "container_number" => $containerNumber
             ];
         } elseif ($type['dispatch_type'] == "ot" && $type['pl_request_no'] == $requestNumber) {
             Log::info("Updating PL proof and signature for request number: {$requestNumber}");
@@ -2291,6 +2200,7 @@ class TransactionController extends Controller
                 "pl_signature" => $signature,
                 "dl_receive_by" => $enteredName,
                 "pl_request_status" => $newStatus,
+                "container_number" => $containerNumber
             ];
         }
 
@@ -2302,6 +2212,7 @@ class TransactionController extends Controller
                 "pe_release_by" => $enteredName,
                 "stage_id" => 5,
                 "dl_request_status" => $newStatus,
+                "container_number" => $containerNumber
             ];
         } elseif ($type['dispatch_type'] == "dt" && $type['pe_request_no'] == $requestNumber) {
             Log::info("Updating PE proof and signature for request number: {$requestNumber}");
@@ -2310,6 +2221,7 @@ class TransactionController extends Controller
                 "pe_signature" => $signature,
                 "dl_receive_by" => $enteredName,
                 "pe_request_status" => $newStatus,
+                "container_number" => $containerNumber
             ];
         }
       
@@ -2459,6 +2371,7 @@ class TransactionController extends Controller
                                     [
                                         'actual_datetime' => $actualTime,
                                         'button_readonly' => true, 
+                                        'button_confirm_semd' => true,
                                         'clicked_by' => $uid,
                                     ]
                                 ]
@@ -2530,49 +2443,49 @@ class TransactionController extends Controller
                                 $resolved_id = $template_id[0]['res_id'];
                                 Log::info("📩 Template ID resolved: $resolved_id for $template_xml_id");
 
-                                // $send_email = [
-                                //     "jsonrpc" => "2.0",
-                                //     "method" => "call",
-                                //     "params" => [
-                                //         "service" => "object",
-                                //         "method" => "execute_kw",
-                                //         "args" => [
-                                //             $db,
-                                //             $uid,
-                                //             $odooPassword,
-                                //             "mail.template",
-                                //             "send_mail",
-                                //             [
-                                //                 $resolved_id,
-                                //                 $milestoneIdToUpdate,
-                                //                 true
-                                //             ]
-                                //         ]
-                                //     ],
-                                //     "id" => 6
-                                // ];
+                                $send_email = [
+                                    "jsonrpc" => "2.0",
+                                    "method" => "call",
+                                    "params" => [
+                                        "service" => "object",
+                                        "method" => "execute_kw",
+                                        "args" => [
+                                            $db,
+                                            $uid,
+                                            $odooPassword,
+                                            "mail.template",
+                                            "send_mail",
+                                            [
+                                                $resolved_id,
+                                                $milestoneIdToUpdate,
+                                                true
+                                            ]
+                                        ]
+                                    ],
+                                    "id" => 6
+                                ];
 
-                                // $sendEmailResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
-                                //     "http" => [
-                                //         "header" => "Content-Type: application/json",
-                                //         "method" => "POST",
-                                //         "content" => json_encode($send_email),
-                                //     ]
-                                // ])), true);
+                                $sendEmailResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
+                                    "http" => [
+                                        "header" => "Content-Type: application/json",
+                                        "method" => "POST",
+                                        "content" => json_encode($send_email),
+                                    ]
+                                ])), true);
 
-                                // if(isset($sendEmailResponse['result']) && $sendEmailResponse['result']) {
-                                //     Log::info("Milestone updated and email sent.");
-                                //     return response()->json([
-                                //         'success' => true,
-                                //         'message' => 'Milestone updated and email sent successfully.',
-                                //         'milestone_id' => $milestoneIdToUpdate,
-                                //         'template_id' =>  $resolved_id,
+                                if(isset($sendEmailResponse['result']) && $sendEmailResponse['result']) {
+                                    Log::info("Milestone updated and email sent.");
+                                    return response()->json([
+                                        'success' => true,
+                                        'message' => 'Milestone updated and email sent successfully.',
+                                        'milestone_id' => $milestoneIdToUpdate,
+                                        'template_id' =>  $resolved_id,
 
-                                //     ], 200);
-                                // } else {
-                                //     Log::warning("Milestone update, but email is not sent", ['response' => $sendEmailResponse]);
-                                //     return response()->json(['success' => true, 'message' => 'Milestsone updated, but email failed'], 200);
-                                // }
+                                    ], 200);
+                                } else {
+                                    Log::warning("Milestone update, but email is not sent", ['response' => $sendEmailResponse]);
+                                    return response()->json(['success' => true, 'message' => 'Milestsone updated, but email failed'], 200);
+                                }
                             } else {
                                 Log::error("Failed to resolve template XML ID $template_xml_id");
                                 return response()->json(['success' => false, 'message' => 'Template not found'], 500);
@@ -2616,6 +2529,7 @@ class TransactionController extends Controller
         $actualTime = $request->input('timestamp');
         $enteredName = $request->input('enteredName');
         $newStatus = $request->input('newStatus');
+        $containerNumber = $request->input('enteredContainerNumber');
 
         Log::info('Received file uplodad request', [
             'uid' => $uid,
@@ -2690,6 +2604,7 @@ class TransactionController extends Controller
                 "de_release_by" => $enteredName,
                 "de_completion_time" => $actualTime,
                 // "de_request_status" => $newStatus,
+                "container_number" => $containerNumber
                 
             ];
         } elseif ($type['dispatch_type'] == "ot" && $type['pl_request_no'] == $requestNumber) {
@@ -2701,6 +2616,7 @@ class TransactionController extends Controller
                 "stage_id" => 7,
                 "pl_completion_time" => $actualTime,
                 // "pl_request_status" => $newStatus,
+                "container_number" => $containerNumber
             ];
         }
 
@@ -2713,6 +2629,7 @@ class TransactionController extends Controller
                 "dl_completion_time" => $actualTime,
                 "stage_id" => 7,
                 // "dl_request_status" => $newStatus,
+                "container_number" => $containerNumber
             ];
         } elseif($type['dispatch_type'] === "dt" && $type['dl_request_no'] === $requestNumber) {
              $updateField = [
@@ -2721,6 +2638,7 @@ class TransactionController extends Controller
                 "de_release_by" => $enteredName,
                 "dl_completion_time" => $actualTime,
                 // "dl_request_status" => $newStatus,
+                "container_number" => $containerNumber
             ];
         } elseif ($type['dispatch_type'] === "dt" && $type['pe_request_no'] === $requestNumber) {
             Log::info("Updating DE proof and signature for request number: {$requestNumber}");
@@ -2731,6 +2649,7 @@ class TransactionController extends Controller
                 "stage_id" => 7,
                 "pe_completion_time" => $actualTime,
                 // "pe_request_status" => $newStatus,
+                "container_number" => $containerNumber
             ];
         }
 
@@ -2876,6 +2795,7 @@ class TransactionController extends Controller
                                     [
                                         'actual_datetime' => $actualTime,
                                         'button_readonly' => true, 
+                                        'button_confirm_semd' => true,
                                         'clicked_by' => $uid,
                                     ]
                                 ]
@@ -2948,49 +2868,49 @@ class TransactionController extends Controller
                                 $resolved_id = $template_id[0]['res_id'];
                                 Log::info("📩 Template ID resolved: $resolved_id for $template_xml_id");
 
-                                // $send_email = [
-                                //     "jsonrpc" => "2.0",
-                                //     "method" => "call",
-                                //     "params" => [
-                                //         "service" => "object",
-                                //         "method" => "execute_kw",
-                                //         "args" => [
-                                //             $db,
-                                //             $uid,
-                                //             $odooPassword,
-                                //             "mail.template",
-                                //             "send_mail",
-                                //             [
-                                //                 $resolved_id,
-                                //                 $milestoneIdToUpdate,
-                                //                 true
-                                //             ]
-                                //         ]
-                                //     ],
-                                //     "id" => 6
-                                // ];
+                                $send_email = [
+                                    "jsonrpc" => "2.0",
+                                    "method" => "call",
+                                    "params" => [
+                                        "service" => "object",
+                                        "method" => "execute_kw",
+                                        "args" => [
+                                            $db,
+                                            $uid,
+                                            $odooPassword,
+                                            "mail.template",
+                                            "send_mail",
+                                            [
+                                                $resolved_id,
+                                                $milestoneIdToUpdate,
+                                                true
+                                            ]
+                                        ]
+                                    ],
+                                    "id" => 6
+                                ];
 
-                                // $sendEmailResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
-                                //     "http" => [
-                                //         "header" => "Content-Type: application/json",
-                                //         "method" => "POST",
-                                //         "content" => json_encode($send_email),
-                                //     ]
-                                // ])), true);
+                                $sendEmailResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
+                                    "http" => [
+                                        "header" => "Content-Type: application/json",
+                                        "method" => "POST",
+                                        "content" => json_encode($send_email),
+                                    ]
+                                ])), true);
 
-                                // if(isset($sendEmailResponse['result']) && $sendEmailResponse['result']) {
-                                //     Log::info("Milestone updated and email sent.");
-                                //     return response()->json([
-                                //         'success' => true,
-                                //         'message' => 'Milestone updated and email sent successfully.',
-                                //         'milestone_id' => $milestoneIdToUpdate,
-                                //         'template_id' =>  $resolved_id,
+                                if(isset($sendEmailResponse['result']) && $sendEmailResponse['result']) {
+                                    Log::info("Milestone updated and email sent.");
+                                    return response()->json([
+                                        'success' => true,
+                                        'message' => 'Milestone updated and email sent successfully.',
+                                        'milestone_id' => $milestoneIdToUpdate,
+                                        'template_id' =>  $resolved_id,
 
-                                //     ], 200);
-                                // } else {
-                                //     Log::warning("Milestone update, but email is not sent", ['response' => $sendEmailResponse]);
-                                //     return response()->json(['success' => true, 'message' => 'Milestsone updated, but email failed'], 200);
-                                // }
+                                    ], 200);
+                                } else {
+                                    Log::warning("Milestone update, but email is not sent", ['response' => $sendEmailResponse]);
+                                    return response()->json(['success' => true, 'message' => 'Milestsone updated, but email failed'], 200);
+                                }
                             } else {
                                 Log::error("Failed to resolve template XML ID $template_xml_id");
                                 return response()->json(['success' => false, 'message' => 'Template not found'], 500);

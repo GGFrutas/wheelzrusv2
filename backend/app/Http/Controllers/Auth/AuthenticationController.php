@@ -26,8 +26,8 @@ use Ripcord\Ripcord;
 class AuthenticationController extends Controller
 {
 
-    protected $db = 'jralejandria-beta-dev-yxe-production-beta-22570487';
-    protected $url = "https://jralejandria-beta-dev-yxe.odoo.com/jsonrpc";
+    protected $db = 'rda_beta_7';
+    protected $url = "http://gsq-ibx-rda:8068/jsonrpc";
 
     public function getOdooUsers()
     {
@@ -196,7 +196,7 @@ class AuthenticationController extends Controller
                     "res.users",  // ✅ Correct model name
                     "search_read",  // ✅ Correct method
                     [[["login", "=", $username]]],  // ✅ Ensure correct filtering
-                    ["fields" => ["id", "login", "partner_id"]] // ✅ Ensure correct fields
+                    ["fields" => ["id", "login", "partner_id","image_1920"]] // ✅ Ensure correct fields
                 ]
             ],
             "id" => 1
@@ -329,7 +329,7 @@ class AuthenticationController extends Controller
                     "res.partner",
                     "search_read",
                     [[["id", "=", $partnerId]]],
-                    ["fields" => ["id", "name", "driver_access", "mobile"]] // ✅ Fetch `driver_access`
+                    ["fields" => ["id", "name", "driver_access", "mobile","phone","license_number","license_expiry","license_status"]] // ✅ Fetch `driver_access`
                 ]
             ],
             "id" => 2
@@ -353,8 +353,12 @@ class AuthenticationController extends Controller
         if (isset($partnerResult['result']) && !empty($partnerResult['result'])) {
             $partner = $partnerResult['result'][0];
             $isDriver = $partner['driver_access'] ?? false;
-             $mobile = $partner['mobile'] ?? null;
-            Log::info("📞 Mobile: $mobile");
+            $mobile = $partner['mobile'] ?? null;
+            $phone = $partner['phone'] ?? null;
+            $licenseNumber = $partner['license_number'] ?? null;
+            $licenseExpiry = $partner['license_expiry'] ?? null;
+            $licenseStatus = $partner['license_status'] ?? null;
+            
 
             // if ($isDriver) {
             //     Log::info("✅ Partner {$partner['name']} is a driver.");
@@ -381,7 +385,11 @@ class AuthenticationController extends Controller
             'user' => $user,
             'uid' => $uid,
             'password' => $odooPassword,
-            'mobile' => $mobile
+            'mobile' => $mobile,
+            'phone' => $phone,
+            'license_number' => $licenseNumber,
+            'license_expiry' => $licenseExpiry,
+            'license_status' => $licenseStatus,
         
         ], 200);
     }
