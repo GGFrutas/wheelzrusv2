@@ -2371,8 +2371,8 @@ class TransactionController extends Controller
                                     [
                                         'actual_datetime' => $actualTime,
                                         'button_readonly' => true, 
-                                        'button_confirm_semd' => true,
-                                        'clicked_by' => $uid,
+                                        'button_confirm_semd' => false,
+                                        'clicked_by' => (int) $uid,
                                     ]
                                 ]
                             ]
@@ -2795,8 +2795,8 @@ class TransactionController extends Controller
                                     [
                                         'actual_datetime' => $actualTime,
                                         'button_readonly' => true, 
-                                        'button_confirm_semd' => true,
-                                        'clicked_by' => $uid,
+                                        'button_confirm_semd' => false,
+                                        'clicked_by' => (int) $uid,
                                     ]
                                 ]
                             ]

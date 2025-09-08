@@ -70,15 +70,7 @@ class HomePage extends ConsumerWidget {
     }
 
     // Define the different pages based on navigation index
-    final List<Widget> pages = [
-      TransactionScreen(user: user),
-      HomepageScreen(user: user),
-      HistoryScreen(user: user),
-      UpdateUserScreen(user: user, uid: uid,),
-      SettingScreen(uid: uid),
-      // ProofOfDeliveryScreen(uid: uid, transaction: null, base64Images: base64Image), // Replace with a valid transaction object
-      ProfileScreen(uid: uid),
-    ];
+    
 
     return PopScope(
       canPop: false,

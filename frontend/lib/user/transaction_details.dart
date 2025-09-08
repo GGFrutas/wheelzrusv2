@@ -60,7 +60,7 @@ class TransactionDetails extends ConsumerStatefulWidget {
   
 class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
   
-  final Map<String, bool> _loadingStates = {};
+  // final Map<String, bool> _loadingStates = {};
 
   gmaps.GoogleMapController? _googleMapController;
 
@@ -69,7 +69,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
   // bool _isMapReady = false;
   PermissionStatus? _permissionGranted;
   bool _serviceEnabled = false;
-  LocationData? _locationData;
+  // LocationData? _locationData;
   static const gmaps.LatLng _pointA = gmaps.LatLng(10.300233284867856, 123.91189477293283);
   static const gmaps.LatLng _pointB = gmaps.LatLng(10.298462163232422, 123.8950565989957);
   static const gmaps.LatLng _pointC = gmaps.LatLng(10.308225643109328, 123.90735316709156);
@@ -238,7 +238,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
       if (_permissionGranted != PermissionStatus.granted) return;
     }
 
-    _locationData = await location.getLocation();
+    // _locationData = await location.getLocation();
 
     
   }
@@ -937,7 +937,7 @@ final delivery = scheduleMap['delivery'];
     final isDT = widget.transaction?.dispatchType == 'dt';
    
 
-    Uint8List? _decodeBase64(String? data) {
+    Uint8List? decodeBase64(String? data) {
       if(data == null || data.isEmpty)  return null;
       try{
       
@@ -970,8 +970,8 @@ final delivery = scheduleMap['delivery'];
       }
     }
 
-    final signBytes = _decodeBase64(signBase64);
-    final proofBytes = _decodeBase64(proofBase64);
+    final signBytes = decodeBase64(signBase64);
+    final proofBytes = decodeBase64(proofBase64);
 
 
     return Column(
@@ -1021,7 +1021,7 @@ final delivery = scheduleMap['delivery'];
   Widget _buildShipConsTab (){
     final isDT = widget.transaction?.dispatchType == 'dt';
 
-    Uint8List? _decodeBase64(String? data) {
+    Uint8List? decodeBase64(String? data) {
       if(data == null || data.isEmpty)  return null;
       try{
       
@@ -1054,8 +1054,8 @@ final delivery = scheduleMap['delivery'];
       }
     }
 
-    final signBytes = _decodeBase64(signBase64);
-    final proofBytes = _decodeBase64(proofBase64);
+    final signBytes = decodeBase64(signBase64);
+    final proofBytes = decodeBase64(proofBase64);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
