@@ -41,23 +41,25 @@ Future<List<Transaction>> fetchFilteredTransactions( {
   // print("URL: $url" );
 
 
-
-  try {
+  try{
     final response = await http.get(Uri.parse(url), headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
       'password': password,
       'login': login,
     });
+
+
+
     if (response.statusCode == 200) {
       final decoded = json.decode(response.body);
       final transactions = decoded['data']['transactions'] as List;
       return transactions.map((json) => Transaction.fromJson(json)).toList();
     }
 
-    throw Exception("An error occured in the system.");
+    throw Exception("Unable to load transactions. Please try again.");
   } on SocketException {
-    throw Exception("Please check your internet connection.");
+    throw Exception("Network error. Please check your internet connection.");
   } on ClientException {
     throw Exception("Connection lost. Please try again.");
   }

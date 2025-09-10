@@ -262,79 +262,67 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
               if (item.dispatchType == "ot") {
                 final shipperOrigin = buildShipperAddress(item);
                 final shipperDestination = cleanAddress([item.destination]);
-                
+                return [
                   // First instance: Deliver to Shipper
-                  if (item.deTruckDriverName == driverId && item.deRequestStatus != "Completed" && item.deRequestStatus != "Ongoing"){
+                  if (item.deTruckDriverName == driverId) // Filter out if accepted
                     // Check if the truck driver is the same as the authPartnerId
-                    return [ 
-                      item.copyWith(
-                        name: "Deliver to Shipper",
-                        origin:shipperDestination,
-                        destination: shipperOrigin,
-                        requestNumber: item.deRequestNumber,
-                        requestStatus: item.deRequestStatus,
-                        assignedDate:item.deAssignedDate,
-                        originAddress: "Deliver Empty Container to Shipper",
-                        freightBookingNumber:item.freightBookingNumber,
-                        // truckPlateNumber: item.deTruckPlateNumber,
-                      ),
-                    ];
-                  }
+                    item.copyWith(
+                      name: "Deliver to Shipper",
+                      origin:shipperDestination,
+                      destination: shipperOrigin,
+                      requestNumber: item.deRequestNumber,
+                      requestStatus: item.deRequestStatus,
+                      assignedDate:item.deAssignedDate,
+                      originAddress: "Deliver Empty Container to Shipper",
+                      freightBookingNumber:item.freightBookingNumber,
+                      // truckPlateNumber: item.deTruckPlateNumber,
+                    ),
                     // Second instance: Pickup from Shipper
-                  if ( item.plTruckDriverName == driverId && item.plRequestStatus != "Completed" && item.plRequestStatus != "Ongoing"){
-                    return [
-                      item.copyWith(
-                        name: newName(item),
-                        origin:shipperOrigin,
-                        destination:shipperDestination,
-                        requestNumber: item.plRequestNumber,
-                        requestStatus: item.plRequestStatus,
-                        assignedDate:item.plAssignedDate,
-                        originAddress: descriptionMsg(item),
-                        freightBookingNumber:item.freightBookingNumber,
-                        // truckPlateNumber: item.plTruckPlateNumber,
-                      ),
-                    ];
-                  }
-                  return [];
-                    
+                  if ( item.plTruckDriverName == driverId) // Filter out if accepted
+                    // if (item.plTruckDriverName == authPartnerId)
+                    item.copyWith(
+                      name: newName(item),
+                      origin:shipperOrigin,
+                      destination:shipperDestination,
+                      requestNumber: item.plRequestNumber,
+                      requestStatus: item.plRequestStatus,
+                      assignedDate:item.plAssignedDate,
+                      originAddress: descriptionMsg(item),
+                      freightBookingNumber:item.freightBookingNumber,
+                      // truckPlateNumber: item.plTruckPlateNumber,
+                    ),
+                ];
               } else if (item.dispatchType == "dt") {
                 final consigneeOrigin = buildConsigneeAddress(item);
                 final consigneeDestination = cleanAddress([item.origin]);
-               
+                return [
                   // First instance: Deliver to Consignee
-                  if (item.dlTruckDriverName == driverId && item.dlRequestStatus != "Completed" && item.dlRequestStatus != "Ongoing"){
-                    return [
-                      item.copyWith(
-                        name: "Deliver to Consignee",
-                        origin:  consigneeDestination,
-                        destination: consigneeOrigin,
-                        requestNumber: item.dlRequestNumber,
-                        requestStatus: item.dlRequestStatus,
-                        assignedDate:item.dlAssignedDate,
-                        originAddress: "Deliver Laden Container to Consignee",
-                        freightBookingNumber:item.freightBookingNumber,
-                        // truckPlateNumber: item.dlTruckPlateNumber,
-                      ),
-                    ];
-                  }
+                  if (item.dlTruckDriverName == driverId) // Filter out if accepted
+                    item.copyWith(
+                      name: "Deliver to Consignee",
+                      origin:  consigneeDestination,
+                      destination: consigneeOrigin,
+                      requestNumber: item.dlRequestNumber,
+                      requestStatus: item.dlRequestStatus,
+                      assignedDate:item.dlAssignedDate,
+                      originAddress: "Deliver Laden Container to Consignee",
+                      freightBookingNumber:item.freightBookingNumber,
+                      // truckPlateNumber: item.dlTruckPlateNumber,
+                    ),
                   // Second instance: Pickup from Consignee
-                  if (item.peTruckDriverName == driverId && item.peRequestStatus != "Completed" && item.peRequestStatus != "Ongoing"){
-                    return [
-                      item.copyWith(
-                        name: "Pickup from Consignee",
-                        origin: consigneeOrigin,
-                        destination: consigneeDestination,
-                        requestNumber: item.peRequestNumber,
-                        requestStatus: item.peRequestStatus,
-                        assignedDate:item.peAssignedDate,
-                        originAddress: "Pickup Empty Container from Consignee",
-                        freightBookingNumber:item.freightBookingNumber,
-                        // truckPlateNumber: item.peTruckPlateNumber,
-                      ),
-                    ];  
-                  }
-                  return [];
+                  if (item.peTruckDriverName == driverId) // Filter out if accepted
+                    item.copyWith(
+                      name: "Pickup from Consignee",
+                      origin: consigneeOrigin,
+                      destination: consigneeDestination,
+                      requestNumber: item.peRequestNumber,
+                      requestStatus: item.peRequestStatus,
+                      assignedDate:item.peAssignedDate,
+                      originAddress: "Pickup Empty Container from Consignee",
+                      freightBookingNumber:item.freightBookingNumber,
+                      // truckPlateNumber: item.peTruckPlateNumber,
+                    ),
+                ];  
               }
               // Return as-is if no match
               return [item];
