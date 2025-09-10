@@ -5,7 +5,6 @@ import 'dart:io';
 
 import 'package:animated_toggle_switch/animated_toggle_switch.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/models/transaction_model.dart';
 import 'package:frontend/notifiers/auth_notifier.dart';
@@ -105,7 +104,7 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
         
     return PopScope(
       canPop: true,
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, result) {
         if(didPop) {
           ref.invalidate(pendingTransactionProvider);
             ref.invalidate(acceptedTransactionProvider);

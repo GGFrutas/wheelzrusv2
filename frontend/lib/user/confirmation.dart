@@ -50,21 +50,21 @@ class _ConfirmationState extends ConsumerState<ConfirmationScreen> {
                 leading: const Icon(Icons.photo_library),
                 title: const Text('Gallery'),
                 onTap: () async {
-                  final List<XFile>? pickedFile = await picker.pickMultiImage();
-                  if (mounted && pickedFile != null) {
+                  final navigator = Navigator.of(context);
+                  final List<XFile> pickedFile = await picker.pickMultiImage();
+                  if (mounted) {
                     setState(() {
                       _images.addAll(pickedFile.map((pickedFile) => File(pickedFile.path))); // Add image to the list
                     });
                   }
-                  if (mounted) {
-                    Navigator.of(context).pop();
-                  }
+                  navigator.pop();
                 },
               ),
               ListTile(
                 leading: const Icon(Icons.camera_alt),
                 title: const Text('Camera'),
                 onTap: () async {
+                  final navigator = Navigator.of(context);
                   final XFile? pickedFile =
                       await picker.pickImage(source: ImageSource.camera);
                   if (pickedFile != null) {
@@ -73,9 +73,7 @@ class _ConfirmationState extends ConsumerState<ConfirmationScreen> {
                           .add(File(pickedFile.path)); // Add image to the list
                     });
                   }
-                  if (mounted) {
-                    Navigator.of(context).pop();
-                  }
+                  navigator.pop();
                 },
               ),
             ],
@@ -180,7 +178,7 @@ class _ConfirmationState extends ConsumerState<ConfirmationScreen> {
                             ],
                           ),
                         );
-                      }).toList(),
+                      }),
                     ],
                   ),
                 ),
@@ -303,10 +301,10 @@ class _ConfirmationState extends ConsumerState<ConfirmationScreen> {
                         if (validImages.isEmpty) {
                           return;
                         }
+                        final navigator  = Navigator.of(context);
                         final base64Images =  await _convertImagestoBase64(validImages);
                           print('Base64 Image: $base64Images\n');
-                        Navigator.push(
-                          context,
+                        navigator.push(
                           MaterialPageRoute(
                             builder: (context) => ProofOfDeliveryScreen(uid: widget.uid, transaction: widget.transaction,base64Images: base64Images),
                           ),

@@ -1,11 +1,8 @@
 // navigation_menu.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:frontend/notifiers/auth_notifier.dart';
 import 'package:frontend/notifiers/navigation_notifier.dart';
-import 'package:frontend/provider/transaction_provider.dart';
 import 'package:frontend/theme/colors.dart';
-import 'package:frontend/user/history_screen.dart';
 
 class NavigationMenu extends ConsumerWidget {
   const NavigationMenu({super.key});

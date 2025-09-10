@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/models/transaction_model.dart';
+import 'package:frontend/models/week_query.dart';
 import 'package:frontend/notifiers/auth_notifier.dart';
 import 'package:frontend/notifiers/navigation_notifier.dart';
 import 'package:frontend/provider/accepted_transaction.dart' as accepted_transaction;
@@ -155,8 +156,22 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
   }
 
   Widget _buildWeekContent(DateTime date) {
-    final allTransaction = ref.watch(allTransactionProvider);
+    
+    // final acceptedTransaction = ref.watch(accepted_transaction.acceptedTransactionProvider);
+    // DateTime now = DateTime.now();
+    // int daysSinceSunday = now.weekday % 7;
+    // DateTime sunday = now.subtract(Duration(days: daysSinceSunday));
+
+    // // Define the week range: Sunday to Saturday
+    // DateTime weekStart = sunday;
+    // DateTime weekEnd = sunday.add(const Duration(days: 6));
+
+
+    // final query = WeekQuery(start: weekStart, end: weekEnd, page: 1, limit: 5);
+    // final allTransaction = ref.watch(allTransactionProvider(query));
+     final allTransaction = ref.watch(allTransactionProvider);
     final acceptedTransaction = ref.watch(accepted_transaction.acceptedTransactionProvider);
+
 
     return Expanded(
       child: RefreshIndicator(
@@ -247,63 +262,79 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
               if (item.dispatchType == "ot") {
                 final shipperOrigin = buildShipperAddress(item);
                 final shipperDestination = cleanAddress([item.destination]);
-                return [
+                
                   // First instance: Deliver to Shipper
-                  if (item.deTruckDriverName == driverId) // Filter out if accepted
+                  if (item.deTruckDriverName == driverId && item.deRequestStatus != "Completed" && item.deRequestStatus != "Ongoing"){
                     // Check if the truck driver is the same as the authPartnerId
-                    item.copyWith(
-                      name: "Deliver to Shipper",
-                      origin:shipperDestination,
-                      destination: shipperOrigin,
-                      requestNumber: item.deRequestNumber,
-                      requestStatus: item.deRequestStatus,
-                      assignedDate:item.deAssignedDate,
-                      originAddress: "Deliver Empty Container to Shipper"
-                      // truckPlateNumber: item.deTruckPlateNumber,
-                    ),
+                    return [ 
+                      item.copyWith(
+                        name: "Deliver to Shipper",
+                        origin:shipperDestination,
+                        destination: shipperOrigin,
+                        requestNumber: item.deRequestNumber,
+                        requestStatus: item.deRequestStatus,
+                        assignedDate:item.deAssignedDate,
+                        originAddress: "Deliver Empty Container to Shipper",
+                        freightBookingNumber:item.freightBookingNumber,
+                        // truckPlateNumber: item.deTruckPlateNumber,
+                      ),
+                    ];
+                  }
                     // Second instance: Pickup from Shipper
-                  if ( item.plTruckDriverName == driverId) // Filter out if accepted
-                    // if (item.plTruckDriverName == authPartnerId)
-                    item.copyWith(
-                      name: newName(item),
-                      origin:shipperOrigin,
-                      destination:shipperDestination,
-                      requestNumber: item.plRequestNumber,
-                      requestStatus: item.plRequestStatus,
-                      assignedDate:item.plAssignedDate,
-                      originAddress: descriptionMsg(item),
-                      // truckPlateNumber: item.plTruckPlateNumber,
-                    ),
-                ];
+                  if ( item.plTruckDriverName == driverId && item.plRequestStatus != "Completed" && item.plRequestStatus != "Ongoing"){
+                    return [
+                      item.copyWith(
+                        name: newName(item),
+                        origin:shipperOrigin,
+                        destination:shipperDestination,
+                        requestNumber: item.plRequestNumber,
+                        requestStatus: item.plRequestStatus,
+                        assignedDate:item.plAssignedDate,
+                        originAddress: descriptionMsg(item),
+                        freightBookingNumber:item.freightBookingNumber,
+                        // truckPlateNumber: item.plTruckPlateNumber,
+                      ),
+                    ];
+                  }
+                  return [];
+                    
               } else if (item.dispatchType == "dt") {
                 final consigneeOrigin = buildConsigneeAddress(item);
                 final consigneeDestination = cleanAddress([item.origin]);
-                return [
+               
                   // First instance: Deliver to Consignee
-                  if (item.dlTruckDriverName == driverId) // Filter out if accepted
-                    item.copyWith(
-                      name: "Deliver to Consignee",
-                      origin:  consigneeDestination,
-                      destination: consigneeOrigin,
-                      requestNumber: item.dlRequestNumber,
-                      requestStatus: item.dlRequestStatus,
-                      assignedDate:item.dlAssignedDate,
-                      originAddress: "Deliver Laden Container to Consignee"
-                      // truckPlateNumber: item.dlTruckPlateNumber,
-                    ),
+                  if (item.dlTruckDriverName == driverId && item.dlRequestStatus != "Completed" && item.dlRequestStatus != "Ongoing"){
+                    return [
+                      item.copyWith(
+                        name: "Deliver to Consignee",
+                        origin:  consigneeDestination,
+                        destination: consigneeOrigin,
+                        requestNumber: item.dlRequestNumber,
+                        requestStatus: item.dlRequestStatus,
+                        assignedDate:item.dlAssignedDate,
+                        originAddress: "Deliver Laden Container to Consignee",
+                        freightBookingNumber:item.freightBookingNumber,
+                        // truckPlateNumber: item.dlTruckPlateNumber,
+                      ),
+                    ];
+                  }
                   // Second instance: Pickup from Consignee
-                  if (item.peTruckDriverName == driverId) // Filter out if accepted
-                    item.copyWith(
-                      name: "Pickup from Consignee",
-                      origin: consigneeOrigin,
-                      destination: consigneeDestination,
-                      requestNumber: item.peRequestNumber,
-                      requestStatus: item.peRequestStatus,
-                      assignedDate:item.peAssignedDate,
-                      originAddress: "Pickup Empty Container from Consignee"
-                      // truckPlateNumber: item.peTruckPlateNumber,
-                    ),
-                ];  
+                  if (item.peTruckDriverName == driverId && item.peRequestStatus != "Completed" && item.peRequestStatus != "Ongoing"){
+                    return [
+                      item.copyWith(
+                        name: "Pickup from Consignee",
+                        origin: consigneeOrigin,
+                        destination: consigneeDestination,
+                        requestNumber: item.peRequestNumber,
+                        requestStatus: item.peRequestStatus,
+                        assignedDate:item.peAssignedDate,
+                        originAddress: "Pickup Empty Container from Consignee",
+                        freightBookingNumber:item.freightBookingNumber,
+                        // truckPlateNumber: item.peTruckPlateNumber,
+                      ),
+                    ];  
+                  }
+                  return [];
               }
               // Return as-is if no match
               return [item];
@@ -358,7 +389,7 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
               
             }
             return ListView.builder(
-              controller: _scrollableController,
+              // controller: _scrollableController,
               itemCount: ongoingTransactions.length,
               itemBuilder: (context, index) {
                 final item = ongoingTransactions[index];
@@ -493,7 +524,27 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
             );
           }, 
           loading: () => const Center(child: CircularProgressIndicator()),  // Show loading spinner while fetching data
-          error: (e, stack) => Center(child: Text('Error: $e')),  
+          error: (err, stack) => RefreshIndicator (
+            onRefresh: _refreshTransaction,
+            child: Center(
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.all(16),
+                  child: Text(
+                    err is Exception
+                    ? err.toString().replaceFirst('Exception: ', '')
+                    : err.toString(),
+                    style: AppTextStyles.body.copyWith(
+                      fontWeight: FontWeight.bold
+                    ),
+                    textAlign: TextAlign.center,
+                  )
+                )
+              )
+            )
+          )
         ),  
       )
     );

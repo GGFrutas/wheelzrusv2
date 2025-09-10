@@ -1,14 +1,23 @@
 // ignore_for_file: unused_import
 
+import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:animated_toggle_switch/animated_toggle_switch.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:frontend/notifiers/auth_notifier.dart';
 import 'package:frontend/provider/theme_provider.dart';
+import 'package:frontend/screen/login_screen.dart';
+import 'package:frontend/user/about_me_pfp_screen.dart';
+import 'package:frontend/user/licensing_screen.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:line_awesome_flutter/line_awesome_flutter.dart';
+import 'package:frontend/theme/colors.dart';
+import 'package:frontend/theme/text_styles.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget{
   final String uid;
@@ -36,80 +45,53 @@ class ProfileMenuWidget extends StatelessWidget {
     this.textColor,
     this.endIcon = true,
   });
+  
+  
 
   @override
   Widget build(BuildContext context) {
+    
     return ListTile(
       onTap: onPress,
       leading: Icon(icon, color: textColor ?? Theme.of(context).iconTheme.color),
-      title: Text(title, style: TextStyle(color: textColor ?? Theme.of(context).textTheme.bodyLarge?.color)),
+      title: Text(title, style: AppTextStyles.subtitle.copyWith(color: textColor ?? Theme.of(context).textTheme.bodyLarge?.color)),
       trailing: endIcon ? const Icon(Icons.arrow_forward_ios, size: 16) : null,
     );
   }
+  
 }
 
 class _ProfileScreenPageState extends ConsumerState<ProfileScreen>{
 
   // Define tPrimaryColor
   final Color tPrimaryColor = Colors.green; // Replace Colors.green with your desired color
-  
-  // Define tDarkColor
 
-  // @override
-  // Widget build(BuildContext context) {
-  //   return Scaffold(
-  //     appBar: AppBar(
-  //       iconTheme: const IconThemeData(color: Colors.white),
-  //       title: Text(
-  //         'Profile',
-  //         style: GoogleFonts.montserrat(
-  //           fontSize: 24,
-  //           color: Colors.white,
-  //           fontWeight: FontWeight.bold,
-  //         ),
-  //       ),
-  //       backgroundColor: const Color(0xFF1d3c34),
-  //       centerTitle: true,
-  //     ),
-  //     body: SingleChildScrollView (
-  //       child: Container(
-  //         padding: const EdgeInsets.all(16),
-  //         child: Column(
-  //           children:[
-  //             SizedBox(
-  //               width: 120, height: 120,
-  //               child:
-  //                 ClipRRect(
-  //                   borderRadius: BorderRadius.circular(100),
-  //                   child:
-  //                     const Image(image: AssetImage('assets/xlogo.png')),
-  //                 )
-  //             ),
-  //             const SizedBox(height: 10),
-  //             Text('Initials', style: Theme.of(context).textTheme.headlineMedium),
-  //           ]
-            
-  //         ),
-  //       )
-          
-  //     )
-  //   );
-  // }  
   @override
   Widget build(BuildContext context) {
+  
+    final authState = ref.watch(authNotifierProvider);
+    Uint8List? imageBytes;
+    if (authState.partnerImageBase64 != null &&
+        authState.partnerImageBase64!.isNotEmpty) {
+      try {
+        imageBytes = base64Decode(authState.partnerImageBase64!);
+      } catch (e) {
+        // Handle invalid base64
+        imageBytes = null;
+      }
+    }
+    
    
     return Scaffold(
       appBar: AppBar(
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: mainColor),
         title: Text(
           'Profile',
-          style: GoogleFonts.montserrat(
-            fontSize: 24,
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
+          style: AppTextStyles.title.copyWith(
+            color: mainColor,
           ),
         ),
-        backgroundColor: const Color(0xFF1d3c34),
+        // backgroundColor: const Color(0xFF1d3c34),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
@@ -120,81 +102,139 @@ class _ProfileScreenPageState extends ConsumerState<ProfileScreen>{
 
               /// -- IMAGE
               Stack(
+                alignment: Alignment.topCenter,
                 children: [
-                  SizedBox(
+                  Container(
                     width: 120,
                     height: 120,
-                    child: ClipRRect(
-                        borderRadius: BorderRadius.circular(100), child: const Image(image: AssetImage('assets/xlogo.png'))),
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      width: 35,
-                      height: 35,
-                      decoration: BoxDecoration(borderRadius: BorderRadius.circular(100), color: tPrimaryColor),
-                      // child: const Icon(
-                      //   LineAwesomeIcons.alternate_pencil,
-                      //   color: Colors.black,
-                      //   size: 20,
-                      // ),
+                    decoration: BoxDecoration(
+                      color:Colors.grey.shade300,
+                      shape: BoxShape.circle,
                     ),
-                  ),
+                   
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(100), 
+                      child: authState.partnerImageBase64 != null && authState.partnerImageBase64!.isNotEmpty && imageBytes != null
+                        ? Image.memory(
+                            imageBytes,
+                            fit: BoxFit.cover,
+                            width: 120,
+                            height: 120,
+                          )
+                        : Image.asset(
+                            'assets/xlogo.png',
+                            fit: BoxFit.cover,
+                            width: 120,
+                            height: 120,
+                          ), 
+                  
+                    ) 
+                  
+                  )
                 ],
               ),
               const SizedBox(height: 10),
-              Text("initials", style: Theme.of(context).textTheme.headlineMedium),
-              Text("Email", style: Theme.of(context).textTheme.bodyMedium),
-              const SizedBox(height: 20),
-
-              /// -- BUTTON
-              SizedBox(
-                width: 200,
-                child: ElevatedButton(
-                  onPressed: null,
-                  style: ElevatedButton.styleFrom(
-                      backgroundColor: tPrimaryColor, side: BorderSide.none, shape: const StadiumBorder()),
-                  child: const Text("Edit Profile", style: TextStyle(color: Color(0xFF1d3c34))),
+              Text(
+                authState.driverName ?? 'No Name',
+                style: AppTextStyles.subtitle.copyWith(
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: 30),
-              const Divider(),
-              const SizedBox(height: 10),
+              Text(
+                authState.login  ?? 'No Email',
+                style: AppTextStyles.caption.copyWith(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 11,
+                ),
+              ),
+              const SizedBox(height:50),
+
 
               /// -- MENU
-              ProfileMenuWidget(title: "Settings", icon: LineAwesomeIcons.cogs_solid, onPress: () {}),
-              ProfileMenuWidget(title: "Billing Details", icon: LineAwesomeIcons.wallet_solid, onPress: () {}),
-              ProfileMenuWidget(title: "User Management", icon: LineAwesomeIcons.user, onPress: () {}),
-              const Divider(),
-              const SizedBox(height: 10),
-              ProfileMenuWidget(title: "Information", icon: LineAwesomeIcons.info_solid, onPress: () {}),
               ProfileMenuWidget(
-                  title: "Logout",
-                  icon: LineAwesomeIcons.copy,
-                  textColor: Colors.red,
-                  endIcon: false,
-                  onPress: () {
-                    // Get.defaultDialog(
-                    //   title: "LOGOUT",
-                    //   titleStyle: const TextStyle(fontSize: 20),
-                    //   content: const Padding(
-                    //     padding: EdgeInsets.symmetric(vertical: 15.0),
-                    //     child: Text("Are you sure, you want to Logout?"),
-                    //   ),
-                    //   confirm: Expanded(
-                    //     child: ElevatedButton(
-                    //       onPressed: () => AuthenticationRepository.instance.logout(),
-                    //       style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, side: BorderSide.none),
-                    //       child: const Text("Yes"),
-                    //     ),
-                    //   ),
-                    //   cancel: OutlinedButton(onPressed: () => Get.back(), child: const Text("No")),
-                    // );
-                  }),
+                title: "About Me", 
+                icon: LineAwesomeIcons.users_solid, 
+                onPress: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AboutMeScreen(uid: widget.uid),
+                    ),
+                  );
+                }),
+              ProfileMenuWidget(
+                title: "License & ID Verification",
+                 icon: LineAwesomeIcons.id_card, 
+                 onPress: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => LicenseScreen(uid: widget.uid),
+                    ),
+                  );
+                 }),
+              ProfileMenuWidget(title: "Vehicle Details", icon: LineAwesomeIcons.truck_solid, onPress: () {}),
+            
+             
             ],
           ),
         ),
+      ),
+      bottomNavigationBar: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Column (
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: (() => _logout(context, ref)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: mainColor,
+                        padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 20),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30.0),
+                        ),
+                      ),
+                      child: Text(
+                        "Log out",
+                        style: AppTextStyles.body.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+                    ),
+                  )
+                ],
+              )
+              
+            ),
+          ],
+          
+        )
+    );
+  }
+  
+  Future<void> _logout(BuildContext context, WidgetRef ref) async {
+    ref.read(themeProvider.notifier).state = true;
+
+    // Remove token from shared preferences
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('token');
+
+    if (!context.mounted) return; // Ensure the widget is still mounted
+
+    // Navigate to the Login screen
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const LoginScreen(),
       ),
     );
   }

@@ -2,6 +2,8 @@
 
 // ignore_for_file: unused_import, depend_on_referenced_packages
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -56,21 +58,23 @@ class HomePage extends ConsumerWidget {
     final String uid = authState.uid ?? '';
 
    final ongoingTransactions = ref.watch(filteredItemsProvider);
+   Uint8List? imageBytes;
+    if (authState.partnerImageBase64 != null &&
+        authState.partnerImageBase64!.isNotEmpty) {
+      try {
+        imageBytes = base64Decode(authState.partnerImageBase64!);
+      } catch (e) {
+        // Handle invalid base64
+        imageBytes = null;
+      }
+    }
 
     // Define the different pages based on navigation index
-    final List<Widget> pages = [
-      TransactionScreen(user: user),
-      HomepageScreen(user: user),
-      HistoryScreen(user: user),
-      UpdateUserScreen(user: user, uid: uid,),
-      SettingScreen(uid: uid),
-      // ProofOfDeliveryScreen(uid: uid, transaction: null, base64Images: base64Image), // Replace with a valid transaction object
-      ProfileScreen(uid: uid),
-    ];
+    
 
     return PopScope(
       canPop: false,
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, result) {
         if(!didPop) {
           if(selectedIndex != 1) {
             ref.read(navigationNotifierProvider.notifier).setSelectedIndex(1);
@@ -266,48 +270,70 @@ class HomePage extends ConsumerWidget {
                   ],
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.all(16.0),
-                decoration: const BoxDecoration(
-                  border: Border(top:BorderSide(color: Colors.grey, width: 0.2)),
-                ),
-                child: Row(
-                  children: [
-                    const SizedBox(width: 8),
-                    const CircleAvatar(
-                      radius: 24,
-                      backgroundImage: NetworkImage(
-                      'assets/xlogo.png', // Replace with user['profileImage'] if available
-                      ),
+              InkWell(
+                onTap:(){
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ProfileScreen(uid: uid),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            authState.driverName ?? 'No Name',
-                            style: AppTextStyles.subtitle.copyWith(
-                              fontWeight: FontWeight.bold,
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(16.0),
+                  decoration: const BoxDecoration(
+                    border: Border(top:BorderSide(color: Colors.grey, width: 0.2)),
+                  ),
+                  child: Row(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(100), 
+                        child: authState.partnerImageBase64 != null && authState.partnerImageBase64!.isNotEmpty && imageBytes != null
+                          ? Image.memory(
+                              imageBytes,
+                              fit: BoxFit.cover,
+                              width: 50,
+                              height: 50,
+                            )
+                          : Image.asset(
+                              'assets/xlogo.png',
+                              fit: BoxFit.cover,
+                              width: 50,
+                              height: 50,
+                            ), 
+                    
+                      ), 
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              authState.driverName ?? 'No Name',
+                              style: AppTextStyles.subtitle.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          ),
-                          Text(
-                            user['login'] ?? 'No Email',
-                            style: AppTextStyles.caption.copyWith(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 11,
+                            Text(
+                              user['login'] ?? 'No Email',
+                              style: AppTextStyles.caption.copyWith(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.logout, color: mainColor),
-                      onPressed: () => _logout(context, ref),
-                    ),
-                  ],
+                      IconButton(
+                        icon: const Icon(Icons.logout, color: mainColor),
+                        onPressed: () => _logout(context, ref),
+                      ),
+                    ],
+                  ),
                 ),
+              
               ),
+             
             ],
           ),
         ),

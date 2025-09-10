@@ -66,6 +66,7 @@ class _UpdateUserScreenState extends ConsumerState<UpdateUserScreen> {
                 leading: const Icon(Icons.photo_library),
                 title: const Text('Gallery'),
                 onTap: () async {
+                  final navigtaor = Navigator.of(context);
                   final XFile? pickedFile =
                       await picker.pickImage(source: ImageSource.gallery);
                   if (pickedFile != null) {
@@ -74,13 +75,14 @@ class _UpdateUserScreenState extends ConsumerState<UpdateUserScreen> {
                           File(pickedFile.path); // Store the selected image
                     });
                   }
-                  Navigator.of(context).pop();
+                  navigtaor.pop();
                 },
               ),
               ListTile(
                 leading: const Icon(Icons.camera_alt),
                 title: const Text('Camera'),
                 onTap: () async {
+                  final navigtaor = Navigator.of(context);
                   final XFile? pickedFile =
                       await picker.pickImage(source: ImageSource.camera);
                   if (pickedFile != null) {
@@ -89,7 +91,7 @@ class _UpdateUserScreenState extends ConsumerState<UpdateUserScreen> {
                           File(pickedFile.path); // Store the selected image
                     });
                   }
-                  Navigator.of(context).pop();
+                  navigtaor.pop();
                 },
               ),
             ],
