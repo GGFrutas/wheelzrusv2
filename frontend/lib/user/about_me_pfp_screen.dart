@@ -62,21 +62,26 @@ class ProfileMenuWidget extends StatelessWidget {
 
 class _AboutMeScreenPageState extends ConsumerState<AboutMeScreen>{
 
+  final ValueNotifier<bool> _isNameNotifier = ValueNotifier<bool>(false);
+  final ValueNotifier<bool> _isEmailNotifier = ValueNotifier<bool>(false);
+  final ValueNotifier<bool> _isNumberNotifier = ValueNotifier<bool>(false);
+
   // Define tPrimaryColor
   final Color tPrimaryColor = Colors.green; // Replace Colors.green with your desired color
   bool isNameEditable = false;
   bool isEmailEditable = false;
   bool isNumberEditable = false;
 
-  bool _isNameChanged = false;
-  bool _isEmailChanged = false;
-  bool _isNumberChanged = false;
+  final bool _isNameChanged = false;
+  final bool _isEmailChanged = false;
+  final bool _isNumberChanged = false;
 
   late TextEditingController nameController;
   late TextEditingController emailController;
   late TextEditingController numberController;
 
   File? _image;
+  Uint8List? imageBytes;
 
   @override
   void initState() {
@@ -85,12 +90,25 @@ class _AboutMeScreenPageState extends ConsumerState<AboutMeScreen>{
     nameController = TextEditingController(text: authState.driverName ?? '');
     emailController = TextEditingController(text: authState.login ?? '');
     numberController = TextEditingController(text: authState.driverNumber ?? '');
+
+    if (authState.partnerImageBase64 != null && authState.partnerImageBase64!.isNotEmpty) {
+      try {
+      imageBytes = base64Decode(authState.partnerImageBase64!);
+        
+      } catch (e) {
+        // Handle invalid base64
+        imageBytes = null;
+      }
+    }
   }
   @override
   void dispose() {
     nameController.dispose();
     emailController.dispose();
     numberController.dispose();
+    _isNameNotifier.dispose();
+    _isEmailNotifier.dispose();
+    _isNumberNotifier.dispose();
     super.dispose();
   }
 
@@ -107,21 +125,21 @@ class _AboutMeScreenPageState extends ConsumerState<AboutMeScreen>{
                 leading: const Icon(Icons.photo_library),
                 title: const Text('Gallery'),
                 onTap: () async {
+                  final navigator = Navigator.of(context);
                   final XFile? pickedFile = await picker.pickImage(source: ImageSource.gallery);
                   if (mounted && pickedFile != null) {
                     setState(() {
                       _image = File(pickedFile.path); // Add image to the list
                     });
                   }
-                  if (mounted) {
-                    Navigator.of(context).pop();
-                  }
+                  navigator.pop();
                 },
               ),
               ListTile(
                 leading: const Icon(Icons.camera_alt),
                 title: const Text('Camera'),
                 onTap: () async {
+                  final navigator = Navigator.of(context);
                   final XFile? pickedFile =
                       await picker.pickImage(source: ImageSource.camera);
                   if (pickedFile != null) {
@@ -129,9 +147,9 @@ class _AboutMeScreenPageState extends ConsumerState<AboutMeScreen>{
                       _image = File(pickedFile.path); // Add image to the list
                     });
                   }
-                  if (mounted) {
-                    Navigator.of(context).pop();
-                  }
+                  
+                  navigator.pop();
+                  
                 },
               ),
             ],
@@ -173,14 +191,14 @@ class _AboutMeScreenPageState extends ConsumerState<AboutMeScreen>{
             IconButton(
               icon: const Icon(Icons.download, color: mainColor),
               onPressed: () {
-                print("Save changes");
+               
               },
             )
           else 
            IconButton(
               icon: const Icon(Icons.more_vert, color: mainColor),
               onPressed: () {
-                print("More options");
+                
               },
             ),
           ],
@@ -263,35 +281,38 @@ class _AboutMeScreenPageState extends ConsumerState<AboutMeScreen>{
                     ),
                   ),
                   const SizedBox(height: 10),
-                  TextField(
-                    controller: nameController,
-                    readOnly: !isNameEditable,
-                    onChanged: (value) {
-                      setState(() {
-                        _isNameChanged = value.trim() != (authState.driverName ?? '').trim();
-                      });
-                    },
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8.0),
-                        borderSide: BorderSide.none,
-                      ),
-                      hintText: authState.driverName ?? '',
-                      filled: true,
-                      fillColor: const Color.fromARGB(255, 234, 240, 238),
-                      hintStyle: AppTextStyles.body, // Use caption style for hint text
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          isNameEditable ? Icons.check : Icons.edit,
-                          color: mainColor,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            isNameEditable = !isNameEditable;
-                          });
+                  ValueListenableBuilder<bool>(
+                    valueListenable: _isNameNotifier, 
+                    builder: (context, isChanged, _){
+                      return TextField(
+                        controller: nameController,
+                        readOnly: !isNameEditable,
+                        onChanged: (value) {
+                          _isNameNotifier.value = value.trim() != (authState.driverName ?? '').trim();
                         },
-                      ),
-                    ),
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8.0),
+                            borderSide: BorderSide.none,
+                          ),
+                          hintText: authState.driverName ?? '',
+                          filled: true,
+                          fillColor: const Color.fromARGB(255, 234, 240, 238),
+                          hintStyle: AppTextStyles.body, // Use caption style for hint text
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              isNameEditable ? Icons.check : Icons.edit,
+                              color: mainColor,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                isNameEditable = !isNameEditable;
+                              });
+                            },
+                          ),
+                        ),
+                      );
+                    }
                   ),
                   const SizedBox(height: 20),
                   Text(
@@ -301,35 +322,38 @@ class _AboutMeScreenPageState extends ConsumerState<AboutMeScreen>{
                     ),
                   ),
                   const SizedBox(height: 10),
-                  TextField(
-                    controller: emailController,
-                    readOnly: !isEmailEditable,
-                    onChanged: (value) {
-                      setState(() {
-                        _isEmailChanged = value.trim() != (authState.login ?? '').trim();
-                      });
-                    },
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8.0),
-                        borderSide: BorderSide.none,
-                      ),
-                      hintText: authState.login ?? ' ',
-                      filled: true,
-                      fillColor: const Color.fromARGB(255, 234, 240, 238),
-                      hintStyle: AppTextStyles.body, // Use caption style for hint text
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          isEmailEditable ? Icons.check : Icons.edit,
-                          color: mainColor,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            isEmailEditable = !isEmailEditable;
-                          });
+                  ValueListenableBuilder<bool>(
+                    valueListenable: _isEmailNotifier, 
+                    builder: (context, isChanged, _){
+                      return TextField(
+                        controller: emailController,
+                        readOnly: !isEmailEditable,
+                        onChanged: (value) {
+                          _isEmailNotifier.value = value.trim() != (authState.login ?? '').trim();
                         },
-                      ),
-                    ),
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8.0),
+                            borderSide: BorderSide.none,
+                          ),
+                          hintText: authState.login ?? '',
+                          filled: true,
+                          fillColor: const Color.fromARGB(255, 234, 240, 238),
+                          hintStyle: AppTextStyles.body, // Use caption style for hint text
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              isEmailEditable ? Icons.check : Icons.edit,
+                              color: mainColor,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                isEmailEditable = !isEmailEditable;
+                              });
+                            },
+                          ),
+                        ),
+                      );
+                    }
                   ),
                   const SizedBox(height: 20),
                   // Text(
@@ -360,37 +384,38 @@ class _AboutMeScreenPageState extends ConsumerState<AboutMeScreen>{
                     ),
                   ),
                   const SizedBox(height: 10),
-                  TextField(
-                    controller: numberController,
-                    readOnly: !isNumberEditable,
-                    onChanged: (value) {
-                      setState(() {
-                        _isNumberChanged = value.trim() != (authState.driverNumber ?? '').trim();
-                      });
-                    },
-                    
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8.0),
-                        borderSide: BorderSide.none,
-                      ),
-                      hintText: authState.driverNumber ?? '',
-                      filled: true,
-                      fillColor: const Color.fromARGB(255, 234, 240, 238),
-                      hintStyle: AppTextStyles.body, // Use caption style for hint text
-                      
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          isNumberEditable ? Icons.check : Icons.edit,
-                          color: mainColor,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            isNumberEditable = !isNumberEditable;
-                          });
+                  ValueListenableBuilder<bool>(
+                    valueListenable: _isNumberNotifier, 
+                    builder: (context, isChanged, _){
+                      return TextField(
+                        controller: numberController,
+                        readOnly: !isNumberEditable,
+                        onChanged: (value) {
+                          _isNumberNotifier.value = value.trim() != (authState.driverNumber ?? '').trim();
                         },
-                      ),
-                    ),
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8.0),
+                            borderSide: BorderSide.none,
+                          ),
+                          hintText: authState.driverNumber ?? '',
+                          filled: true,
+                          fillColor: const Color.fromARGB(255, 234, 240, 238),
+                          hintStyle: AppTextStyles.body, // Use caption style for hint text
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              isNumberEditable ? Icons.check : Icons.edit,
+                              color: mainColor,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                isNumberEditable = !isNumberEditable;
+                              });
+                            },
+                          ),
+                        ),
+                      );
+                    }
                   ),
                   const SizedBox(height: 20),
                   Text(

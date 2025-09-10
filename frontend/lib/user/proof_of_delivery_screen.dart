@@ -58,8 +58,8 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
     Uint8List? signatureImage = await _controller.toPngBytes();
     String? base64Signature = signatureImage != null ? base64Encode(signatureImage) : null;
     final now = DateTime.now();
-final adjustedTime = now.subtract(const Duration(hours: 8));
-final timestamp = DateFormat("yyyy-MM-dd HH:mm:ss").format(adjustedTime);
+    final adjustedTime = now.subtract(const Duration(hours: 8));
+    final timestamp = DateFormat("yyyy-MM-dd HH:mm:ss").format(adjustedTime);
 
     String? enteredName = _enteredName;
     String? enteredContainerNumber = _enteredContainerNumber;
@@ -98,6 +98,7 @@ final timestamp = DateFormat("yyyy-MM-dd HH:mm:ss").format(adjustedTime);
       nextStatus = "Completed";
      url = Uri.parse('$baseUrl/api/odoo/pod-ongoing-to-complete?uid=$uid');
     } else {
+      if (!mounted) return;
       showSuccessDialog(context, "Invalid transaction!");
       return;
     }
@@ -124,6 +125,7 @@ final timestamp = DateFormat("yyyy-MM-dd HH:mm:ss").format(adjustedTime);
     print("Response status code: ${response.statusCode}");
     
     print('Posting to: $url for status update to $nextStatus');
+    if (!mounted) return;
     if (response.statusCode == 200) {
       print("Files uploaded successfully!");
       print("Response body: ${response.body}");
@@ -157,7 +159,7 @@ final timestamp = DateFormat("yyyy-MM-dd HH:mm:ss").format(adjustedTime);
         );
 
       print('Updated to Ongoing: ${updatedTransaction.requestStatus}');
-
+      if (!mounted) return;
       Navigator.of(context).pop(); // Close the loading dialog
       showSuccessDialog(context, "Success!");
       
@@ -316,7 +318,7 @@ final timestamp = DateFormat("yyyy-MM-dd HH:mm:ss").format(adjustedTime);
         mainAxisSize: MainAxisSize.min,
         children: [
           Padding(
-            padding: EdgeInsets.all(8.0),
+            padding: const EdgeInsets.all(8.0),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -459,7 +461,7 @@ final timestamp = DateFormat("yyyy-MM-dd HH:mm:ss").format(adjustedTime);
         builder: (context, ref, _) {
           return PopScope(
             canPop: false, // Prevent default pop behavior
-            onPopInvoked: (didPop) {
+            onPopInvokedWithResult: (didPop, result) {
               if (!didPop) {
                 // Navigate to home if system back button is pressed
                 ref.invalidate(bookingProvider);

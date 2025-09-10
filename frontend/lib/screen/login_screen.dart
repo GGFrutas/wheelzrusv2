@@ -13,10 +13,10 @@ class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  _LoginScreenState createState() => _LoginScreenState();
+  LoginScreenState createState() => LoginScreenState();
 }
 
-class _LoginScreenState extends ConsumerState<LoginScreen> {
+class LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final GlobalKey<FormState> _form = GlobalKey<FormState>();
@@ -135,10 +135,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     clipper: WaveClipperOne(),
                     child: ColorFiltered(
                       colorFilter: ColorFilter.mode(
-                        mainColor.withOpacity(0.8), 
+                        mainColor.withValues(alpha: 0.8), 
                         BlendMode.srcATop
                       ), // Apply color filter to the image
-                      child: Container(
+                      child: SizedBox(
                         height: MediaQuery.of(context).size.height * 0.4,
                         width: double.infinity,
                         child: Image.asset(

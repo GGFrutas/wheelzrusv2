@@ -74,7 +74,7 @@ class HomePage extends ConsumerWidget {
 
     return PopScope(
       canPop: false,
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, result) {
         if(!didPop) {
           if(selectedIndex != 1) {
             ref.read(navigationNotifierProvider.notifier).setSelectedIndex(1);

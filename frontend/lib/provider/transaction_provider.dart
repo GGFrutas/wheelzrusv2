@@ -38,7 +38,7 @@ Future<List<Transaction>> fetchFilteredTransactions( {
   }
 
   final url = '$baseUrl/api/odoo/booking/$endpoint?uid=$uid';
-  print("URL: $url" );
+  // print("URL: $url" );
 
 
 

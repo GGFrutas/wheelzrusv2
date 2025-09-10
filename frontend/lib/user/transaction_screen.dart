@@ -138,7 +138,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                       ),
                     ),
                     Container(
-                      color: Colors.black.withOpacity(0.4),
+                      color: Colors.black.withValues(alpha: 0.4),
                     ),
                     Positioned(
                       left: 24,
