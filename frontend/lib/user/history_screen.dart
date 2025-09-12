@@ -283,7 +283,19 @@ void initState() {
                       return [item];
                     }).toList();
 
-                    expandedTransactions.sort((a,b){
+                    for (var tx in expandedTransactions) {
+  print(
+    "ID=${tx.id}, stageId=${tx.stageId}, requestStatus=${tx.requestStatus}, "
+    "completedTime=${tx.completedTime}, writeDate=${tx.writeDate}"
+  );
+}
+
+                     final ongoingTransactions = expandedTransactions
+                      .where((tx) => tx.stageId == "Cancelled" || tx.stageId == "Completed" || tx.requestStatus == "Completed")
+                      // .take(5)
+                      .toList();
+
+                    ongoingTransactions.sort((a,b){
                       DateTime dateACompleted = DateTime.tryParse(a.completedTime ?? '') ?? DateTime(0);
                       DateTime dateARejected = DateTime.tryParse(a.writeDate ?? '') ?? DateTime(0);
                       DateTime dateBCompleted = DateTime.tryParse(b.completedTime ?? '') ?? DateTime(0);
@@ -297,10 +309,7 @@ void initState() {
                     });
                     
 
-                    final ongoingTransactions = expandedTransactions
-                      .where((tx) => tx.stageId == "Cancelled" || tx.stageId == "Completed" || tx.requestStatus == "Completed")
-                      // .take(5)
-                      .toList();
+                   
                     final recentFinished = ongoingTransactions.take(5).toList();
 
                   
