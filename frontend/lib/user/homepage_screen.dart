@@ -407,9 +407,9 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                             // Get the relevant date depending on dispatch type
                             String? dateStr;
                             if (tx.dispatchType == 'ot') {
-                              dateStr = tx.departureDate;
+                              dateStr = tx.pickupDate;
                             } else if (tx.dispatchType == 'dt') {
-                              dateStr = tx.arrivalDate;
+                              dateStr = tx.deliveryDate;
                             }
 
                             if (dateStr == null || dateStr.isEmpty) return false;

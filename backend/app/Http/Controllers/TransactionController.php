@@ -204,11 +204,11 @@ class TransactionController extends Controller
 
                             "|",  // OR: date range match
                                 "&", 
-                                    [ "arrival_date", ">=", $today ],
-                                    [ "arrival_date", "<=", $tomorrow ],
+                                    [ "pickup_date", ">=", $today ],
+                                    [ "pickup_date", "<=", $tomorrow ],
                                 "&", 
-                                    [ "departure_date", ">=", $today ],
-                                    [ "departure_date", "<=", $tomorrow ],
+                                    [ "delivery_date", ">=", $today ],
+                                    [ "delivery_date", "<=", $tomorrow ],
 
                             "|", "|", "|",  // OR: driver match
                                 ["de_truck_driver_name", "=", $partnerId],
@@ -1132,12 +1132,12 @@ class TransactionController extends Controller
                         ["pl_truck_driver_name", "=", $partnerId],
 
                         "|",
-                        ['arrival_date', ">=", $today],
-                        ['departure_date', ">=", $today],
+                        ['pickup_date', ">=", $today],
+                        ['delivery_date', ">=", $today],
 
                         "|",
-                        ['arrival_date', ">=", $today],
-                        ['departure_date', ">=", $today],
+                        ['pickup_date', ">=", $today],
+                        ['delivery_date', ">=", $today],
                     
                         
                     
@@ -2183,6 +2183,8 @@ class TransactionController extends Controller
 
         $updateField = [];
 
+        $serviceType = is_array($type['service_type']) ? $type['service_type'][0] : $type['service_type'];
+
         if ($type['dispatch_type'] == "ot" && $type['de_request_no'] == $requestNumber) {
             Log::info("Updating PE proof and signature for request number: {$requestNumber}");
             $updateField = [
@@ -2202,6 +2204,9 @@ class TransactionController extends Controller
                 "pl_request_status" => $newStatus,
                 "container_number" => $containerNumber
             ];
+            if($serviceType == 2){
+                $updateField["stage_id"] = 5;
+            }
         }
 
         if ($type['dispatch_type'] == "dt" && $type['dl_request_no'] == $requestNumber) {
@@ -2214,6 +2219,9 @@ class TransactionController extends Controller
                 "dl_request_status" => $newStatus,
                 "container_number" => $containerNumber
             ];
+            if($serviceType == 2){
+                $updateField["stage_id"] = 5;
+            }
         } elseif ($type['dispatch_type'] == "dt" && $type['pe_request_no'] == $requestNumber) {
             Log::info("Updating PE proof and signature for request number: {$requestNumber}");
             $updateField = [
@@ -2595,6 +2603,7 @@ class TransactionController extends Controller
         }
 
         $updateField = [];
+        $serviceType = is_array($type['service_type']) ? $type['service_type'][0] : $type['service_type'];
 
         if ($type['dispatch_type'] == "ot" && $type['de_request_no'] == $requestNumber) {
             Log::info("Updating DE proof and signature for request number: {$requestNumber}");
@@ -2618,6 +2627,9 @@ class TransactionController extends Controller
                 // "pl_request_status" => $newStatus,
                 "container_number" => $containerNumber
             ];
+            if($serviceType == 2){
+                $updateField["stage_id"] = 7;
+            }
         }
 
         if ($type['dispatch_type'] === "dt" && $type['dl_request_no'] === $requestNumber && isset($type['service_type']) && $type['service_type'] == 2) {
