@@ -299,11 +299,12 @@ void initState() {
 
                     final ongoingTransactions = expandedTransactions
                       .where((tx) => tx.stageId == "Cancelled" || tx.stageId == "Completed" || tx.requestStatus == "Completed")
-                      .take(5)
+                      // .take(5)
                       .toList();
+                    final recentFinished = ongoingTransactions.take(5).toList();
 
                   
-                    if (ongoingTransactions.isEmpty) {
+                    if (recentFinished.isEmpty) {
                       return LayoutBuilder(
                         builder: (context,constraints){
                           return ListView(
@@ -327,9 +328,9 @@ void initState() {
                     }
                     
                     return ListView.builder(
-                      itemCount: ongoingTransactions.length,
+                      itemCount: recentFinished.length,
                       itemBuilder: (context, index) {
-                        final item = ongoingTransactions[index];
+                        final item = recentFinished[index];
                         final statusLabel =
                         item.requestStatus == 'Completed'
                             ? item.requestStatus
