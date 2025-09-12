@@ -590,14 +590,19 @@ class TransactionController extends Controller
 
                     ["fields" => [
                         "id", "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
-                        "dispatch_type",
-                        "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", 
+                        "dispatch_type", "de_truck_driver_name", "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name",
+                        "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", "origin_port_terminal_address", "destination_port_terminal_address", "arrival_date", "delivery_date",
                         "container_number", "seal_number", "booking_reference_no", "origin_forwarder_name", "destination_forwarder_name", "freight_booking_number",
                         "origin_container_location", "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
-                        "freight_forwarder_name","origin", "destination", "de_rejection_time", "pl_rejection_time", "dl_rejection_time", "pe_rejection_time", "de_completion_time", 
-                        "pl_completion_time", "dl_completion_time", "pe_completion_time", "service_type", "booking_service",
+                        "freight_forwarder_name", "shipper_phone", "consignee_phone", "dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", "pl_truck_plate_no",
+                        "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
+                        "pickup_date", "departure_date","origin", "destination", "de_rejection_time", "pl_rejection_time", "dl_rejection_time", "pe_rejection_time", "de_completion_time", 
+                        "pl_completion_time", "dl_completion_time", "pe_completion_time", "shipper_province","shipper_city","shipper_barangay","shipper_street", 
+                        "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime", "service_type", "booking_service",
                         "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time", "stage_id", "write_date", "name", "pe_release_by", "de_release_by",
                         "dl_receive_by", "pl_receive_by"
+
+
                     ]],
                 ]
             ],
@@ -627,15 +632,18 @@ class TransactionController extends Controller
         // Step 5: Queue a job for each dispatch.manager record
         $fieldsToString = [
             "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
-                        "dispatch_type",
-                        "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", 
-                        "container_number", "seal_number", "booking_reference_no", "origin_forwarder_name", "destination_forwarder_name", "freight_booking_number",
-                        "origin_container_location", "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
-                        "freight_forwarder_name","origin", "destination", "de_rejection_time", "pl_rejection_time", "dl_rejection_time", "pe_rejection_time", "de_completion_time", 
-                        "pl_completion_time", "dl_completion_time", "pe_completion_time", "service_type", "booking_service",
-                        "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time", "stage_id", "write_date",
+            "dispatch_type", 
+            "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", "origin_port_terminal_address", "destination_port_terminal_address", "arrival_date", "delivery_date",
+            "container_number", "seal_number", "booking_reference_no", "origin_forwarder_name", "destination_forwarder_name", "freight_booking_number",
+            "origin_container_location", "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
+            "freight_forwarder_name", "shipper_phone", "consignee_phone", "dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", "pl_truck_plate_no",
+            "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
+            "pickup_date", "departure_date","origin", "destination","de_rejection_time", "pl_rejection_time", "dl_rejection_time", "pe_rejection_time", "de_completion_time", 
+            "pl_completion_time", "dl_completion_time", "pe_completion_time","shipper_province","shipper_city","shipper_barangay","shipper_street",
+            "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime",  "service_type","booking_service",
+            "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time","stage_id", "write_date", "pe_release_by", "de_release_by",
+                        "dl_receive_by", "pl_receive_by"
         ];
-
         $jobResponses = [];
 
         foreach ($filteredManagers  as $manager) {
