@@ -356,8 +356,8 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
               // Safely parse the string to DateTime
               try{
                 final dateToCheck = tx.dispatchType == "ot"
-                ? DateTime.parse(tx.departureDate)
-                : DateTime.parse(tx.arrivalDate); // Handle null dates
+                ? DateTime.parse(tx.pickupDate)
+                : DateTime.parse(tx.deliveryDate); // Handle null dates
 
                 return sameWeekRange(dateToCheck, date);
               }catch(_) {
