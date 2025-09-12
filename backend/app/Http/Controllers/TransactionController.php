@@ -44,10 +44,10 @@ function jsonRpcRequest($url, $payload){
 
 class TransactionController extends Controller
 {
-    protected $url = "http://gsq-ibx-rda:8068";
-    protected $db = 'rda_beta_7';
-    // protected $odoo_url = "http://192.168.118.102:8000/odoo/jsonrpc";
-    protected $odoo_url = "http://gsq-ibx-rda:8068/jsonrpc";
+    protected $url = "https://jralejandria-beta-dev-yxe.odoo.com";
+    protected $db = 'jralejandria-beta-dev-yxe1-beta-production-23247386';
+    // protected $odoo_url = "http://192.168.76.45:8080/odoo/jsonrpc";
+    protected $odoo_url = "https://jralejandria-beta-dev-yxe.odoo.com/jsonrpc";
 
     private function authenticateDriver(Request $request)
     {
