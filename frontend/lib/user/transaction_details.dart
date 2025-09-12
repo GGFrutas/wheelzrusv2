@@ -451,6 +451,119 @@ final delivery = scheduleMap['delivery'];
                     ],
                   ),
                 ),
+
+                Container(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center, // Align top of icon and text
+                    children: [
+                      const Icon(
+                        Icons.check_circle,
+                        color: mainColor,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8), // Space between icon and text
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Space between label and value
+                          
+                          Text(
+                            "Freight Booking Number",
+                            style: AppTextStyles.caption.copyWith(
+                              fontSize: 12,
+                              color: mainColor,
+                            ),
+                          ),
+                          Text(
+                            (widget.transaction?.freightBookingNumber?.isNotEmpty ?? false)
+                              ? widget.transaction!.freightBookingNumber! : '—',
+                            style: AppTextStyles.subtitle.copyWith(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: mainColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center, // Align top of icon and text
+                    children: [
+                      const Icon(
+                        Icons.check_circle,
+                        color: mainColor,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8), // Space between icon and text
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Space between label and value
+                          
+                          Text(
+                            "Freight BL Number",
+                            style: AppTextStyles.caption.copyWith(
+                              fontSize: 12,
+                              color: mainColor,
+                            ),
+                          ),
+                          Text(
+                            (widget.transaction?.freightBlNumber?.isNotEmpty ?? false)
+                              ? widget.transaction!.freightBlNumber! : '—',
+                            style: AppTextStyles.subtitle.copyWith(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: mainColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center, // Align top of icon and text
+                    children: [
+                      const Icon(
+                        Icons.check_circle,
+                        color: mainColor,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8), // Space between icon and text
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Space between label and value
+                          
+                          Text(
+                            "Container Number",
+                            style: AppTextStyles.caption.copyWith(
+                              fontSize: 12,
+                              color: mainColor,
+                            ),
+                          ),
+                          Text(
+                            (widget.transaction?.containerNumber?.isNotEmpty ?? false)
+                              ? widget.transaction!.containerNumber! : '—',
+                            style: AppTextStyles.subtitle.copyWith(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: mainColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
                 Column( // Use a Column to arrange the widgets vertically
                   crossAxisAlignment: CrossAxisAlignment.center, // Align text to the left
                   children: [
