@@ -179,7 +179,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
             fclCode: '',
             scheduledDatetime: '',
             actualDatetime: '',
-            serviceType: '',
+            serviceType: '', isBackload: '',
            
           ),
         );
@@ -199,7 +199,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
             fclCode: '',
             scheduledDatetime: '',
             actualDatetime: '',
-            serviceType: '',
+            serviceType: '', isBackload: '',
             
           ),
         );

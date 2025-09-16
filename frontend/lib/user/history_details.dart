@@ -144,7 +144,7 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
             fclCode: '',
             scheduledDatetime: '',
             serviceType: '',
-            actualDatetime: ''
+            actualDatetime: '', isBackload: ''
           ),
         );
         if(pickupSchedule.id == -1) pickupSchedule  = null;
@@ -163,7 +163,7 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
             fclCode: '',
             scheduledDatetime: '',
             serviceType: '',
-            actualDatetime: ''
+            actualDatetime: '', isBackload: ''
           ),
         );
         if(deliverySchedule.id == -1) deliverySchedule  = null;

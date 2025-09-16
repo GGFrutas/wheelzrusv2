@@ -134,7 +134,7 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
             fclCode: '',
             scheduledDatetime: '',
             actualDatetime: '',
-            serviceType: '',
+            serviceType: '', isBackload: '',
            
           ),
         );
@@ -154,7 +154,7 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
             fclCode: '',
             scheduledDatetime: '',
             actualDatetime: '',
-            serviceType: '',
+            serviceType: '', isBackload: '',
             
           ),
         );
