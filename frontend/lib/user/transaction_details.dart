@@ -671,7 +671,8 @@ final delivery = scheduleMap['delivery'];
               size: 24,
             ),
             const SizedBox(width: 8),
-            Column(
+            Expanded(
+              child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
@@ -689,6 +690,8 @@ final delivery = scheduleMap['delivery'];
                 ),
               ],
             ),
+            )
+            
           ],
         ),
       ),
@@ -706,7 +709,8 @@ final delivery = scheduleMap['delivery'];
               size: 24,
             ),
             const SizedBox(width: 8),
-            Column(
+            Expanded(
+              child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
@@ -724,6 +728,8 @@ final delivery = scheduleMap['delivery'];
                 ),
               ],
             ),
+            )
+            
           ],
         ),
       ),
@@ -743,7 +749,8 @@ final delivery = scheduleMap['delivery'];
                             size: 24,
                           ),
                           const SizedBox(width: 8), // Space between icon and text
-                          Column(
+                          Expanded(
+                            child:Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               // Space between label and value
@@ -764,6 +771,8 @@ final delivery = scheduleMap['delivery'];
                               ),
                             ],
                           ),
+                          )
+                          
                         ],
                       ),
                     ),

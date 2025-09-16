@@ -15,7 +15,9 @@ import 'package:frontend/provider/transaction_provider.dart';
 import 'package:frontend/screen/navigation_menu.dart';
 import 'package:frontend/theme/colors.dart';
 import 'package:frontend/theme/text_styles.dart';
+import 'package:frontend/user/confirmation.dart';
 import 'package:frontend/user/schedule.dart';
+import 'package:frontend/widgets/progress_row.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
@@ -67,6 +69,7 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
     final plRequestNumber = transaction?.plRequestNumber;
     final peRequestNumber = transaction?.peRequestNumber;
     final bookingNumber = transaction?.bookingRefNo;
+    int currentStep = 1; // Assuming Detailed Details is step 1 (0-based index)
 
     /// Helper
     bool isNullOrEmpty(dynamic value) {
@@ -142,7 +145,7 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                progressRow(1),
+                ProgressRow(currentStep: currentStep, uid: uid, transaction: transaction),
                 const SizedBox(height: 20),
                 Container(
                   padding: const EdgeInsets.all(16.0), // Add padding inside the container
@@ -535,55 +538,5 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
    
   }
 
-   /// Progress Indicator Row
-  Widget progressRow(int currentStep ) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        buildStep("Delivery Log", currentStep > 1 ? mainColor : Colors.grey, currentStep == 1), // Active step
-        buildConnector(currentStep > 1 ? Colors.green : Colors.grey),
-        buildStep("Schedule", currentStep > 2 ? mainColor : Colors.grey, currentStep == 2),
-        buildConnector(currentStep > 2 ? Colors.green : Colors.grey),
-        buildStep("Confirmation", currentStep == 3 ? mainColor : Colors.grey, currentStep == 3),
-      ],
-    );
-  }
-
-  /// Single Progress Step Widget
-  Widget buildStep(String label, Color color, bool isCurrent) {
-    return Column(
-      children: [
-        CircleAvatar(
-          radius: 10,
-          backgroundColor: isCurrent ? mainColor : Colors.grey,
-          child: isCurrent
-              ? const CircleAvatar(
-                  radius: 7,
-                  backgroundColor: Colors.white,
-                )
-              : null,
-        ),
-        const SizedBox(height: 5),
-        Text(
-          label, 
-          style: AppTextStyles.caption.copyWith(
-            color: isCurrent ? mainColor : Colors.grey
-          )
-        ),
-      ],
-    );
-  }
-
-  /// Connector Line Between Steps
-  Widget buildConnector(Color color) {
-    return Transform.translate(
-      offset: const Offset(0, -10),
-      child: 
-        Container(
-          width: 40,
-          height: 4,
-          color: color,
-        ),
-    );
-  }
+ 
 }

@@ -322,7 +322,7 @@ class TransactionController extends Controller
                             
                         ]]],
                         ["fields" => [
-                            "id", "dispatch_id", "dispatch_type", "fcl_code", "scheduled_datetime","service_type"
+                            "id", "dispatch_id", "dispatch_type", "fcl_code", "scheduled_datetime","service_type","is_backload"
                         ]],
                     ]
                 ],
@@ -495,7 +495,7 @@ class TransactionController extends Controller
                             
                         ]]],
                         ["fields" => [
-                            "id", "dispatch_id", "dispatch_type", "fcl_code", "scheduled_datetime","service_type"
+                            "id", "dispatch_id", "dispatch_type", "fcl_code", "scheduled_datetime","service_type","is_backload"
                         ]],
                     ]
                 ],
@@ -1143,12 +1143,7 @@ class TransactionController extends Controller
                         ['pickup_date', ">=", $today],
                         ['delivery_date', ">=", $today],
 
-                        "|",
-                        ['pickup_date', ">=", $today],
-                        ['delivery_date', ">=", $today],
-                    
-                        
-                    
+                      
                         ["dispatch_type", "!=", "ff"]
                     ]],
                     ["fields" => [
@@ -1254,7 +1249,7 @@ class TransactionController extends Controller
                             
                         ]]],
                         ["fields" => [
-                            "id", "dispatch_id", "dispatch_type", "fcl_code", "scheduled_datetime","service_type"
+                            "id", "dispatch_id", "dispatch_type", "fcl_code", "scheduled_datetime","service_type","is_backload"
                         ]],
                     ]
                 ],
@@ -1513,7 +1508,7 @@ class TransactionController extends Controller
                             
                         ]]],
                         ["fields" => [
-                            "id", "dispatch_id", "dispatch_type", "fcl_code", "scheduled_datetime","service_type"
+                            "id", "dispatch_id", "dispatch_type", "fcl_code", "scheduled_datetime","service_type","is_backload"
                         ]],
                     ]
                 ],
@@ -2133,6 +2128,7 @@ class TransactionController extends Controller
             'requestNumber' => $request->requestNumber,
             'actualTime' => $actualTime,
             
+            'enteredContainerNumber' => $containerNumber,
             // 'images' => $request->input('images'),
             // 'signature' => $request->input('signature'),
         ]); 
@@ -2157,7 +2153,7 @@ class TransactionController extends Controller
                     "dispatch.manager", 
                     "search_read",
                     [[["id", "=", $transactionId]]],  // Search by Request Number
-                    ["fields" => ["dispatch_type","de_request_no", "pl_request_no", "dl_request_no", "pe_request_no","service_type" ]]
+                    ["fields" => ["dispatch_type","de_request_no", "pl_request_no", "dl_request_no", "pe_request_no","service_type", "booking_reference_no" ]]
                 ]
             ],
             "id" => 1
@@ -2201,7 +2197,6 @@ class TransactionController extends Controller
                 "pe_release_by" => $enteredName,
                 "stage_id" => 5,
                 "de_request_status" => $newStatus,
-                "container_number" => $containerNumber
             ];
         } elseif ($type['dispatch_type'] == "ot" && $type['pl_request_no'] == $requestNumber) {
             Log::info("Updating PL proof and signature for request number: {$requestNumber}");
@@ -2210,7 +2205,6 @@ class TransactionController extends Controller
                 "pl_signature" => $signature,
                 "dl_receive_by" => $enteredName,
                 "pl_request_status" => $newStatus,
-                "container_number" => $containerNumber
             ];
             if($serviceType == 2){
                 $updateField["stage_id"] = 5;
@@ -2225,7 +2219,6 @@ class TransactionController extends Controller
                 "pe_release_by" => $enteredName,
                 "stage_id" => 5,
                 "dl_request_status" => $newStatus,
-                "container_number" => $containerNumber
             ];
             if($serviceType == 2){
                 $updateField["stage_id"] = 5;
@@ -2237,7 +2230,6 @@ class TransactionController extends Controller
                 "pe_signature" => $signature,
                 "dl_receive_by" => $enteredName,
                 "pe_request_status" => $newStatus,
-                "container_number" => $containerNumber
             ];
         }
       
@@ -2280,6 +2272,80 @@ class TransactionController extends Controller
         ])), true);
 
 
+        // $bookingreference = $type['booking_reference_no'] ?? null;
+
+        // if($bookingreference) {
+        //     $searchBooking = [
+        //         "jsonrpc" => "2.0",
+        //         "method" => "call",
+        //         "params" => [
+        //             "service" => "object",
+        //             "method" => "execute_kw",
+        //             "args" => [
+        //                 $db, 
+        //                 $uid, 
+        //                 $odooPassword, 
+        //                 "booking.freight.forwarder", 
+        //                 "search_read",
+        //                 [[["id", "=", $transactionId]]],
+        //                 ["fields" => ["id", "container_number"]]
+        //             ]
+        //         ],
+        //         "id" => 3
+        //     ];
+        //     $bookingrefResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
+        //         "http" => [
+        //             "header" => "Content-Type: application/json",
+        //             "method" => "POST",
+        //             "content" => json_encode($searchBooking),
+        //         ],
+        //     ])), true);
+
+        //     if(!empty($bookingrefResponse['result'])) {
+        //         $freightId = $bookingrefResponse['result'][0]['id'];
+        //         Log::info("🚀 Attempting to update container number for freight ID: {$freightId}");
+
+        //         $updateFreight = [
+        //             "jsonrpc" => "2.0",
+        //             "method" => "call",
+        //             "params" => [
+        //                 "service" => "object",
+        //                 "method" => "execute_kw",
+        //                 "args" => [
+        //                     $db, 
+        //                     $uid, 
+        //                     $odooPassword, 
+        //                     "booking.freight.forwarder", 
+        //                     "write",
+        //                     [
+        //                         [$freightId],
+        //                         [
+        //                             "container_number" => $containerNumber
+        //                         ]
+        //                     ]
+        //                 ]
+        //             ],
+        //             "id" => 4
+        //         ];
+        //         $updateFreightResponse = json_decode(file_get_contents($odooUrl,false,stream_context_create([
+        //             "http" => [
+        //                 "header" => "Content-Type: application/json",
+        //                 "method" => "POST",
+        //                 "content" => json_encode($updateFreight),
+        //             ]
+        //         ])), true);
+
+        //         if (isset($updateFreightResponse['result']) && $updateFreightResponse['result']) {
+        //             Log::info("✅ Freight container number updated successfully for booking reference: {$bookingreference}");
+        //         } else {
+        //             Log::error("❌ Failed to update freight container number", ["response" => $updateFreightResponse]);
+        //         }
+        //     } else {
+        //         Log::warning("⚠️ No freight record found for booking reference: {$bookingreference}");
+        //     }
+        // }
+
+
         if (isset($updateResponse['result']) && $updateResponse['result']) {
             Log::info("✅ POD uploaded. Proceeding with milestone update. POD JOURNEY");
 
@@ -2296,10 +2362,10 @@ class TransactionController extends Controller
                         "dispatch.milestone.history", 
                         "search_read",
                         [[["dispatch_id", "=", $transactionId]]],  // Search by Request Number
-                        ["fields" => ["id","dispatch_type","actual_datetime","scheduled_datetime","fcl_code"]]
+                        ["fields" => ["id","dispatch_type","actual_datetime","scheduled_datetime","fcl_code","is_backload"]]
                     ]
                 ],
-                "id" => 3
+                "id" => 5
             ];
         
             $fcl_code_response = json_decode(file_get_contents($odooUrl, false, stream_context_create([
@@ -2393,7 +2459,7 @@ class TransactionController extends Controller
                                 ]
                             ]
                         ],
-                        "id" => 4
+                        "id" => 6
                     ];
 
                     $updateActualResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
@@ -2441,7 +2507,7 @@ class TransactionController extends Controller
                                        
                                     ]
                                 ],
-                                "id" => 5
+                                "id" => 7
                             ];
                             $templateResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
                                 "http" => [
@@ -2478,7 +2544,7 @@ class TransactionController extends Controller
                                             ]
                                         ]
                                     ],
-                                    "id" => 6
+                                    "id" => 8
                                 ];
 
                                 $sendEmailResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
@@ -2621,7 +2687,7 @@ class TransactionController extends Controller
                 "de_release_by" => $enteredName,
                 "de_completion_time" => $actualTime,
                 // "de_request_status" => $newStatus,
-                "container_number" => $containerNumber
+                // "container_number" => $containerNumber
                 
             ];
         } elseif ($type['dispatch_type'] == "ot" && $type['pl_request_no'] == $requestNumber) {
@@ -2633,7 +2699,7 @@ class TransactionController extends Controller
                 "stage_id" => 7,
                 "pl_completion_time" => $actualTime,
                 // "pl_request_status" => $newStatus,
-                "container_number" => $containerNumber
+                // "container_number" => $containerNumber
             ];
             if($serviceType == 2){
                 $updateField["stage_id"] = 7;
@@ -2649,7 +2715,7 @@ class TransactionController extends Controller
                 "dl_completion_time" => $actualTime,
                 "stage_id" => 7,
                 // "dl_request_status" => $newStatus,
-                "container_number" => $containerNumber
+                // "container_number" => $containerNumber
             ];
         } elseif($type['dispatch_type'] === "dt" && $type['dl_request_no'] === $requestNumber) {
              $updateField = [
@@ -2658,7 +2724,7 @@ class TransactionController extends Controller
                 "de_release_by" => $enteredName,
                 "dl_completion_time" => $actualTime,
                 // "dl_request_status" => $newStatus,
-                "container_number" => $containerNumber
+                // "container_number" => $containerNumber
             ];
         } elseif ($type['dispatch_type'] === "dt" && $type['pe_request_no'] === $requestNumber) {
             Log::info("Updating DE proof and signature for request number: {$requestNumber}");
@@ -2669,7 +2735,7 @@ class TransactionController extends Controller
                 "stage_id" => 7,
                 "pe_completion_time" => $actualTime,
                 // "pe_request_status" => $newStatus,
-                "container_number" => $containerNumber
+                // "container_number" => $containerNumber
             ];
         }
 
@@ -2707,6 +2773,80 @@ class TransactionController extends Controller
             ]
         ])), true);
 
+        
+        // $bookingreference = $type['booking_reference_no'] ?? null;
+
+        // if($bookingreference) {
+        //     $searchBooking = [
+        //         "jsonrpc" => "2.0",
+        //         "method" => "call",
+        //         "params" => [
+        //             "service" => "object",
+        //             "method" => "execute_kw",
+        //             "args" => [
+        //                 $db, 
+        //                 $uid, 
+        //                 $odooPassword, 
+        //                 "booking.freight.forwarder", 
+        //                 "search_read",
+        //                 [[["id", "=", $transactionId]]],
+        //                 ["fields" => ["id", "container_number"]]
+        //             ]
+        //         ],
+        //         "id" => 3
+        //     ];
+        //     $bookingrefResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
+        //         "http" => [
+        //             "header" => "Content-Type: application/json",
+        //             "method" => "POST",
+        //             "content" => json_encode($searchBooking),
+        //         ],
+        //     ])), true);
+
+        //     if(!empty($bookingrefResponse['result'])) {
+        //         $freightId = $bookingrefResponse['result'][0]['id'];
+        //         Log::info("🚀 Attempting to update container number for freight ID: {$freightId}");
+
+        //         $updateFreight = [
+        //             "jsonrpc" => "2.0",
+        //             "method" => "call",
+        //             "params" => [
+        //                 "service" => "object",
+        //                 "method" => "execute_kw",
+        //                 "args" => [
+        //                     $db, 
+        //                     $uid, 
+        //                     $odooPassword, 
+        //                     "booking.freight.forwarder", 
+        //                     "write",
+        //                     [
+        //                         [$freightId],
+        //                         [
+        //                             "container_number" => $containerNumber
+        //                         ]
+        //                     ]
+        //                 ]
+        //             ],
+        //             "id" => 4
+        //         ];
+        //         $updateFreightResponse = json_decode(file_get_contents($odooUrl,false,stream_context_create([
+        //             "http" => [
+        //                 "header" => "Content-Type: application/json",
+        //                 "method" => "POST",
+        //                 "content" => json_encode($updateFreight),
+        //             ]
+        //         ])), true);
+
+        //         if (isset($updateFreightResponse['result']) && $updateFreightResponse['result']) {
+        //             Log::info("✅ Freight container number updated successfully for booking reference: {$bookingreference}");
+        //         } else {
+        //             Log::error("❌ Failed to update freight container number", ["response" => $updateFreightResponse]);
+        //         }
+        //     } else {
+        //         Log::warning("⚠️ No freight record found for booking reference: {$bookingreference}");
+        //     }
+        // }
+
 
         if (isset($updateResponse['result']) && $updateResponse['result']) {
             Log::info("✅ POD uploaded. Proceeding with milestone update. POD JOURNEY");
@@ -2724,10 +2864,10 @@ class TransactionController extends Controller
                         "dispatch.milestone.history", 
                         "search_read",
                         [[["dispatch_id", "=", $transactionId]]],  // Search by Request Number
-                        ["fields" => ["id","dispatch_type","actual_datetime","scheduled_datetime","fcl_code"]]
+                        ["fields" => ["id","dispatch_type","actual_datetime","scheduled_datetime","fcl_code","is_backload"]]
                     ]
                 ],
-                "id" => 3
+                "id" => 5
             ];
         
             $fcl_code_response = json_decode(file_get_contents($odooUrl, false, stream_context_create([
@@ -2821,7 +2961,7 @@ class TransactionController extends Controller
                                 ]
                             ]
                         ],
-                        "id" => 4
+                        "id" => 6
                     ];
 
                     $updateActualResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
@@ -2868,7 +3008,7 @@ class TransactionController extends Controller
                                         ]
                                     ]
                                 ],
-                                "id" => 5
+                                "id" => 7
                             ];
                             $templateResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
                                 "http" => [
@@ -2907,7 +3047,7 @@ class TransactionController extends Controller
                                             ]
                                         ]
                                     ],
-                                    "id" => 6
+                                    "id" => 8
                                 ];
 
                                 $sendEmailResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([

@@ -263,6 +263,7 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
                 //     _enteredContainerNumber = val;
                 //   });
                 // },
+                enabled: _containerController.text.isEmpty,
                 controller: _containerController,
                 decoration: InputDecoration(
                   border: const OutlineInputBorder(),

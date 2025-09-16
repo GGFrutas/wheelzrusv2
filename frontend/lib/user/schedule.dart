@@ -18,6 +18,8 @@ import 'package:frontend/screen/navigation_menu.dart';
 import 'package:frontend/theme/colors.dart';
 import 'package:frontend/theme/text_styles.dart';
 import 'package:frontend/user/confirmation.dart';
+import 'package:frontend/user/detailed_details.dart';
+import 'package:frontend/widgets/progress_row.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
@@ -197,6 +199,7 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
    final scheduleMap = getPickupAndDeliverySchedule(widget.transaction!);
 final pickup = scheduleMap['pickup'];
 final delivery = scheduleMap['delivery'];
+int currentStep = 2; // Assuming Schedule is step 2 (0-based index)
     return Scaffold(
       appBar: AppBar(
         iconTheme: const IconThemeData(color: mainColor),
@@ -217,7 +220,7 @@ final delivery = scheduleMap['delivery'];
                 ),
               ),
               const SizedBox(height: 20),
-              progressRow(2), // Pass an integer value for currentStep
+              ProgressRow(currentStep: currentStep, uid: uid, transaction: widget.transaction,), // Pass an integer value for currentStep
               const SizedBox(height: 20),
               Container(
                 padding: const EdgeInsets.all(8.0), // Add padding inside the container
@@ -368,6 +371,68 @@ final delivery = scheduleMap['delivery'];
                 ),
                 
               ),
+              const SizedBox(height: 20),
+
+              Text (
+                "Optional",
+                style: AppTextStyles.caption.copyWith(
+                  fontStyle: FontStyle.italic,
+                  color: darkerBgColor,
+                ),
+              ),
+
+              Column (
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        
+                        
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: mainColor,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30.0),
+                        ),
+                      ),
+                      child: Row (
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.notifications_active,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8), // Space between icon and text
+                          Text(
+                            widget.transaction?.dispatchType == 'ot' ? "Notify Shipper" : "Notify Consignee",
+                            style: AppTextStyles.body.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                        ]
+                      )
+                      
+                    ),
+                  )
+                ],
+              ), 
+              const SizedBox(height: 10),
+
+              // Text (
+              //   "Note: Schedule is subject to change based on unforeseen circumstances. Please stay updated through your notifications.",
+              //   style: AppTextStyles.caption.copyWith(
+              //     fontStyle: FontStyle.italic,
+              //     color: const Color.fromARGB(255, 128, 137, 145),
+              //   ),
+              // )
             ],
           ),
           
@@ -427,85 +492,8 @@ final delivery = scheduleMap['delivery'];
     );
   }
 
-  // Progress Indicator Row
-  Widget progressRow(int currentStep) {
-  return Row(
-    mainAxisAlignment: MainAxisAlignment.center,
-    children: List.generate(3 * 2 - 1, (index) {
-      // Step indices: 0, 2, 4; Connector indices: 1, 3
-      if (index.isEven) {
-        int stepIndex = index ~/ 2 + 1;
-        Color stepColor = stepIndex < currentStep
-            ? mainColor     // Completed
-            : stepIndex == currentStep
-                ? mainColor  // Active
-                : Colors.grey;     // Upcoming
+  
 
-        bool isCurrent = stepIndex == currentStep;
+        
 
-        String label;
-        switch (stepIndex) {
-          case 1:
-            label = "Delivery Log";
-            break;
-          case 2:
-            label = "Schedule";
-            break;
-          case 3:
-          default:
-            label = "Confirmation";
-        }
-
-        return buildStep(label, stepColor, isCurrent);
-      } else {
-        int connectorIndex = (index - 1) ~/ 2 + 1;
-        Color connectorColor = connectorIndex < currentStep
-            ? mainColor
-            : Colors.grey;
-
-        return buildConnector(connectorColor);
-      }
-    }),
-  );
-}
-
-
-  /// Single Progress Step Widget
- Widget buildStep(String label, Color color, bool isCurrent) {
-  return Column(
-    children: [
-      CircleAvatar(
-        radius: 10,
-        backgroundColor: color,
-        child: isCurrent
-            ? const CircleAvatar(
-                radius: 7,
-                backgroundColor: Colors.white,
-              )
-            : null,
-      ),
-      const SizedBox(height: 5),
-      Text(
-        label,
-        style: AppTextStyles.caption.copyWith(
-          color: color,
-        ),
-      ),
-    ],
-  );
-}
-
-
-  /// Connector Line Between Steps
-  Widget buildConnector(Color color) {
-    return Transform.translate(
-      offset: const Offset(0, -10),
-      child: 
-        Container(
-          width: 40,
-          height: 4,
-          color: color,
-        ),
-    );
-  }
 }

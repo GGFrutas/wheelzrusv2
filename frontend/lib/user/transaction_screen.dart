@@ -410,12 +410,12 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                                               fontWeight: FontWeight.bold,
                                             ),
                                           ),
-                                          Text(
-                                            formatDateTime(item.arrivalDate),
-                                            style: AppTextStyles.caption.copyWith(
-                                              color: darkerBgColor,
-                                            ),
-                                          ),
+                                          // Text(
+                                          //   formatDateTime(item.arrivalDate),
+                                          //   style: AppTextStyles.caption.copyWith(
+                                          //     color: darkerBgColor,
+                                          //   ),
+                                          // ),
                                         ],
                                       ),
                                       ) // Space between icon and text

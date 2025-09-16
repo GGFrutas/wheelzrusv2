@@ -17,6 +17,7 @@ import 'package:frontend/screen/navigation_menu.dart';
 import 'package:frontend/theme/colors.dart';
 import 'package:frontend/theme/text_styles.dart';
 import 'package:frontend/user/proof_of_delivery_screen.dart';
+import 'package:frontend/widgets/progress_row.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
@@ -108,6 +109,7 @@ class _ConfirmationState extends ConsumerState<ConfirmationScreen> {
   @override
   Widget build(BuildContext context) {
    
+  int currentStep = 3; // Assuming Confirmation is step 3 (0-based index)
     return Scaffold(
       appBar: AppBar(
         iconTheme: const IconThemeData(color: mainColor),
@@ -128,7 +130,7 @@ class _ConfirmationState extends ConsumerState<ConfirmationScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              progressRow(3), // Pass an integer value for currentStep
+              ProgressRow(currentStep: currentStep, uid: widget.uid, transaction: widget.transaction,),
 
               const SizedBox(height: 20),
               Container(
