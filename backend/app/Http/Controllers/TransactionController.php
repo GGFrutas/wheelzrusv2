@@ -1275,7 +1275,7 @@ class TransactionController extends Controller
 
         return response()->json([
             'data' => [
-                 'week' => $start->toDateString() . ' to ' . $end->toDateString(),
+                 
 
                 'transactions' => $jobResponses,
                 'pagination' => [

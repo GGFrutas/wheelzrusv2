@@ -276,6 +276,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                             assignedDate:item.deAssignedDate,
                             originAddress: "Deliver Empty Container to Shipper",
                             truckPlateNumber: item.deTruckPlateNumber,
+                            freightBookingNumber:item.freightBookingNumber,
                           ),
                           // Second instance: Pickup from Shipper
                         if ( item.plTruckDriverName == driverId) // Filter out if accepted
@@ -289,6 +290,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                             assignedDate:item.plAssignedDate,
                             originAddress: descriptionMsg(item),
                             truckPlateNumber: item.plTruckPlateNumber,
+                            freightBookingNumber:item.freightBookingNumber,
                             ),
                       ];
                     } else if (item.dispatchType == "dt") {
@@ -306,6 +308,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                             assignedDate:item.dlAssignedDate,
                             originAddress: "Deliver Laden Container to Consignee",
                             truckPlateNumber: item.dlTruckPlateNumber,
+                            freightBookingNumber:item.freightBookingNumber,
                           ),
                         // Second instance: Pickup from Consignee
                         if (item.peTruckDriverName == driverId) // Filter out if accepted
@@ -318,6 +321,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                             assignedDate:item.peAssignedDate,
                             originAddress: "Pickup Empty Container from Consignee",
                             truckPlateNumber: item.peTruckPlateNumber,
+                            freightBookingNumber:item.freightBookingNumber,
                           ),
                       ]; 
                     }

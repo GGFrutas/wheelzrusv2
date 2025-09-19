@@ -274,7 +274,7 @@ void initState() {
                               requestStatus: item.peRequestStatus,
                               rejectedTime: item.peRejectedTime,
                               completedTime: item.peCompletedTime,
-                              originAddress: "Deliver Laden Container to Consignee",
+                              originAddress: "Pickup Empty Container to Consignee",
                               // truckPlateNumber: item.peTruckPlateNumber,
                             ),
                         ]; 
@@ -283,24 +283,20 @@ void initState() {
                       return [item];
                     }).toList();
 
-                    expandedTransactions.sort((a,b){
-                      DateTime dateACompleted = DateTime.tryParse(a.completedTime ?? '') ?? DateTime(0);
-                      DateTime dateARejected = DateTime.tryParse(a.writeDate ?? '') ?? DateTime(0);
-                      DateTime dateBCompleted = DateTime.tryParse(b.completedTime ?? '') ?? DateTime(0);
-                      DateTime dateBRejected = DateTime.tryParse(b.writeDate ?? '') ?? DateTime(0);
-
-                      DateTime latestA = dateACompleted.isAfter(dateARejected) ? dateACompleted : dateARejected;
-                      DateTime latestB = dateBCompleted.isAfter(dateBRejected) ? dateBCompleted : dateBRejected;
-                      
-                      return latestB.compareTo(latestA);
-                      
-                    });
-                    
-
                     final ongoingTransactions = expandedTransactions
-                      .where((tx) => tx.stageId == "Cancelled" || tx.stageId == "Completed" || tx.requestStatus == "Completed")
+                      .where((tx) =>  ['Cancelled', 'Completed'].contains(tx.stageId) || tx.requestStatus == 'Completed')
                       .take(5)
-                      .toList();
+                      .toList()
+                      ..sort((a,b){
+                      DateTime getRecentDate(Transaction t) {
+                        if((t.completedTime ?? '').isNotEmpty){
+                          return DateTime.tryParse(t.completedTime!) ?? DateTime.fromMillisecondsSinceEpoch(0);
+                        }
+                      
+                        return DateTime.tryParse(t.writeDate ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
+                      }
+                      return getRecentDate(b).compareTo(getRecentDate(a));
+                    });
 
                   
                     if (ongoingTransactions.isEmpty) {
