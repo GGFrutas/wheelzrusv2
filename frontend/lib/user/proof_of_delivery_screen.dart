@@ -242,7 +242,7 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
               ),
             ),
            const SizedBox(height: 20),
-           if(widget.transaction?.requestNumber == widget.transaction?.deRequestNumber) ... [
+           if(widget.transaction?.dispatchType == "ot") ... [
             Text(
               "Container Number: ",
               style: AppTextStyles.subtitle.copyWith(
@@ -258,12 +258,12 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
                 borderRadius: BorderRadius.circular(4),
               ),
               child: TextField(
-                // onChanged: (val){
-                //   setState(() {
-                //     _enteredContainerNumber = val;
-                //   });
-                // },
-                enabled: _containerController.text.isEmpty,
+                onChanged: (val){
+                  setState(() {
+                    _enteredContainerNumber = val;
+                  });
+                },
+                enabled: widget.transaction?.deRequestStatus != "Ongoing",
                 controller: _containerController,
                 decoration: InputDecoration(
                   border: const OutlineInputBorder(),

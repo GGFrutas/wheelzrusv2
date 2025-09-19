@@ -39,4 +39,6 @@ Route::middleware([HandleCors::class])->group(function () {
     Route::get('/odoo/booking/all-bookings', [TransactionController::class, 'getAllBooking']);
     Route::get('/odoo/booking/all-history', [TransactionController::class, 'getAllHistory']);
 
+    Route::post('/odoo/notify', [TransactionController::class, 'notifyShipperConsignee']);
+
 });
