@@ -72,19 +72,19 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
     int currentStep = 1; // Assuming Detailed Details is step 1 (0-based index)
 
     /// Helper
-    bool isNullOrEmpty(dynamic value) {
-      return value == null || value.toString().trim().isEmpty;
-    }
+    // bool isNullOrEmpty(dynamic value) {
+    //   return value == null || value.toString().trim().isEmpty;
+    // }
 
     /// Base conditions (ot and dt)
     bool hideForCurrentDispatch = 
       (dispatchType == 'ot' &&
       serviceType == 'Full Container Load' &&
-        (isNullOrEmpty(transaction?.deProof) || isNullOrEmpty(transaction?.deSign)) &&
+        transaction?.deRequestStatus == "Completed" &&
         plRequestNumber == requestNumber) ||
 
       (dispatchType == 'dt' &&
-        (isNullOrEmpty(transaction?.dlProof) || isNullOrEmpty(transaction?.dlSign)) &&
+        transaction?.dlRequestStatus == "Completed" &&
         peRequestNumber == requestNumber);
 
     bool isLandTransport = transaction?.landTransport != 'transport';

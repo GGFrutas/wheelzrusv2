@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/models/transaction_model.dart';
 import 'package:frontend/notifiers/auth_notifier.dart';
 import 'package:frontend/provider/accepted_transaction.dart' as accepted_transaction;
+import 'package:frontend/provider/expanded_transaction_provider.dart';
 import 'package:frontend/provider/reject_provider.dart';
 import 'package:frontend/provider/transaction_provider.dart';
 import 'package:frontend/theme/colors.dart';
@@ -173,135 +174,35 @@ void initState() {
                     }
 
                     final transactionList = snapshot.data ?? [];
-
-
-                    // If acceptedTransaction is a list, convert it to a Set of IDs for faster lookup
-                    final acceptedTransactionIds = acceptedTransaction;
-
-                    // Filtered list excluding transactions with IDs in acceptedTransaction
-                    final transaction = transactionList.where((t) {
-                      final key = "${t.id}-${t.requestNumber}";
-                        return !acceptedTransactionIds.contains(key);
-                    }).toList();
-
-                   
                     final authPartnerId = ref.watch(authNotifierProvider).partnerId;
                     final driverId = authPartnerId?.toString();
 
-                   
+                    // Extract accepted transaction IDs from the provider (assuming it's a List<String>)
+                    final acceptedTransactionIds = acceptedTransaction is List
+                        ? Set<String>.from(acceptedTransaction)
+                        : <String>{};
 
+                    final expandedTransactions = expandTransactions(
+                      transactionList,
+                      acceptedTransactionIds,
+                      driverId,
+                    );
 
-
-                    final expandedTransactions = transaction.expand((item) {
-                      
-                      String cleanAddress(String address) {
-                        return address
-                          .split(',') // splits the string by commas
-                          .map((e) => e.trim()) //removes extra spaces
-                          .where((e) => e.isNotEmpty && e.toLowerCase() != 'ph') //filters out empty strings and 'ph'
-                          .join(', '); // joins the remaining parts back together
-                      }
-
-                       String descriptionMsg(Transaction item) {
-                          if (item.landTransport == 'transport'){
-                            return 'Deliver Laden Container to Consignee';
-                          } else {
-                            return 'Pickup Laden Container from Shipper';
-                          }
-                        }
-                        String newName(Transaction item) {
-                          if (item.landTransport == 'transport'){
-                            return 'Deliver to Consignee';
-                          } else {
-                            return 'Pickup from Shipper';
-                          }
-                        }
-    
-                      if (item.dispatchType == "ot") {
-                        return [
-                          // First instance: Deliver to Shipper
-                          if (item.deTruckDriverName == driverId) // Filter out if accepted
-                            // Check if the truck driver is the same as the authPartnerId
-                            item.copyWith(
-                              name: "Deliver to Shipper",
-                              destination: cleanAddress(item.origin),
-                              origin: cleanAddress(item.destination),
-                              requestNumber: item.deRequestNumber,
-                              requestStatus: item.deRequestStatus,
-                              rejectedTime: item.deRejectedTime,
-                              completedTime: item.deCompletedTime,
-                              originAddress: "Deliver Empty Container to Shipper",
-
-                              // truckPlateNumber: item.deTruckPlateNumber,
-                            ),
-                            // Second instance: Pickup from Shipper
-                          if ( item.plTruckDriverName == driverId) // Filter out if accepted
-                            // if (item.plTruckDriverName == authPartnerId)
-                              item.copyWith(
-                              name: newName(item),
-                              destination: cleanAddress(item.origin),
-                              origin: cleanAddress(item.destination),
-                              requestNumber: item.plRequestNumber,
-                              requestStatus: item.plRequestStatus,
-                              rejectedTime: item.plRejectedTime,
-                              completedTime: item.plCompletedTime,
-                              originAddress: descriptionMsg(item),
-                              // truckPlateNumber: item.plTruckPlateNumber,
-                              ),
-                        ];
-                      } else if (item.dispatchType == "dt") {
-                        return [
-                          // First instance: Deliver to Consignee
-                          if (item.dlTruckDriverName == driverId) // Filter out if accepted
-                            item.copyWith(
-                              name: "Deliver to Consignee",
-                              origin: cleanAddress(item.destination),
-                              destination: cleanAddress(item.origin),
-                              requestNumber: item.dlRequestNumber,
-                              requestStatus: item.dlRequestStatus,
-                              rejectedTime: item.dlRejectedTime,
-                              completedTime: item.dlCompletedTime,
-                              originAddress: "Deliver Laden Container to Consignee",
-                              // truckPlateNumber: item.dlTruckPlateNumber,
-                            ),
-                          // Second instance: Pickup from Consignee
-                          if (item.peTruckDriverName == driverId) // Filter out if accepted
-                            item.copyWith(
-                              name: "Pickup from Consignee",
-                              origin: cleanAddress(item.origin),
-                              destination: cleanAddress(item.destination),
-                              requestNumber: item.peRequestNumber,
-                              requestStatus: item.peRequestStatus,
-                              rejectedTime: item.peRejectedTime,
-                              completedTime: item.peCompletedTime,
-                              originAddress: "Deliver Laden Container to Consignee",
-                              // truckPlateNumber: item.peTruckPlateNumber,
-                            ),
-                        ]; 
-                      }
-                      // Return as-is if no match
-                      return [item];
-                    }).toList();
-
-                    expandedTransactions.sort((a,b){
-                      DateTime dateACompleted = DateTime.tryParse(a.completedTime ?? '') ?? DateTime(0);
-                      DateTime dateARejected = DateTime.tryParse(a.writeDate ?? '') ?? DateTime(0);
-                      DateTime dateBCompleted = DateTime.tryParse(b.completedTime ?? '') ?? DateTime(0);
-                      DateTime dateBRejected = DateTime.tryParse(b.writeDate ?? '') ?? DateTime(0);
-
-                      DateTime latestA = dateACompleted.isAfter(dateARejected) ? dateACompleted : dateARejected;
-                      DateTime latestB = dateBCompleted.isAfter(dateBRejected) ? dateBCompleted : dateBRejected;
-                      
-                      return latestB.compareTo(latestA);
-                      
-                    });
-                    
 
                     final ongoingTransactions = expandedTransactions
-                      .where((tx) => tx.stageId == "Cancelled" || tx.stageId == "Completed" || tx.requestStatus == "Completed")
+                      .where((tx) =>  ['Cancelled', 'Completed'].contains(tx.stageId) || tx.requestStatus == 'Completed')
                       .take(5)
-                      .toList();
-
+                      .toList()
+                      ..sort((a,b){
+                      DateTime getRecentDate(Transaction t) {
+                       if((t.completedTime ?? '').isNotEmpty){
+                        return DateTime.tryParse(t.completedTime!) ?? DateTime.fromMillisecondsSinceEpoch(0);
+                       }
+                      
+                        return DateTime.tryParse(t.writeDate ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
+                      }
+                      return getRecentDate(b).compareTo(getRecentDate(a));
+                    });
                   
                     if (ongoingTransactions.isEmpty) {
                       return LayoutBuilder(

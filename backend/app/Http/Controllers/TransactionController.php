@@ -44,10 +44,10 @@ function jsonRpcRequest($url, $payload){
 
 class TransactionController extends Controller
 {
-    protected $url = "https://jralejandria-beta-dev-yxe.odoo.com";
-    protected $db = 'jralejandria-beta-dev-yxe1-beta-production-23247386';
-    // protected $odoo_url = "http://192.168.76.45:8080/odoo/jsonrpc";
-    protected $odoo_url = "https://jralejandria-beta-dev-yxe.odoo.com/jsonrpc";
+    protected $url = "http://gsq-ibx-rda:8068";
+    protected $db = 'rda_beta_7';
+    // protected $odoo_url = "http://192.168.118.102:8000/odoo/jsonrpc";
+    protected $odoo_url = "http://gsq-ibx-rda:8068/jsonrpc";
 
     private function authenticateDriver(Request $request)
     {
@@ -936,55 +936,63 @@ class TransactionController extends Controller
                     $manager[$field] = (string) $manager[$field];
                 }
             }
+        }
 
-            $jobRes = jsonRpcRequest("$url/job_dispatcher/queue_job", [
-                'jsonrpc' => '2.0',
-                'method' => 'call',
-                'params' => [
-                    'model' => 'dispatch.manager',
-                    'id' => $manager['id'],
-                    'method' => 'run_laravel_job',
-                ],
-                'id' => 5
-            ]);
+            $batch = [];
+            foreach ($filteredManagers as $i => $manager) {
+                $batch[] = [
+                    'jsonrpc' => '2.0',
+                    'method' => 'call',
+                    'params' => [
+                        'service' => 'object',
+                        'method' => 'execute_kw',
+                        'args' => [
+                            $db,
+                            $uid,
+                            $odooPassword,
+                            'dispatch.milestone.history',
+                            'search_read',
+                            [[[
 
-              $dispatchId = $manager['id'];
+                                'dispatch_id','=', $manager['id']
+                                
+                            ]]],
+                            ["fields" => [
+                                "id", "dispatch_id", "dispatch_type", "fcl_code", "scheduled_datetime","actual_datetime","service_type"
+                            ]],
+                        ]
+                    ],
+                    'id' => $i,
+                ];
+            }
 
-            
+            $batchResponse = jsonRpcRequest($odooUrl, $batch);
 
-            $historyRes = jsonRpcRequest("$odooUrl", [
-                'jsonrpc' => '2.0',
-                'method' => 'call',
-                'params' => [
-                    'service' => 'object',
-                    'method' => 'execute_kw',
-                    'args' => [
-                        $db,
-                        $uid,
-                        $odooPassword,
-                        'dispatch.milestone.history',
-                        'search_read',
-                        [[[
+            $historyMap = [];
 
-                            'dispatch_id','=', $dispatchId
-                            
-                        ]]],
-                        ["fields" => [
-                            "id", "dispatch_id", "dispatch_type", "fcl_code", "scheduled_datetime","actual_datetime","service_type"
-                        ]],
-                    ]
-                ],
-                'id' => 6
-            ]);
+            foreach ($batchResponse as $res) {
+                if(isset($res['id'])) {
+                    $historyMap[$res['id']] = $res['result'] ?? [];
+                }
+            }
 
-            $dispatchHistory = is_array($historyRes['result']) ? $historyRes['result'] : [];
-            $manager['history'] = $dispatchHistory;
+            foreach($filteredManagers as $i => $manager) {
+                $manager['history'] = $historyMap[$i] ?? [];
 
-
-            
+                $jobRes = jsonRpcRequest("$url/job_dispatcher/queue_job", [
+                    'jsonrpc' => '2.0',
+                    'method' => 'call',
+                    'params' => [
+                        'model' => 'dispatch.manager',
+                        'id' => $manager['id'],
+                        'method' => 'run_laravel_job',
+                    ],
+                    'id' => "job-" . $manager['id']
+                ]);
+            }
 
             $jobResponses[] = $manager;
-        }
+        
 
         // ✅ Final return
         return response()->json([
@@ -1143,6 +1151,7 @@ class TransactionController extends Controller
                         ['pickup_date', ">=", $today],
                         ['delivery_date', ">=", $today],
 
+                        
                       
                         ["dispatch_type", "!=", "ff"]
                     ]],
@@ -2198,6 +2207,65 @@ class TransactionController extends Controller
                 "stage_id" => 5,
                 "de_request_status" => $newStatus,
             ];
+
+            $bookingRef = $type['booking_reference_no'] ?? null;
+            if ($bookingRef && $containerNumber) {
+                $searchFF = [
+                    "jsonrpc" => "2.0",
+                    "method" => "call",
+                    "params" => [
+                        "service" => "object",
+                        "method" => "execute_kw",
+                        "args" => [
+                            $db,
+                            $uid,
+                            $odooPassword,
+                            "dispatch.manager",
+                            "search",
+                            [[
+                                ["booking_reference_no", '=', $bookingRef],
+                                ["dispatch_type", '=', "ff"]
+                            ]]
+                        ],
+                    ],
+                    "id" => 101
+                ];
+                $ffRes = jsonRpcRequest($odooUrl, $searchFF);
+                $ffIds = $ffRes['result'] ?? [];
+
+                if (!empty($ffIds)) {
+                    // ✅ Update container_number only in ff
+                    $updateFFContainer = [
+                        "jsonrpc" => "2.0",
+                        "method" => "call",
+                        "params" => [
+                            "service" => "object",
+                            "method" => "execute_kw",
+                            "args" => [
+                                $db,
+                                $uid,
+                                $odooPassword,
+                                "dispatch.manager",
+                                "write",
+                                [
+                                    $ffIds,
+                                    [
+                                        "container_number" => $containerNumber
+                                    ]
+                                ]
+                            ]
+                        ],
+                        "id" => 102
+                    ];
+                    $ffUpdateRes = jsonRpcRequest($odooUrl, $updateFFContainer);
+                    Log::info("Updated container_number in FF for bookingRef {$bookingRef}, ffIds: " . json_encode($ffIds));
+                } else {
+                    Log::warning("No FF found for bookingRef {$bookingRef}");
+                }
+            }
+
+
+            
         } elseif ($type['dispatch_type'] == "ot" && $type['pl_request_no'] == $requestNumber) {
             Log::info("Updating PL proof and signature for request number: {$requestNumber}");
             $updateField = [
@@ -2270,81 +2338,6 @@ class TransactionController extends Controller
                 "content" => json_encode($updatePOD),
             ]
         ])), true);
-
-
-        // $bookingreference = $type['booking_reference_no'] ?? null;
-
-        // if($bookingreference) {
-        //     $searchBooking = [
-        //         "jsonrpc" => "2.0",
-        //         "method" => "call",
-        //         "params" => [
-        //             "service" => "object",
-        //             "method" => "execute_kw",
-        //             "args" => [
-        //                 $db, 
-        //                 $uid, 
-        //                 $odooPassword, 
-        //                 "booking.freight.forwarder", 
-        //                 "search_read",
-        //                 [[["id", "=", $transactionId]]],
-        //                 ["fields" => ["id", "container_number"]]
-        //             ]
-        //         ],
-        //         "id" => 3
-        //     ];
-        //     $bookingrefResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
-        //         "http" => [
-        //             "header" => "Content-Type: application/json",
-        //             "method" => "POST",
-        //             "content" => json_encode($searchBooking),
-        //         ],
-        //     ])), true);
-
-        //     if(!empty($bookingrefResponse['result'])) {
-        //         $freightId = $bookingrefResponse['result'][0]['id'];
-        //         Log::info("🚀 Attempting to update container number for freight ID: {$freightId}");
-
-        //         $updateFreight = [
-        //             "jsonrpc" => "2.0",
-        //             "method" => "call",
-        //             "params" => [
-        //                 "service" => "object",
-        //                 "method" => "execute_kw",
-        //                 "args" => [
-        //                     $db, 
-        //                     $uid, 
-        //                     $odooPassword, 
-        //                     "booking.freight.forwarder", 
-        //                     "write",
-        //                     [
-        //                         [$freightId],
-        //                         [
-        //                             "container_number" => $containerNumber
-        //                         ]
-        //                     ]
-        //                 ]
-        //             ],
-        //             "id" => 4
-        //         ];
-        //         $updateFreightResponse = json_decode(file_get_contents($odooUrl,false,stream_context_create([
-        //             "http" => [
-        //                 "header" => "Content-Type: application/json",
-        //                 "method" => "POST",
-        //                 "content" => json_encode($updateFreight),
-        //             ]
-        //         ])), true);
-
-        //         if (isset($updateFreightResponse['result']) && $updateFreightResponse['result']) {
-        //             Log::info("✅ Freight container number updated successfully for booking reference: {$bookingreference}");
-        //         } else {
-        //             Log::error("❌ Failed to update freight container number", ["response" => $updateFreightResponse]);
-        //         }
-        //     } else {
-        //         Log::warning("⚠️ No freight record found for booking reference: {$bookingreference}");
-        //     }
-        // }
-
 
         if (isset($updateResponse['result']) && $updateResponse['result']) {
             Log::info("✅ POD uploaded. Proceeding with milestone update. POD JOURNEY");
@@ -2774,78 +2767,7 @@ class TransactionController extends Controller
         ])), true);
 
         
-        // $bookingreference = $type['booking_reference_no'] ?? null;
 
-        // if($bookingreference) {
-        //     $searchBooking = [
-        //         "jsonrpc" => "2.0",
-        //         "method" => "call",
-        //         "params" => [
-        //             "service" => "object",
-        //             "method" => "execute_kw",
-        //             "args" => [
-        //                 $db, 
-        //                 $uid, 
-        //                 $odooPassword, 
-        //                 "booking.freight.forwarder", 
-        //                 "search_read",
-        //                 [[["id", "=", $transactionId]]],
-        //                 ["fields" => ["id", "container_number"]]
-        //             ]
-        //         ],
-        //         "id" => 3
-        //     ];
-        //     $bookingrefResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
-        //         "http" => [
-        //             "header" => "Content-Type: application/json",
-        //             "method" => "POST",
-        //             "content" => json_encode($searchBooking),
-        //         ],
-        //     ])), true);
-
-        //     if(!empty($bookingrefResponse['result'])) {
-        //         $freightId = $bookingrefResponse['result'][0]['id'];
-        //         Log::info("🚀 Attempting to update container number for freight ID: {$freightId}");
-
-        //         $updateFreight = [
-        //             "jsonrpc" => "2.0",
-        //             "method" => "call",
-        //             "params" => [
-        //                 "service" => "object",
-        //                 "method" => "execute_kw",
-        //                 "args" => [
-        //                     $db, 
-        //                     $uid, 
-        //                     $odooPassword, 
-        //                     "booking.freight.forwarder", 
-        //                     "write",
-        //                     [
-        //                         [$freightId],
-        //                         [
-        //                             "container_number" => $containerNumber
-        //                         ]
-        //                     ]
-        //                 ]
-        //             ],
-        //             "id" => 4
-        //         ];
-        //         $updateFreightResponse = json_decode(file_get_contents($odooUrl,false,stream_context_create([
-        //             "http" => [
-        //                 "header" => "Content-Type: application/json",
-        //                 "method" => "POST",
-        //                 "content" => json_encode($updateFreight),
-        //             ]
-        //         ])), true);
-
-        //         if (isset($updateFreightResponse['result']) && $updateFreightResponse['result']) {
-        //             Log::info("✅ Freight container number updated successfully for booking reference: {$bookingreference}");
-        //         } else {
-        //             Log::error("❌ Failed to update freight container number", ["response" => $updateFreightResponse]);
-        //         }
-        //     } else {
-        //         Log::warning("⚠️ No freight record found for booking reference: {$bookingreference}");
-        //     }
-        // }
 
 
         if (isset($updateResponse['result']) && $updateResponse['result']) {
@@ -3096,5 +3018,70 @@ class TransactionController extends Controller
         return response()->json($statusResponse);
 
        
+    }
+
+    public function notifyShipperConsignee(Request $request)
+    {
+        $url = $this->url;
+        $db = $this->db;
+       
+        $uid = $request->query('uid') ;
+        $odooPassword = $request->header('password');
+        $transactionId = (int)$request->input('id');
+        $dispatchType = $request->input('dispatch_type');
+        $requestNumber = $request->input('request_number');
+
+        Log::info('Received notify shipper/consignee request', [
+            'uid' => $uid,
+            'id' => $transactionId,
+            'dispatch_type' => $dispatchType,
+            'requestNumber' => $request->requestNumber,
+            
+        ]); 
+
+        
+
+        if (!$uid) {
+            return response()->json(['success' => false, 'message' => 'UID is required'], 400);
+        }
+
+        $odooUrl = $this->odoo_url;
+        $proof_attach = [
+            "jsonrpc" => "2.0",
+            "method" => "call",
+            "params" => [
+                "service" => "object",
+                "method" => "execute_kw",
+                "args" => [
+                    $db, 
+                    $uid, 
+                    $odooPassword, 
+                    "dispatch.manager", 
+                    "search_read",
+                    [[["id", "=", $transactionId]]],  // Search by Request Number
+                    ["fields" => ["dispatch_type","de_request_no", "pl_request_no", "dl_request_no", "pe_request_no","service_type" ]]
+                ]
+            ],
+            "id" => 1
+        ];
+        
+        $statusResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
+            "http" => [
+                "header" => "Content-Type: application/json",
+                "method" => "POST",
+                "content" => json_encode($proof_attach),
+            ],
+        ])), true);
+    
+        if (!isset($statusResponse['result']) || empty($statusResponse['result'])) {
+            Log::error("❌ No data on this ID", ["response" => $statusResponse]);
+            return response()->json(['success' => false, 'message' => 'Data not found'], 404);
+        }
+
+        $type = $statusResponse['result'][0] ?? null;
+      
+        if (!$type) {
+            Log::error("❌ Missing dispatch_type");
+        }
     }
 }

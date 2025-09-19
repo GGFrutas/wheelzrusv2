@@ -372,6 +372,7 @@ int currentStep = 2; // Assuming Schedule is step 2 (0-based index)
                 
               ),
               const SizedBox(height: 20),
+              if(widget.transaction?.deRequestStatus == "Ongooing" || widget.transaction?.dlRequestStatus == "Ongoing")
 
               Text (
                 "Optional",
@@ -380,7 +381,7 @@ int currentStep = 2; // Assuming Schedule is step 2 (0-based index)
                   color: darkerBgColor,
                 ),
               ),
-
+              if(widget.transaction?.deRequestStatus == "Ongoing" || widget.transaction?.dlRequestStatus == "Ongoing")
               Column (
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -398,6 +399,7 @@ int currentStep = 2; // Assuming Schedule is step 2 (0-based index)
                           borderRadius: BorderRadius.circular(30.0),
                         ),
                       ),
+                      
                       child: Row (
                         mainAxisSize: MainAxisSize.min,
                         children: [
