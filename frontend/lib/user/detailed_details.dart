@@ -74,6 +74,8 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
           (tx) => (tx?.bookingRefNo == bookingNumber) && (tx?.dispatchType == 'ff'),
           orElse: () => null,
         );
+        print("Related FF:$relatedFF");
+
 
       if (requestNumber == transaction.plRequestNumber &&
           transaction.deRequestStatus != "Completed") {
