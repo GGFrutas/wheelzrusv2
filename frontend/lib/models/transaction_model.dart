@@ -1,3 +1,4 @@
+import 'package:frontend/models/consolidation_model.dart';
 import 'package:frontend/models/milestone_history_model.dart';
 
 class Transaction {
@@ -101,6 +102,7 @@ class Transaction {
  final String? writeDate;
 
   final List<MilestoneHistoryModel> history;
+  final ConsolidationModel? backloadConsolidation;
 
 
   const Transaction({
@@ -193,10 +195,12 @@ class Transaction {
     required this.peReleasedBy,
     required this.dlReceivedBy,
     required this.plReceivedBy,
+    required this.backloadConsolidation,
   });
 
   factory Transaction.fromJson(Map<String, dynamic> json) {
     // print('knii Raw transaction JSON: $json');
+    final rawConsolidation = json['backload_consolidation'];
 
     return Transaction(
       id: json['id'] ?? 0,
@@ -320,6 +324,14 @@ class Transaction {
       writeDate: json['write_date']?.toString() ?? 'Unknown Date', // Provide a default value
 
       isAccepted: false,  // set default or map from API
+
+    backloadConsolidation: rawConsolidation != null && rawConsolidation is Map
+        ? ConsolidationModel.fromJson(Map<String, dynamic>.from(rawConsolidation))
+        : null,
+
+
+
+
       
     );
   }
@@ -444,6 +456,7 @@ class Transaction {
 
       login: login,
        history: history,
+       backloadConsolidation: backloadConsolidation,
 
     );
   }

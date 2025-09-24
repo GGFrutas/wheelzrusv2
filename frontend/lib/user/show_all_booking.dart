@@ -37,13 +37,19 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
 
   late final List<DateTime> weekStartDates;
 
+  late final List<String> tabTitles;
+
   final ScrollController _scrollableController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     weekStartDates = _generateWeekStartDates();
-    _expandedTabIndex =0;
+    tabTitles = [
+      'Delayed',
+      ...weekStartDates.map((d) => DateFormat('MMM d').format(d)),
+    ];
+    _expandedTabIndex = 1;
     _scrollableController.addListener(() {
       if (_scrollableController.position.pixels == _scrollableController.position.maxScrollExtent) {
         ref.read(paginatedTransactionProvider('all-bookings'));
@@ -58,7 +64,7 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
     DateTime thisSunday = now.subtract(Duration(days: daysSinceSunday));
 
     // Generate current + next 3 Sundays (4 weeks total)
-    return List.generate(4, (i) => thisSunday.add(Duration(days: i * 7)));
+    return List.generate(5,(i) => thisSunday.add(Duration(days: i * 7)));
   }
 
   String formatDateTime(String? dateString) {
@@ -96,6 +102,10 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
   @override
   Widget build(BuildContext context) {
     final dateFormat = DateFormat('MMM d');
+    final tabTitles = [
+      'Delayed',
+      ...weekStartDates.map((d) => dateFormat.format(d)),
+    ];
     return Scaffold(
       appBar: AppBar(
         title: const Text("All Bookings"),
@@ -126,7 +136,7 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
                       ),
                       alignment: Alignment.center,
                       child: Text(
-                        dateFormat.format(weekStartDates[index]),
+                        tabTitles[index],
                         style: TextStyle(
                           color: tabColor,
                           fontWeight: FontWeight.bold,
@@ -140,7 +150,11 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
             const SizedBox(height: 20),
 
             if (_expandedTabIndex != null)
-             Expanded(child: _buildWeekContent(weekStartDates[_expandedTabIndex!])),
+              _expandedTabIndex == 0
+              ? Expanded(child: _buildWeekContent(isDelayed: true))
+              : Expanded(child: _buildWeekContent(
+                  date: weekStartDates[_expandedTabIndex! - 1],
+                ))
           ],
         ),
       ),
@@ -155,21 +169,9 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
     );
   }
 
-  Widget _buildWeekContent(DateTime date) {
-    
-    // final acceptedTransaction = ref.watch(accepted_transaction.acceptedTransactionProvider);
-    // DateTime now = DateTime.now();
-    // int daysSinceSunday = now.weekday % 7;
-    // DateTime sunday = now.subtract(Duration(days: daysSinceSunday));
 
-    // // Define the week range: Sunday to Saturday
-    // DateTime weekStart = sunday;
-    // DateTime weekEnd = sunday.add(const Duration(days: 6));
-
-
-    // final query = WeekQuery(start: weekStart, end: weekEnd, page: 1, limit: 5);
-    // final allTransaction = ref.watch(allTransactionProvider(query));
-     final allTransaction = ref.watch(allTransactionProvider);
+  Widget _buildWeekContent({DateTime? date, bool isDelayed = false}){ {
+    final allTransaction = ref.watch(allTransactionProvider);
     final acceptedTransaction = ref.watch(accepted_transaction.acceptedTransactionProvider);
 
 
@@ -193,6 +195,7 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
                     height: MediaQuery.of(context).size.height * 0.6, // Enough height to allow pull gesture
                     alignment: Alignment.center,
                     child: Text(
+                     isDelayed ? 'No delayed transactions available.' :
                       'No transaction for this week.',
                       style: AppTextStyles.subtitle,
                     ),
@@ -347,7 +350,12 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
                 ? DateTime.parse(tx.pickupDate)
                 : DateTime.parse(tx.deliveryDate); // Handle null dates
 
-                return sameWeekRange(dateToCheck, date);
+                if(isDelayed) {
+                  
+                  return dateToCheck.isBefore(weekStartDates.first);
+                }else{
+                  return sameWeekRange(dateToCheck, date!);
+                }
               }catch(_) {
                 return false; // If parsing fails, exclude this transaction
               }
@@ -536,6 +544,7 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
         ),  
       )
     );
+  }
   }
 
 }

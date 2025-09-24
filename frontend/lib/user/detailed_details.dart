@@ -49,45 +49,12 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
   
   @override
   Widget build(BuildContext context) {
-    // final transaction = widget.transaction;
-    // final dispatchType = transaction?.dispatchType;
-    // final serviceType = transaction?.serviceType;
-    // final bookingNumber = transaction?.freightBookingNumber;
-
-    // /// Helper to check if a value is null or empty
-    // bool isNullOrEmpty(dynamic value) {
-    //   return value == null || value.toString().trim().isEmpty;
-    // }
-
-    // /// Determine if the button should be hidden
-    // final showButton = (dispatchType == 'ot' && (isNullOrEmpty(transaction?.deProof) || isNullOrEmpty(transaction?.deSign))&& widget.transaction?.plRequestNumber == widget.transaction?.requestNumber) ||
-    //                   (dispatchType == 'dt' && (isNullOrEmpty(transaction?.dlProof) || isNullOrEmpty(transaction?.dlSign))  && widget.transaction?.peRequestNumber == widget.transaction?.requestNumber);
+  
     final transaction = widget.transaction;
-    final dispatchType = transaction?.dispatchType;
-    final serviceType = transaction?.serviceType;
-    final requestNumber = transaction?.requestNumber;
-    final plRequestNumber = transaction?.plRequestNumber;
-    final peRequestNumber = transaction?.peRequestNumber;
     final bookingNumber = transaction?.bookingRefNo;
     int currentStep = 1; // Assuming Detailed Details is step 1 (0-based index)
 
-    /// Helper
-    // bool isNullOrEmpty(dynamic value) {
-    //   return value == null || value.toString().trim().isEmpty;
-    // }
-
-    /// Base conditions (ot and dt)
-    bool hideForCurrentDispatch = 
-      (dispatchType == 'ot' &&
-      serviceType == 'Full Container Load' &&
-        transaction?.deRequestStatus == "Completed" &&
-        plRequestNumber == requestNumber) ||
-
-      (dispatchType == 'dt' &&
-        transaction?.dlRequestStatus == "Completed" &&
-        peRequestNumber == requestNumber);
-
-    bool isLandTransport = transaction?.landTransport != 'transport';
+   
 
     final allTransactions = ref.read(acceptedTransactionProvider);
 
@@ -99,10 +66,40 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
 
     print("Related FF: $relatedFF");
 
-    bool ffNotComplete = relatedFF != null && relatedFF.stageId != '7';
+   
 
-    /// Final decision: if any rule to hide the button is true, we hide it
-    final showButton = (isLandTransport && hideForCurrentDispatch) || (isLandTransport && ffNotComplete);
+    String? _checkPrerequisites(Transaction transaction, String requestNumber) {
+
+      final relatedFF = allTransactions.cast<Transaction?>().firstWhere(
+          (tx) => (tx?.bookingRefNo == bookingNumber) && (tx?.dispatchType == 'ff'),
+          orElse: () => null,
+        );
+
+      if (requestNumber == transaction.plRequestNumber &&
+          transaction.deRequestStatus != "Completed") {
+        return "Delivery Empty should be completed first.";
+      }
+
+      if (requestNumber == transaction.dlRequestNumber) {
+        if (relatedFF == null || relatedFF.stageId != "Completed") {
+          return "Associated Freight Forwarding should be completed first.";
+        }
+      }
+
+      if (requestNumber == transaction.deRequestNumber) {
+        if (relatedFF == null || relatedFF.stageId == "For Assignment") {
+          return "Associated Freight Forwarding Vendor has not yet been assigned.";
+        }
+      }
+    
+      if (requestNumber == transaction.peRequestNumber &&
+          transaction.dlRequestStatus != "Completed") {
+        return "Delivery Laden should be completed first.";
+      }
+
+      return null; // ✅ All good
+    }
+
 
         
     return PopScope(
@@ -481,10 +478,12 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
           ),
           
         ),
+        
         bottomNavigationBar: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if(!showButton)
+            // if(!showButton)
+            
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: Column (
@@ -494,15 +493,74 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () {
-                        
-                        print("uid: ${widget.uid}");
-                    
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ScheduleScreen(uid: widget.uid, transaction: widget.transaction),
-                          ),
-                        );
+                        // Example: Replace this with your real prerequisite check
+                        String? errorMessage;
+                        if (widget.transaction != null) {
+                          errorMessage = _checkPrerequisites(
+                            widget.transaction!,
+                            widget.transaction!.requestNumber ?? '', // <- pass whichever request they’re on, fallback to empty string if null
+                          );
+                        } else {
+                          errorMessage = "Transaction data is missing.";
+                        }
+
+
+                        if (errorMessage != null) {
+                          // Show modal with message
+                          showDialog(
+                            context: context,
+                            builder: (context) {
+                              return AlertDialog(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                title: Text(
+                                  "Invalid Action!",
+                                  style: AppTextStyles.body.copyWith(
+                                    color: Colors.red,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                content: Text(
+                                  errorMessage!,
+                                  textAlign: TextAlign.center,
+                                  style: AppTextStyles.body.copyWith(
+                                    color: Colors.black87
+                                  ),
+                                ),
+                                actions: [
+                                  Center(
+                                    child: ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: mainColor,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                      ),
+                                      onPressed: () {
+                                        Navigator.of(context).pop();
+                                      },
+                                      child: Text("OK", style: AppTextStyles.body.copyWith(color: Colors.white)),
+                                    )
+                                  )
+                                  
+                                ],
+                              );
+                            },
+                          );
+                        } else {
+                          // If everything is okay -> go to ScheduleScreen
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ScheduleScreen(
+                                uid: widget.uid,
+                                transaction: widget.transaction,
+                              ),
+                            ),
+                          );
+                        }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: mainColor,
@@ -522,7 +580,7 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
                         maxLines: 1,
                       ),
                     ),
-                  )
+                  ),
                 ],
               )
               
@@ -537,6 +595,7 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
     );
    
   }
+  
 
  
 }
