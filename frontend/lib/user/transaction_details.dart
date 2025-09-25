@@ -259,9 +259,15 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
     }
   } 
 
+  
+
 
   @override
   Widget build(BuildContext context) {
+   final bookingNumber = widget.transaction?.bookingRefNumber?.trim();
+ 
+   
+   
     // If transaction is null, display a fallback message
       final scheduleMap = getPickupAndDeliverySchedule(widget.transaction!);
 final pickup = scheduleMap['pickup'];
@@ -269,7 +275,15 @@ final delivery = scheduleMap['delivery'];
     final showTabs = widget.transaction?.requestStatus == "Ongoing";
     return Consumer(
       builder: (context, ref, child) {
-        
+         final allTransactions = ref.watch(transactionListProvider);
+
+  final relatedFF = allTransactions.cast<Transaction?>().firstWhere(
+    (tx) =>
+      tx?.bookingRefNumber?.trim() == bookingNumber &&
+      tx?.dispatchType?.toLowerCase().trim() == 'ff',
+    orElse: () => null,
+  );
+
         if (widget.transaction == null) {
           return Scaffold(
             appBar: AppBar(
@@ -838,14 +852,14 @@ final delivery = scheduleMap['delivery'];
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => ConfirmationScreen(uid: widget.uid, transaction: widget.transaction),
+                              builder: (context) => ConfirmationScreen(uid: widget.uid, transaction: widget.transaction, relatedFF:relatedFF ,),
                             ),
                           );
                         }else {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => DetailedDetailScreen(uid: widget.uid, transaction: widget.transaction),
+                              builder: (context) => DetailedDetailScreen(uid: widget.uid, transaction: widget.transaction, relatedFF: relatedFF),
                             ),
                           );
                         }

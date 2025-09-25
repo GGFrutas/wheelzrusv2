@@ -171,7 +171,7 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
 
 
   Widget _buildWeekContent({DateTime? date, bool isDelayed = false}){ {
-    final allTransaction = ref.watch(allTransactionProvider);
+    final allTransaction = ref.watch(allTransactionFilteredProvider);
     final acceptedTransaction = ref.watch(accepted_transaction.acceptedTransactionProvider);
 
 

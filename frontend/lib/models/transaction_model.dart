@@ -101,6 +101,8 @@ class Transaction {
 
  final String? writeDate;
 
+ final String? bookingRefNumber;
+
   final List<MilestoneHistoryModel> history;
   final ConsolidationModel? backloadConsolidation;
 
@@ -196,6 +198,7 @@ class Transaction {
     required this.dlReceivedBy,
     required this.plReceivedBy,
     required this.backloadConsolidation,
+    required this.bookingRefNumber,
   });
 
   factory Transaction.fromJson(Map<String, dynamic> json) {
@@ -317,6 +320,8 @@ class Transaction {
       peReleasedBy: json['pe_release_by'].toString(),
       deReleasedBy: json['de_release_by'].toString(),
       dlReceivedBy: json['dl_receive_by'].toString(),
+
+      bookingRefNumber: json['booking_reference_no']?.toString() ?? 'N/A',
 
       history: (json['history'] is List) 
         ? (json['history'] as List).map((e) => MilestoneHistoryModel.fromJson(e)).toList() : [],
@@ -452,6 +457,8 @@ class Transaction {
       deReleasedBy: deReleasedBy,
       dlReceivedBy: dlReceivedBy,
       plReceivedBy: plReceivedBy,
+
+      bookingRefNumber:bookingRefNumber,
       
 
       login: login,

@@ -199,7 +199,7 @@ class TransactionController extends Controller
         ];
     }
 
-    private function processDispatchManagers(array $domain,  string $partnerId): array
+    private function processDispatchManagers(array $domain, string $partnerId, bool $filterByDriver = true): array
     {
         $odooUrl = "{$this->url}/jsonrpc";
         $jobUrl = "{$this->url}/job_dispatcher/queue_job";
@@ -267,16 +267,18 @@ class TransactionController extends Controller
         }
 
         // Step 2: Filter by driver name
-        $filtered = array_filter($records, function ($manager) use ($partnerId) {
-            foreach (["de_truck_driver_name", "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name"] as $field) {
-                if (isset($manager[$field][1]) && $manager[$field][1] === $partnerId) {
-                    return true;
+         $filtered = $records;
+        if ($filterByDriver) {
+            $filtered = array_filter($records, function ($manager) use ($partnerId) {
+                foreach (["de_truck_driver_name", "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name"] as $field) {
+                    if (isset($manager[$field][1]) && $manager[$field][1] === $partnerId) {
+                        return true;
+                    }
                 }
-            }
-            return false;
-        });
-
-        $filtered = array_values($filtered);
+                return false;
+            });
+            $filtered = array_values($filtered);
+        }
 
 
         // Step 3: Normalize fields and enrich with history
@@ -417,7 +419,7 @@ class TransactionController extends Controller
 
          $domain = [
             "&",  // AND all of the following
-                ["dispatch_type", "!=", "ff"],
+                // ["dispatch_type", "!=", "ff"],
 
                 "|",  // OR: date range match
                     "&", 
@@ -501,7 +503,7 @@ class TransactionController extends Controller
         $url = $this->url;
         $db = $this->db;
       
-         $user = $this->authenticateDriver($request);
+        $user = $this->authenticateDriver($request);
         if(!is_array($user)) return $user;
 
         
@@ -568,7 +570,7 @@ class TransactionController extends Controller
         $url = $this->url;
         $db = $this->db;
       
-         $user = $this->authenticateDriver($request);
+        $user = $this->authenticateDriver($request);
         if(!is_array($user)) return $user;
 
         $odooUrl = $this->odoo_url;  
@@ -646,21 +648,47 @@ class TransactionController extends Controller
 
         // Step 5: Queue a job for each dispatch.manager record
         $domain =[
-            "|", "|", "|",
+            "|", "|", "|", // OR: driver match
             ["de_truck_driver_name", "=", $partnerId],
             ["dl_truck_driver_name", "=", $partnerId],
             ["pe_truck_driver_name", "=", $partnerId],
             ["pl_truck_driver_name", "=", $partnerId],
-
             "|",
             ['pickup_date', ">=", $today],
             ['delivery_date', ">=", $today],
+           
+            // ["dispatch_type", "=", "ff"]
             
-            ["dispatch_type", "!=", "ff"]
+
         ];
 
         
-        $data = $this->processDispatchManagers($domain, $partnerName);
+        $driverData = $this->processDispatchManagers($domain, $partnerName);
+
+    // 🔹 Step 2: collect booking refs from driverData
+    $bookingRefs = collect($driverData)
+        ->pluck('booking_reference_no') // ⚠️ ensure this matches Odoo field
+        ->filter()
+        ->unique()
+        ->toArray();
+
+    \Log::info("Booking Refs collected:", $bookingRefs);
+
+    // 🔹 Step 3: fetch FF by those booking refs
+    $ffData = [];
+    if (!empty($bookingRefs)) {
+        $ffDomain = [
+            ["dispatch_type", "ilike", "ff"], // case-insensitive match
+            ["booking_reference_no", "in", array_values($bookingRefs)],
+        ];
+        \Log::info("FF Domain:", $ffDomain);
+
+        $ffData = $this->processDispatchManagers($ffDomain, $partnerName, false);
+        \Log::info("FF Data fetched:", $ffData);
+    }
+
+    // 🔹 Step 4: merge driver + FF results
+    $data = array_merge($driverData, $ffData);
 
 
         // ✅ Final return

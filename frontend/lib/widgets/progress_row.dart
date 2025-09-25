@@ -9,12 +9,14 @@ class ProgressRow extends StatelessWidget {
   final int currentStep;
   final String uid;
   final dynamic transaction;
+  final dynamic relatedFF;
 
   const ProgressRow({
     super.key,
     required this.currentStep,
     required this.uid,
     required this.transaction,
+    required this.relatedFF,
   });
 
   @override
@@ -26,9 +28,9 @@ class ProgressRow extends StatelessWidget {
     ];
 
     final stepPage = [
-      DetailedDetailScreen(uid: uid, transaction: transaction),
-      ScheduleScreen(uid: uid, transaction: transaction),
-      ConfirmationScreen(uid: uid, transaction: transaction),
+      DetailedDetailScreen(uid: uid, transaction: transaction, relatedFF: relatedFF),
+      ScheduleScreen(uid: uid, transaction: transaction, relatedFF: relatedFF),
+      ConfirmationScreen(uid: uid, transaction: transaction, relatedFF: relatedFF),
     ];
 
     return Row(
@@ -50,14 +52,65 @@ class ProgressRow extends StatelessWidget {
 
         return GestureDetector(
           onTap: () {
-            
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => stepPage[stepIndex],
-                ),
+              final errorMessage = _checkPrerequisites(
+                transaction,
+                transaction.requestNumber ?? "",
+                relatedFF,
               );
-          },
+
+              if (errorMessage != null) {
+                showDialog(
+                  context: context, 
+                  builder: (BuildContext ctx) {
+                    return AlertDialog(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      title: Text(
+                        "Invalid Action!",
+                        style: AppTextStyles.body.copyWith(
+                          color: Colors.red,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      content: Text(
+                        errorMessage!,
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.body.copyWith(
+                          color: Colors.black87
+                        ),
+                      ),
+                      actions: [
+                        Center(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: mainColor,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                            child: Text("OK", style: AppTextStyles.body.copyWith(color: Colors.white)),
+                          )
+                        )
+                        
+                      ],
+                    );
+                  });
+                
+              } else {
+                // ✅ Safe to navigate
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => stepPage[stepIndex],
+                  ),
+                );
+              }
+            },
             child: buildStep(stepLabels[stepIndex], stepColor, isCurrent)
         );
       }else {
@@ -117,6 +170,33 @@ class ProgressRow extends StatelessWidget {
           color: color,
         ),
     );
+  }
+
+  String? _checkPrerequisites(dynamic transaction, String requestNumber, dynamic relatedFF) {
+  
+    print('Related FF Stage ID: ${relatedFF?.stageId}');
+    if (requestNumber == transaction.plRequestNumber &&
+        transaction.deRequestStatus != "Completed") {
+      return "Delivery Empty should be completed first.";
+    }
+
+     if (requestNumber == transaction.dlRequestNumber &&
+      (relatedFF == null || relatedFF.stageId?.trim() != "Completed")) {
+    return "Associated Freight Forwarding should be completed first.";
+  }
+
+  if (requestNumber == transaction.deRequestNumber &&
+      (relatedFF == null || relatedFF.stageId?.trim() == "For Assignment")) {
+    return "Associated Freight Forwarding Vendor has not yet been assigned.";
+  }
+
+
+    if (requestNumber == transaction.peRequestNumber &&
+        transaction.dlRequestStatus != "Completed") {
+      return "Delivery Laden should be completed first.";
+    }
+
+    return null;
   }
 }
 

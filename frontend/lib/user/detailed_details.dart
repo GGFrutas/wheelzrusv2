@@ -27,7 +27,7 @@ class DetailedDetailScreen extends ConsumerStatefulWidget {
   final String uid;
   final Transaction? transaction;
 
-  const DetailedDetailScreen({super.key, required this.uid, required this.transaction});
+  const DetailedDetailScreen({super.key, required this.uid, required this.transaction, required relatedFF});
 
   @override
   ConsumerState<DetailedDetailScreen> createState() => _DetailedDetailState();
@@ -40,6 +40,12 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
   void initState() {
     super.initState();
     uid = widget.uid; // Initialize uid
+
+    Future.microtask(() async {
+      final transactions = await ref.read(allTransactionProvider.future);
+      ref.read(transactionListProvider.notifier).loadTransactions(transactions);
+    });
+
   }
 
   String getNullableValue(String? value, {String fallback = ''}) {
@@ -51,29 +57,34 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
   Widget build(BuildContext context) {
   
     final transaction = widget.transaction;
-    final bookingNumber = transaction?.bookingRefNo;
+    final bookingNumber = transaction?.bookingRefNumber;
     int currentStep = 1; // Assuming Detailed Details is step 1 (0-based index)
 
-   
+    final allTransactions = ref.read(transactionListProvider);
+    print("All Transaction: $allTransactions");
 
-    final allTransactions = ref.read(acceptedTransactionProvider);
+    for (var tx in allTransactions) {
+      print("🔍 TX → bookingRefNumber: '${tx.bookingRefNumber}', dispatchType: '${tx.dispatchType}'");
+    }
 
-    print("All: $allTransactions");
     final relatedFF = allTransactions.cast<Transaction?>().firstWhere(
-      (tx) => (tx?.bookingRefNo == bookingNumber) && (tx?.dispatchType == 'ff'),
-      orElse: () => null,
-    );
+        (tx) {
+          final refNum = tx?.bookingRefNumber?.trim();
+          final currentRef = bookingNumber?.trim();
+          final dispatch = tx?.dispatchType.toLowerCase().trim();
 
-    print("Related FF: $relatedFF");
-
+          return refNum != null &&
+                refNum == currentRef &&
+                dispatch == 'ff'; // ✅ specifically look for FF
+        },
+        orElse: () => null,
+      );
    
 
     String? _checkPrerequisites(Transaction transaction, String requestNumber) {
+      print("Related FF: ${relatedFF?.stageId}");
+      
 
-      final relatedFF = allTransactions.cast<Transaction?>().firstWhere(
-          (tx) => (tx?.bookingRefNo == bookingNumber) && (tx?.dispatchType == 'ff'),
-          orElse: () => null,
-        );
 
       if (requestNumber == transaction.plRequestNumber &&
           transaction.deRequestStatus != "Completed") {
@@ -87,7 +98,7 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
       }
 
       if (requestNumber == transaction.deRequestNumber) {
-        if (relatedFF == null || relatedFF.stageId == "For Assignment") {
+        if (relatedFF == null || relatedFF.stageId?.trim() == "For Assignment") {
           return "Associated Freight Forwarding Vendor has not yet been assigned.";
         }
       }
@@ -142,7 +153,7 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                ProgressRow(currentStep: currentStep, uid: uid, transaction: transaction),
+                ProgressRow(currentStep: currentStep, uid: uid, transaction: transaction, relatedFF: relatedFF,),
                 const SizedBox(height: 20),
                 Container(
                   padding: const EdgeInsets.all(16.0), // Add padding inside the container
@@ -556,7 +567,7 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
                             MaterialPageRoute(
                               builder: (context) => ScheduleScreen(
                                 uid: widget.uid,
-                                transaction: widget.transaction,
+                                transaction: widget.transaction, relatedFF: relatedFF,
                               ),
                             ),
                           );

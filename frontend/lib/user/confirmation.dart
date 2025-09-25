@@ -28,7 +28,7 @@ class ConfirmationScreen extends ConsumerStatefulWidget {
   final String uid;
   final Transaction? transaction;
 
-  const ConfirmationScreen({super.key, required this.uid, required this.transaction});
+  const ConfirmationScreen({super.key, required this.uid, required this.transaction, required relatedFF});
 
   @override
   ConsumerState<ConfirmationScreen> createState() => _ConfirmationState();
@@ -110,6 +110,31 @@ class _ConfirmationState extends ConsumerState<ConfirmationScreen> {
   Widget build(BuildContext context) {
    
   int currentStep = 3; // Assuming Confirmation is step 3 (0-based index)
+
+  final bookingNumber = widget.transaction?.bookingRefNumber;
+
+    final allTransactions = ref.read(transactionListProvider);
+    print("All Transaction: $allTransactions");
+
+    for (var tx in allTransactions) {
+      print("🔍 TX → bookingRefNumber: '${tx.bookingRefNumber}', dispatchType: '${tx.dispatchType}'");
+    }
+
+    final relatedFF = allTransactions.cast<Transaction?>().firstWhere(
+        (tx) {
+          final refNum = tx?.bookingRefNumber?.trim();
+          final currentRef = bookingNumber?.trim();
+          final dispatch = tx?.dispatchType.toLowerCase().trim();
+
+          return refNum != null &&
+                refNum == currentRef &&
+                dispatch == 'ff'; // ✅ specifically look for FF
+        },
+        orElse: () => null,
+      );
+   
+
+   
     return Scaffold(
       appBar: AppBar(
         iconTheme: const IconThemeData(color: mainColor),
@@ -130,7 +155,7 @@ class _ConfirmationState extends ConsumerState<ConfirmationScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              ProgressRow(currentStep: currentStep, uid: widget.uid, transaction: widget.transaction,),
+              ProgressRow(currentStep: currentStep, uid: widget.uid, transaction: widget.transaction,relatedFF: relatedFF,),
 
               const SizedBox(height: 20),
               Container(

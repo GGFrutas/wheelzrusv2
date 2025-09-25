@@ -30,7 +30,7 @@ class ScheduleScreen extends ConsumerStatefulWidget {
   final String uid;
   final Transaction? transaction;
 
-  const ScheduleScreen({super.key, required this.uid, required this.transaction});
+  const ScheduleScreen({super.key, required this.uid, required this.transaction, required relatedFF});
 
   @override
   ConsumerState<ScheduleScreen> createState() => _ScheduleState();
@@ -197,9 +197,32 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
   @override
   Widget build(BuildContext context) {
    final scheduleMap = getPickupAndDeliverySchedule(widget.transaction!);
-final pickup = scheduleMap['pickup'];
-final delivery = scheduleMap['delivery'];
-int currentStep = 2; // Assuming Schedule is step 2 (0-based index)
+  final pickup = scheduleMap['pickup'];
+  final delivery = scheduleMap['delivery'];
+  int currentStep = 2; // Assuming Schedule is step 2 (0-based index)
+  final bookingNumber = widget.transaction?.bookingRefNumber;
+
+    final allTransactions = ref.read(transactionListProvider);
+    print("Schedule All Transaction: $allTransactions");
+
+    for (var tx in allTransactions) {
+      print("🔍 TX → bookingRefNumber: '${tx.bookingRefNumber}', dispatchType: '${tx.dispatchType}'");
+    }
+
+    final relatedFF = allTransactions.cast<Transaction?>().firstWhere(
+        (tx) {
+          final refNum = tx?.bookingRefNumber?.trim();
+          final currentRef = bookingNumber?.trim();
+          final dispatch = tx?.dispatchType.toLowerCase().trim();
+
+          return refNum != null &&
+                refNum == currentRef &&
+                dispatch == 'ff'; // ✅ specifically look for FF
+        },
+        orElse: () => null,
+      );
+   
+
     return Scaffold(
       appBar: AppBar(
         iconTheme: const IconThemeData(color: mainColor),
@@ -220,7 +243,7 @@ int currentStep = 2; // Assuming Schedule is step 2 (0-based index)
                 ),
               ),
               const SizedBox(height: 20),
-              ProgressRow(currentStep: currentStep, uid: uid, transaction: widget.transaction,), // Pass an integer value for currentStep
+              ProgressRow(currentStep: currentStep, uid: uid, transaction: widget.transaction,relatedFF: relatedFF,), // Pass an integer value for currentStep
               const SizedBox(height: 20),
               Container(
                 padding: const EdgeInsets.all(8.0), // Add padding inside the container
@@ -459,7 +482,7 @@ int currentStep = 2; // Assuming Schedule is step 2 (0-based index)
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => ConfirmationScreen(uid: widget.uid, transaction: widget.transaction),
+                            builder: (context) => ConfirmationScreen(uid: widget.uid, transaction: widget.transaction, relatedFF: relatedFF,),
                           ),
                         );
                       },
