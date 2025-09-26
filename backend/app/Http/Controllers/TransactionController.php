@@ -76,11 +76,11 @@ function jsonRpcRequest($url, $payload){
 }
 
 class TransactionController extends Controller
-{   
-    protected $url = "https://jralejandria-beta-dev-yxe.odoo.com";
-    protected $db = 'jralejandria-beta-dev-yxe1-beta-production-23247386';
+{
+    protected $url = "http://gsq-ibx-rda:8068";
+    protected $db = 'rda_beta_new';
     // protected $odoo_url = "http://192.168.118.102:8000/odoo/jsonrpc";
-    protected $odoo_url = "https://jralejandria-beta-dev-yxe.odoo.comjsonrpc";
+    protected $odoo_url = "http://gsq-ibx-rda:8068/jsonrpc";
 
     private function authenticateDriver(Request $request)
     {
@@ -219,7 +219,7 @@ class TransactionController extends Controller
             "pickup_date", "departure_date","origin", "destination", "de_rejection_time", "pl_rejection_time", "dl_rejection_time", "pe_rejection_time", "de_completion_time", 
             "pl_completion_time", "dl_completion_time", "pe_completion_time", "shipper_province","shipper_city","shipper_barangay","shipper_street", 
             "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime", "service_type", "booking_service",
-            "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time", "name", "stage_id"
+            "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time", "name", "stage_id", "pe_release_by", "de_release_by","pl_receive_by","dl_receive_by"
         ];
 
         $fieldsToString =[
@@ -233,7 +233,7 @@ class TransactionController extends Controller
             "pickup_date", "departure_date","origin", "destination","de_rejection_time", "pl_rejection_time", "dl_rejection_time", "pe_rejection_time", "de_completion_time", 
             "pl_completion_time", "dl_completion_time", "pe_completion_time","shipper_province","shipper_city","shipper_barangay","shipper_street",
             "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime",  "service_type","booking_service",
-            "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time","stage_id"
+            "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time","stage_id", "pe_release_by", "de_release_by","pl_receive_by","dl_receive_by"
         ];
 
        
@@ -336,7 +336,7 @@ class TransactionController extends Controller
         ]);
 
         $histories = $historyRes['result'] ?? [];
-
+        // 
         // ✅ Step 4: Group histories by dispatch_id
         $historyMap = [];
         foreach ($histories as $history) {
@@ -365,8 +365,14 @@ class TransactionController extends Controller
                 'id' => rand(1000, 9999)
             ]);
 
-            $consolidation = $notebookRes['result'][0] ?? null;
-            $conslMasterId = $consolidation['consolidation_id'][0] ?? null;
+            $conslMasterId = null;
+            foreach ($notebookRes['result'] as $nb) {
+                $raw = $nb['consolidation_id'] ?? null;
+                if (is_array($raw) && isset($raw[0])) {
+                    $conslMasterId = $raw[0];
+                    break; // take the first valid consolidation
+                }
+            }
 
             if ($conslMasterId) {
                 $masterRes = jsonRpcRequest($odooUrl, [
@@ -653,9 +659,9 @@ class TransactionController extends Controller
             ["dl_truck_driver_name", "=", $partnerId],
             ["pe_truck_driver_name", "=", $partnerId],
             ["pl_truck_driver_name", "=", $partnerId],
-            "|",
-            ['pickup_date', ">=", $today],
-            ['delivery_date', ">=", $today],
+            // "|",
+            // ['pickup_date', ">=", $today],
+            // ['delivery_date', ">=", $today],
            
             // ["dispatch_type", "=", "ff"]
             

@@ -106,6 +106,8 @@ class Transaction {
   final List<MilestoneHistoryModel> history;
   final ConsolidationModel? backloadConsolidation;
 
+  // final String? completeAddress ;
+
 
   const Transaction({
     required this.id,
@@ -199,6 +201,7 @@ class Transaction {
     required this.plReceivedBy,
     required this.backloadConsolidation,
     required this.bookingRefNumber,
+    // required this.completeAddress,
   });
 
   factory Transaction.fromJson(Map<String, dynamic> json) {
@@ -334,7 +337,7 @@ class Transaction {
         ? ConsolidationModel.fromJson(Map<String, dynamic>.from(rawConsolidation))
         : null,
 
-
+      // completeAddress: json['origin']?.toString() ?? 'N/A',
 
 
       
@@ -464,6 +467,8 @@ class Transaction {
       login: login,
        history: history,
        backloadConsolidation: backloadConsolidation,
+
+        // completeAddress: completeAddress, 
 
     );
   }

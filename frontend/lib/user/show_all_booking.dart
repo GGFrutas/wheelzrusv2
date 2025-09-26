@@ -173,8 +173,8 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
   Widget _buildWeekContent({DateTime? date, bool isDelayed = false}){ {
     final allTransaction = ref.watch(allTransactionFilteredProvider);
     final acceptedTransaction = ref.watch(accepted_transaction.acceptedTransactionProvider);
-
-
+ 
+print("Tab index: $_expandedTabIndex, isDelayed: $isDelayed, date: $date");
     return Expanded(
       child: RefreshIndicator(
         onRefresh: _refreshTransaction,
@@ -373,7 +373,8 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
                         height: constraints.maxHeight, // Adjust height as needed
                         child: Center(
                           child: Text(
-                            'No transactions for this week.',
+                            isDelayed ? 'No delayed transactions available.' :
+                      'No transaction for this week.',
                             style: AppTextStyles.subtitle,
                           ),
                         ),
