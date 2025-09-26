@@ -79,8 +79,8 @@ class TransactionController extends Controller
 {   
     protected $url = "https://jralejandria-beta-dev-yxe.odoo.com";
     protected $db = 'jralejandria-beta-dev-yxe1-beta-production-23247386';
-    // protected $odoo_url = "http://192.168.118.102:8000/odoo/jsonrpc";
-    protected $odoo_url = "https://jralejandria-beta-dev-yxe.odoo.comjsonrpc";
+    // protected $odoo_url = "http://192.168.76.45:8080/odoo/jsonrpc";
+    protected $odoo_url = "https://jralejandria-beta-dev-yxe.odoo.com/jsonrpc";
 
     private function authenticateDriver(Request $request)
     {
@@ -218,8 +218,8 @@ class TransactionController extends Controller
             "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
             "pickup_date", "departure_date","origin", "destination", "de_rejection_time", "pl_rejection_time", "dl_rejection_time", "pe_rejection_time", "de_completion_time", 
             "pl_completion_time", "dl_completion_time", "pe_completion_time", "shipper_province","shipper_city","shipper_barangay","shipper_street", 
-            "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime", "service_type", "booking_service",
-            "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time", "name", "stage_id"
+            "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime", "service_type", "booking_service", "write_date",
+            "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time", "name", "stage_id", "pe_release_by", "de_release_by","pl_receive_by","dl_receive_by"
         ];
 
         $fieldsToString =[
@@ -232,8 +232,8 @@ class TransactionController extends Controller
             "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
             "pickup_date", "departure_date","origin", "destination","de_rejection_time", "pl_rejection_time", "dl_rejection_time", "pe_rejection_time", "de_completion_time", 
             "pl_completion_time", "dl_completion_time", "pe_completion_time","shipper_province","shipper_city","shipper_barangay","shipper_street",
-            "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime",  "service_type","booking_service",
-            "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time","stage_id"
+            "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime",  "service_type","booking_service","write_date",
+            "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time","stage_id", "pe_release_by", "de_release_by","pl_receive_by","dl_receive_by"
         ];
 
        
@@ -365,8 +365,15 @@ class TransactionController extends Controller
                 'id' => rand(1000, 9999)
             ]);
 
-            $consolidation = $notebookRes['result'][0] ?? null;
-            $conslMasterId = $consolidation['consolidation_id'][0] ?? null;
+            $conslMasterId = null;
+            foreach ($notebookRes['result'] as $nb) {
+                $raw = $nb['consolidation_id'] ?? null;
+                if (is_array($raw) && isset($raw[0])) {
+                    $conslMasterId = $raw[0];
+                    break; // take the first valid consolidation
+                }
+            }
+
 
             if ($conslMasterId) {
                 $masterRes = jsonRpcRequest($odooUrl, [
@@ -653,9 +660,9 @@ class TransactionController extends Controller
             ["dl_truck_driver_name", "=", $partnerId],
             ["pe_truck_driver_name", "=", $partnerId],
             ["pl_truck_driver_name", "=", $partnerId],
-            "|",
-            ['pickup_date', ">=", $today],
-            ['delivery_date', ">=", $today],
+            // "|",
+            // ['pickup_date', ">=", $today],
+            // ['delivery_date', ">=", $today],
            
             // ["dispatch_type", "=", "ff"]
             
@@ -665,30 +672,30 @@ class TransactionController extends Controller
         
         $driverData = $this->processDispatchManagers($domain, $partnerName);
 
-    // 🔹 Step 2: collect booking refs from driverData
-    $bookingRefs = collect($driverData)
-        ->pluck('booking_reference_no') // ⚠️ ensure this matches Odoo field
-        ->filter()
-        ->unique()
-        ->toArray();
+        // 🔹 Step 2: collect booking refs from driverData
+        $bookingRefs = collect($driverData)
+            ->pluck('booking_reference_no') // ⚠️ ensure this matches Odoo field
+            ->filter()
+            ->unique()
+            ->toArray();
 
-    \Log::info("Booking Refs collected:", $bookingRefs);
+        \Log::info("Booking Refs collected:", $bookingRefs);
 
-    // 🔹 Step 3: fetch FF by those booking refs
-    $ffData = [];
-    if (!empty($bookingRefs)) {
-        $ffDomain = [
-            ["dispatch_type", "ilike", "ff"], // case-insensitive match
-            ["booking_reference_no", "in", array_values($bookingRefs)],
-        ];
-        \Log::info("FF Domain:", $ffDomain);
+        // 🔹 Step 3: fetch FF by those booking refs
+        $ffData = [];
+        if (!empty($bookingRefs)) {
+            $ffDomain = [
+                ["dispatch_type", "ilike", "ff"], // case-insensitive match
+                ["booking_reference_no", "in", array_values($bookingRefs)],
+            ];
+            // \Log::info("FF Domain:", $ffDomain);
 
-        $ffData = $this->processDispatchManagers($ffDomain, $partnerName, false);
-        \Log::info("FF Data fetched:", $ffData);
-    }
+            $ffData = $this->processDispatchManagers($ffDomain, $partnerName, false);
+            \Log::info("FF Data fetched:", $ffData);
+        }
 
-    // 🔹 Step 4: merge driver + FF results
-    $data = array_merge($driverData, $ffData);
+        // 🔹 Step 4: merge driver + FF results
+        $data = array_merge($driverData, $ffData);
 
 
         // ✅ Final return

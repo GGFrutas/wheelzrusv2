@@ -277,7 +277,7 @@ void initState() {
                               requestStatus: item.peRequestStatus,
                               rejectedTime: item.peRejectedTime,
                               completedTime: item.peCompletedTime,
-                              originAddress: "Pickup Empty Container to Consignee",
+                              originAddress: "Pickup Empty Container from Consignee",
                               // truckPlateNumber: item.peTruckPlateNumber,
                             ),
                         ]; 
