@@ -78,7 +78,7 @@ function jsonRpcRequest($url, $payload){
 class TransactionController extends Controller
 {   
     protected $url = "https://jralejandria-beta-dev-yxe.odoo.com";
-    protected $db = 'jralejandria-beta-dev-yxe1-beta-production-23247386';
+    protected $db = 'jralejandria-beta-dev-yxe-beta-production-24066960';
     // protected $odoo_url = "http://192.168.76.45:8080/odoo/jsonrpc";
     protected $odoo_url = "https://jralejandria-beta-dev-yxe.odoo.com/jsonrpc";
 
@@ -336,7 +336,7 @@ class TransactionController extends Controller
         ]);
 
         $histories = $historyRes['result'] ?? [];
-
+        // 
         // ✅ Step 4: Group histories by dispatch_id
         $historyMap = [];
         foreach ($histories as $history) {
@@ -660,6 +660,9 @@ class TransactionController extends Controller
             ["dl_truck_driver_name", "=", $partnerId],
             ["pe_truck_driver_name", "=", $partnerId],
             ["pl_truck_driver_name", "=", $partnerId],
+            // "|",
+            // ['pickup_date', ">=", $today],
+            // ['delivery_date', ">=", $today],
             // "|",
             // ['pickup_date', ">=", $today],
             // ['delivery_date', ">=", $today],

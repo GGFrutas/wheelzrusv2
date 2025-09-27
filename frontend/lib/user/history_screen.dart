@@ -196,16 +196,32 @@ void initState() {
 
 
                     final expandedTransactions = transaction.expand((item) {
-                      
-                      String cleanAddress(String address) {
-                        return address
-                          .split(',') // splits the string by commas
-                          .map((e) => e.trim()) //removes extra spaces
-                          .where((e) => e.isNotEmpty && e.toLowerCase() != 'ph') //filters out empty strings and 'ph'
-                          .join(', '); // joins the remaining parts back together
-                      }
 
-                       String descriptionMsg(Transaction item) {
+
+                        String removeBrackets(String input) {
+                          return input.replaceAll(RegExp(r'\s*\[.*?\]'), '')
+                                      .replaceAll(RegExp(r'\s*\(.*?\)'), '')
+                                      .trim();
+                        }
+                        String cleanAddress(List<String?> parts) {
+                          return parts
+                            .where((e) => e != null && e.trim().isNotEmpty && e.trim().toLowerCase() != 'ph')
+                            .map((e) => removeBrackets(e!)) // now safe because nulls are filtered above
+                            .join(', ');
+                        }
+
+                        String buildConsigneeAddress(Transaction item, {bool cityLevel = false}) {
+                          return cleanAddress(cityLevel ? [item.consigneeCity,item.consigneeProvince]
+                          : [item.consigneeStreet,item.consigneeBarangay,item.consigneeCity,item.consigneeProvince]
+                          );
+                        }
+
+                        String buildShipperAddress(Transaction item, {bool cityLevel = false}) {
+                          return cleanAddress(cityLevel ? [item.shipperCity,item.shipperProvince]
+                          : [item.shipperStreet,item.shipperBarangay,item.shipperCity,item.shipperProvince]
+                          );
+                        }
+                        String descriptionMsg(Transaction item) {
                           if (item.landTransport == 'transport'){
                             return 'Deliver Laden Container to Consignee';
                           } else {
@@ -219,54 +235,72 @@ void initState() {
                             return 'Pickup from Shipper';
                           }
                         }
-    
-                      if (item.dispatchType == "ot") {
-                        return [
-                          // First instance: Deliver to Shipper
-                          if (item.deTruckDriverName == driverId) // Filter out if accepted
-                            // Check if the truck driver is the same as the authPartnerId
-                            item.copyWith(
-                              name: "Deliver to Shipper",
-                              destination: cleanAddress(item.origin),
-                              origin: cleanAddress(item.destination),
-                              requestNumber: item.deRequestNumber,
-                              requestStatus: item.deRequestStatus,
-                              rejectedTime: item.deRejectedTime,
-                              completedTime: item.deCompletedTime,
-                              originAddress: "Deliver Empty Container to Shipper",
+      
+                        if (item.dispatchType == "ot") {
+                          final shipperOrigin = buildShipperAddress(item);
+                          final shipperDestination = cleanAddress([item.destination]);
+                
+                        return[
 
-                              // truckPlateNumber: item.deTruckPlateNumber,
-                            ),
-                            // Second instance: Pickup from Shipper
-                          if ( item.plTruckDriverName == driverId) // Filter out if accepted
-                            // if (item.plTruckDriverName == authPartnerId)
+                        
+                          // First instance: Deliver to Shipper
+                          if (item.deTruckDriverName == driverId)
+                            // Check if the truck driver is the same as the authPartnerId
+                            // return [ 
                               item.copyWith(
-                              name: newName(item),
-                              destination: cleanAddress(item.origin),
-                              origin: cleanAddress(item.destination),
-                              requestNumber: item.plRequestNumber,
-                              requestStatus: item.plRequestStatus,
-                              rejectedTime: item.plRejectedTime,
-                              completedTime: item.plCompletedTime,
-                              originAddress: descriptionMsg(item),
-                              // truckPlateNumber: item.plTruckPlateNumber,
+                                name: "Deliver to Shipper",
+                                origin:shipperDestination,
+                                destination: shipperOrigin,
+                                requestNumber: item.deRequestNumber,
+                                requestStatus: item.deRequestStatus,
+                                assignedDate:item.deAssignedDate,
+                                originAddress: "Deliver Empty Container to Shipper",
+                                freightBookingNumber:item.freightBookingNumber,
+                                // // completeAddress: shipperOrigin,
+                                // truckPlateNumber: item.deTruckPlateNumber,
                               ),
-                        ];
-                      } else if (item.dispatchType == "dt") {
+                          //   ];
+                          // }
+                            // Second instance: Pickup from Shipper
+                          if ( item.plTruckDriverName == driverId)
+                            // return [
+                              item.copyWith(
+                                name: newName(item),
+                                origin:shipperOrigin,
+                                destination:shipperDestination,
+                                requestNumber: item.plRequestNumber,
+                                requestStatus: item.plRequestStatus,
+                                assignedDate:item.plAssignedDate,
+                                originAddress: descriptionMsg(item),
+                                freightBookingNumber:item.freightBookingNumber,
+                                // // completeAddress: shipperDestination,
+                                // truckPlateNumber: item.plTruckPlateNumber,
+                              ),
+                            ];
+                          // }
+                          // return [];
+                    
+                        } else if (item.dispatchType == "dt") {
+                          final consigneeOrigin = buildConsigneeAddress(item);
+                          final consigneeDestination = cleanAddress([item.origin]);
                         return [
-                          // First instance: Deliver to Consignee
-                          if (item.dlTruckDriverName == driverId) // Filter out if accepted
-                            item.copyWith(
-                              name: "Deliver to Consignee",
-                              origin: cleanAddress(item.destination),
-                              destination: cleanAddress(item.origin),
-                              requestNumber: item.dlRequestNumber,
-                              requestStatus: item.dlRequestStatus,
-                              rejectedTime: item.dlRejectedTime,
-                              completedTime: item.dlCompletedTime,
-                              originAddress: "Deliver Laden Container to Consignee",
-                              // truckPlateNumber: item.dlTruckPlateNumber,
-                            ),
+                            // First instance: Deliver to Consignee
+                          if (item.dlTruckDriverName == driverId)
+                            // return [
+                              item.copyWith(
+                                name: "Deliver to Consignee",
+                                origin:  consigneeDestination,
+                                destination: consigneeOrigin,
+                                requestNumber: item.dlRequestNumber,
+                                requestStatus: item.dlRequestStatus,
+                                assignedDate:item.dlAssignedDate,
+                                originAddress: "Deliver Laden Container to Consignee",
+                                freightBookingNumber:item.freightBookingNumber,
+                                // // completeAddress: consigneeOrigin,
+                                // truckPlateNumber: item.dlTruckPlateNumber,
+                              ),
+                          //   ];
+                          // }
                           // Second instance: Pickup from Consignee
                           if (item.peTruckDriverName == driverId) // Filter out if accepted
                             item.copyWith(

@@ -321,6 +321,7 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                                 assignedDate:item.deAssignedDate,
                                 originAddress: "Deliver Empty Container to Shipper",
                                 freightBookingNumber:item.freightBookingNumber,
+                                // // completeAddress: buildShipperAddress(item),
                                 // truckPlateNumber: item.deTruckPlateNumber,
                               ),
                           //   ];
@@ -337,6 +338,7 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                                 assignedDate:item.plAssignedDate,
                                 originAddress: descriptionMsg(item),
                                 freightBookingNumber:item.freightBookingNumber,
+                                // // completeAddress: shipperDestination,
                                 // truckPlateNumber: item.plTruckPlateNumber,
                               ),
                             ];
@@ -359,6 +361,7 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                                 assignedDate:item.dlAssignedDate,
                                 originAddress: "Deliver Laden Container to Consignee",
                                 freightBookingNumber:item.freightBookingNumber,
+                                // // completeAddress: consigneeOrigin,
                                 // truckPlateNumber: item.dlTruckPlateNumber,
                               ),
                           //   ];
@@ -375,6 +378,7 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                                 assignedDate:item.peAssignedDate,
                                 originAddress: "Pickup Empty Container from Consignee",
                                 freightBookingNumber:item.freightBookingNumber,
+                                // // completeAddress: consigneeDestination,
                                 // truckPlateNumber: item.peTruckPlateNumber,
                               ),
                             ];  
