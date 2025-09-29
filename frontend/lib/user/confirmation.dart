@@ -113,7 +113,7 @@ class _ConfirmationState extends ConsumerState<ConfirmationScreen> {
 
   final bookingNumber = widget.transaction?.bookingRefNumber;
 
-    final allTransactions = ref.read(transactionListProvider);
+    final allTransactions = ref.watch(transactionListProvider);
     print("All Transaction: $allTransactions");
 
     for (var tx in allTransactions) {

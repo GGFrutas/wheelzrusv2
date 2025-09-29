@@ -60,7 +60,7 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
     final bookingNumber = transaction?.bookingRefNumber;
     int currentStep = 1; // Assuming Detailed Details is step 1 (0-based index)
 
-    final allTransactions = ref.read(transactionListProvider);
+    final allTransactions = ref.watch(transactionListProvider);
     print("All Transaction: $allTransactions");
 
     for (var tx in allTransactions) {
@@ -81,7 +81,7 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
       );
    
 
-    String? _checkPrerequisites(Transaction transaction, String requestNumber) {
+    String? checkPrerequisites(Transaction transaction, String requestNumber) {
       print("Related FF: ${relatedFF?.stageId}");
       
 
@@ -507,7 +507,7 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
                         // Example: Replace this with your real prerequisite check
                         String? errorMessage;
                         if (widget.transaction != null) {
-                          errorMessage = _checkPrerequisites(
+                          errorMessage = checkPrerequisites(
                             widget.transaction!,
                             widget.transaction!.requestNumber ?? '', // <- pass whichever request they’re on, fallback to empty string if null
                           );
