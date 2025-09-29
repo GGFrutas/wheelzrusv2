@@ -136,7 +136,7 @@ class _SettingPageState extends ConsumerState<SettingScreen>{
         height:40,
         child: Center(
           child: Text(
-            'DA.17.00.B.019',
+            'DA.17.00.B.020',
             style: AppTextStyles.caption.copyWith(
               color: Colors.black87,
             ),

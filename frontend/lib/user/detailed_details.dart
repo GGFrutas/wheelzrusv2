@@ -97,11 +97,11 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
         }
       }
 
-      // if (requestNumber == transaction.deRequestNumber) {
-      //   if (relatedFF == null || relatedFF.stageId?.trim() == "For Assignment") {
-      //     return "Associated Freight Forwarding Vendor has not yet been assigned.";
-      //   }
-      // }
+      if (requestNumber == transaction.deRequestNumber) {
+        if (relatedFF == null || relatedFF.stageId?.trim() == "For Assignment") {
+          return "Associated Freight Forwarding Vendor has not yet been assigned.";
+        }
+      }
     
       if (requestNumber == transaction.peRequestNumber &&
           transaction.dlRequestStatus != "Completed") {
