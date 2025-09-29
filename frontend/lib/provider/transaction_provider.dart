@@ -180,7 +180,12 @@ final bookingProvider = FutureProvider<List<Transaction>>((ref) async {
 
 final filteredItemsProvider = FutureProvider<List<Transaction>>((ref) async {
   
-  return fetchFilteredTransactions(ref: ref, endpoint: 'today', queryParams: {});
+   final transactions = await fetchFilteredTransactions(ref: ref, endpoint: 'today', queryParams: {});
+  // final filtered = transactions
+  //     .where((tx) => tx.dispatchType.toLowerCase() != 'ff')
+  //     .toList();
+  ref.read(transactionListProvider.notifier).loadTransactions(transactions);
+  return transactions;
 });
 
 final filteredItemsProviderForTransactionScreen = FutureProvider<List<Transaction>>((ref) async {
@@ -237,5 +242,16 @@ final allTransactionFilteredProvider = FutureProvider<List<Transaction>>((ref) a
       .toList();
 
   return filtered;
+});
+
+
+final relatedFFProvider = Provider.family<Transaction?, String>((ref, bookingNumber) {
+  final allTransactions = ref.watch(transactionListProvider);
+  return allTransactions.cast<Transaction?>().firstWhere(
+    (tx) =>
+      tx?.bookingRefNumber?.trim() == bookingNumber.trim() &&
+      tx?.dispatchType?.toLowerCase().trim() == 'ff',
+    orElse: () => null,
+  );
 });
 

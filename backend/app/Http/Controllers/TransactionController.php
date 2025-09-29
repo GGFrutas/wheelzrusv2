@@ -444,7 +444,32 @@ class TransactionController extends Controller
         ];
 
         
-        $data = $this->processDispatchManagers($domain, $partnerName);
+        $driverData = $this->processDispatchManagers($domain, $partnerName);
+
+        // 🔹 Step 2: collect booking refs from driverData
+        $bookingRefs = collect($driverData)
+            ->pluck('booking_reference_no') // ⚠️ ensure this matches Odoo field
+            ->filter()
+            ->unique()
+            ->toArray();
+
+        \Log::info("Booking Refs collected:", $bookingRefs);
+
+        // 🔹 Step 3: fetch FF by those booking refs
+        $ffData = [];
+        if (!empty($bookingRefs)) {
+            $ffDomain = [
+                ["dispatch_type", "ilike", "ff"], // case-insensitive match
+                ["booking_reference_no", "in", array_values($bookingRefs)],
+            ];
+            // \Log::info("FF Domain:", $ffDomain);
+
+            $ffData = $this->processDispatchManagers($ffDomain, $partnerName, false);
+            // \Log::info("FF Data fetched:", $ffData);
+        }
+
+        // 🔹 Step 4: merge driver + FF results
+        $data = array_merge($driverData, $ffData);
 
 
         // ✅ Final return
@@ -671,30 +696,30 @@ class TransactionController extends Controller
         
         $driverData = $this->processDispatchManagers($domain, $partnerName);
 
-    // 🔹 Step 2: collect booking refs from driverData
-    $bookingRefs = collect($driverData)
-        ->pluck('booking_reference_no') // ⚠️ ensure this matches Odoo field
-        ->filter()
-        ->unique()
-        ->toArray();
+        // 🔹 Step 2: collect booking refs from driverData
+        $bookingRefs = collect($driverData)
+            ->pluck('booking_reference_no') // ⚠️ ensure this matches Odoo field
+            ->filter()
+            ->unique()
+            ->toArray();
 
-    \Log::info("Booking Refs collected:", $bookingRefs);
+        \Log::info("Booking Refs collected:", $bookingRefs);
 
-    // 🔹 Step 3: fetch FF by those booking refs
-    $ffData = [];
-    if (!empty($bookingRefs)) {
-        $ffDomain = [
-            ["dispatch_type", "ilike", "ff"], // case-insensitive match
-            ["booking_reference_no", "in", array_values($bookingRefs)],
-        ];
-        \Log::info("FF Domain:", $ffDomain);
+        // 🔹 Step 3: fetch FF by those booking refs
+        $ffData = [];
+        if (!empty($bookingRefs)) {
+            $ffDomain = [
+                ["dispatch_type", "ilike", "ff"], // case-insensitive match
+                ["booking_reference_no", "in", array_values($bookingRefs)],
+            ];
+            // \Log::info("FF Domain:", $ffDomain);
 
-        $ffData = $this->processDispatchManagers($ffDomain, $partnerName, false);
-        \Log::info("FF Data fetched:", $ffData);
-    }
+            $ffData = $this->processDispatchManagers($ffDomain, $partnerName, false);
+            // \Log::info("FF Data fetched:", $ffData);
+        }
 
-    // 🔹 Step 4: merge driver + FF results
-    $data = array_merge($driverData, $ffData);
+        // 🔹 Step 4: merge driver + FF results
+        $data = array_merge($driverData, $ffData);
 
 
         // ✅ Final return
@@ -1377,57 +1402,58 @@ class TransactionController extends Controller
             ];
 
             $bookingRef = $type['booking_reference_no'] ?? null;
-
-            if($bookingRef){
-                $searchFreight = [
+            if ($bookingRef && $containerNumber) {
+                $searchFF = [
                     "jsonrpc" => "2.0",
                     "method" => "call",
                     "params" => [
                         "service" => "object",
                         "method" => "execute_kw",
                         "args" => [
-                            $db, 
-                            $uid, 
-                            $odooPassword, 
-                            "freight.management", 
+                            $db,
+                            $uid,
+                            $odooPassword,
+                            "dispatch.manager",
                             "search",
-                            [[["booking_reference_no", '=', $bookingRef]]]
+                            [[
+                                ["booking_reference_no", '=', $bookingRef],
+                                ["dispatch_type", '=', "ff"]
+                            ]]
                         ],
                     ],
-                    "id" => 2   
+                    "id" => 101
                 ];
-                $freightRes = jsonRpcRequest($odooUrl, $searchFreight);
-                $freightIds = $freightRes['result'] ?? [];
+                $ffRes = jsonRpcRequest($odooUrl, $searchFF);
+                $ffIds = $ffRes['result'] ?? [];
 
-                if(!empty($freightIds)) {
-                    $freightId = $freightIds[0];
-                    $searchBooking = [
+                if (!empty($ffIds)) {
+                    // ✅ Update container_number only in ff
+                    $updateFFContainer = [
                         "jsonrpc" => "2.0",
                         "method" => "call",
                         "params" => [
                             "service" => "object",
                             "method" => "execute_kw",
                             "args" => [
-                                $db, 
-                                $uid, 
-                                $odooPassword, 
-                                "booking.freight.forwarder", 
+                                $db,
+                                $uid,
+                                $odooPassword,
+                                "dispatch.manager",
                                 "write",
                                 [
-                                    [$freightId],
+                                    $ffIds,
                                     [
-                                        "container_number" => $containerNumber,
+                                        "container_number" => $containerNumber
                                     ]
                                 ]
-                            ],
+                            ]
                         ],
-                        "id" => 2
+                        "id" => 102
                     ];
-                    $bookingRes = jsonRpcRequest($odooUrl, $searchBooking);
-                    Log::info("Updated container_number for bookingRef {$bookingRef}, containerIds:  . freightId: {$freightId}");
-
+                    $ffUpdateRes = jsonRpcRequest($odooUrl, $updateFFContainer);
+                    Log::info("Updated container_number in FF for bookingRef {$bookingRef}, ffIds: " . json_encode($ffIds));
                 } else {
-                    Log::warning("No freight.management found for bookingRef {$bookingRef}");
+                    Log::warning("No FF found for bookingRef {$bookingRef}");
                 }
             }
         } elseif ($type['dispatch_type'] == "ot" && $type['pl_request_no'] == $requestNumber) {
@@ -1494,7 +1520,7 @@ class TransactionController extends Controller
                     ]
                 ]
             ],
-            "id" => 3
+            "id" => 4
         ];
 
         $updateResponse = json_decode(file_get_contents($odooUrl,false,stream_context_create([
@@ -1525,7 +1551,7 @@ class TransactionController extends Controller
                         ["fields" => ["id","dispatch_type","actual_datetime","scheduled_datetime","fcl_code","is_backload"]]
                     ]
                 ],
-                "id" => 4
+                "id" => 5
             ];
         
             $fcl_code_response = json_decode(file_get_contents($odooUrl, false, stream_context_create([
@@ -1619,7 +1645,7 @@ class TransactionController extends Controller
                                 ]
                             ]
                         ],
-                        "id" => 5
+                        "id" => 6
                     ];
 
                     $updateActualResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
@@ -1667,7 +1693,7 @@ class TransactionController extends Controller
                                        
                                     ]
                                 ],
-                                "id" => 6
+                                "id" => 7
                             ];
                             $templateResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
                                 "http" => [
@@ -1704,7 +1730,7 @@ class TransactionController extends Controller
                                             ]
                                         ]
                                     ],
-                                    "id" => 7
+                                    "id" => 8
                                 ];
 
                                 $sendEmailResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([

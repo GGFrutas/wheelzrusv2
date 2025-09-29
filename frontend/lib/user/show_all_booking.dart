@@ -59,12 +59,17 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
 
   List<DateTime> _generateWeekStartDates() {
     DateTime now = DateTime.now();
-    // Find the most recent Sunday
-    int daysSinceSunday = now.weekday % 7; 
-    DateTime thisSunday = now.subtract(Duration(days: daysSinceSunday));
 
-    // Generate current + next 3 Sundays (4 weeks total)
-    return List.generate(5,(i) => thisSunday.add(Duration(days: i * 7)));
+    // Normalize to midnight
+    DateTime today = DateTime(now.year, now.month, now.day);
+
+    // Find the most recent Sunday
+    int daysSinceSunday = today.weekday % 7;
+    DateTime thisSunday = today.subtract(Duration(days: daysSinceSunday));
+
+    // Generate current + next 4 Sundays (5 weeks total)
+    return List.generate(5, (i) => thisSunday.add(Duration(days: i * 7)));
+
   }
 
   String formatDateTime(String? dateString) {
@@ -351,7 +356,6 @@ print("Tab index: $_expandedTabIndex, isDelayed: $isDelayed, date: $date");
                 : DateTime.parse(tx.deliveryDate); // Handle null dates
 
                 if(isDelayed) {
-                  
                   return dateToCheck.isBefore(weekStartDates.first);
                 }else{
                   return sameWeekRange(dateToCheck, date!);

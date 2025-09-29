@@ -50,6 +50,16 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
     }
    }
 
+  @override
+  void initState() {
+    super.initState();
+
+    Future.microtask(() async {
+      ref.invalidate(bookingProvider);
+      await ref.refresh(allTransactionProvider.future); // if async
+    });
+  }
+
 
    final List<Map<String, String>> carouselItems = [
     {

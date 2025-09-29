@@ -242,7 +242,7 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
               ),
             ),
            const SizedBox(height: 20),
-           if(widget.transaction?.dispatchType == "ot") ... [
+           if(widget.transaction?.requestNumber == widget.transaction?.deRequestNumber) ... [
             Text(
               "Container Number: ",
               style: AppTextStyles.subtitle.copyWith(

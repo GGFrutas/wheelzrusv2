@@ -202,7 +202,7 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
   int currentStep = 2; // Assuming Schedule is step 2 (0-based index)
   final bookingNumber = widget.transaction?.bookingRefNumber;
 
-    final allTransactions = ref.read(transactionListProvider);
+    final allTransactions = ref.watch(transactionListProvider);
     print("Schedule All Transaction: $allTransactions");
 
     for (var tx in allTransactions) {
