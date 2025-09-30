@@ -404,7 +404,7 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
                   color: darkerBgColor,
                 ),
               ),
-              if(widget.transaction?.deRequestStatus == "Ongoing" || widget.transaction?.dlRequestStatus == "Ongoing")
+              if(widget.transaction?.plRequestStatus == "Assigned" || widget.transaction?.peRequestStatus == "Assigned")
               Column (
                 mainAxisSize: MainAxisSize.min,
                 children: [

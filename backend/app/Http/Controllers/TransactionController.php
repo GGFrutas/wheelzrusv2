@@ -1403,7 +1403,6 @@ class TransactionController extends Controller
                 "pe_release_by" => $enteredName,
                 "stage_id" => 5,
                 "de_request_status" => $newStatus,
-                "container_number" => $containerNumber
             ];
 
             $bookingRef = $type['booking_reference_no'] ?? null;
@@ -1493,7 +1492,7 @@ class TransactionController extends Controller
                             ]]
                         ],
                     ],
-                    "id" => 103
+                    "id" => 105
                 ];
                 $ffRes = jsonRpcRequest($odooUrl, $searchFF);
                 $ffIds = $ffRes['result'] ?? [];
@@ -1520,7 +1519,7 @@ class TransactionController extends Controller
                                 ]
                             ]
                         ],
-                        "id" => 104
+                        "id" => 106
                     ];
                     $ffUpdateRes = jsonRpcRequest($odooUrl, $updateFFContainer);
                     Log::info("Updated container_number in FF for bookingRef {$bookingRef}, ffIds: " . json_encode($ffIds));
@@ -1543,6 +1542,62 @@ class TransactionController extends Controller
             if($serviceType == 2){
                 $updateField["stage_id"] = 5;
             }
+
+            $bookingRef = $type['booking_reference_no'] ?? null;
+            if ($bookingRef && $containerNumber) {
+                $searchFF = [
+                    "jsonrpc" => "2.0",
+                    "method" => "call",
+                    "params" => [
+                        "service" => "object",
+                        "method" => "execute_kw",
+                        "args" => [
+                            $db,
+                            $uid,
+                            $odooPassword,
+                            "dispatch.manager",
+                            "search",
+                            [[
+                                ["booking_reference_no", '=', $bookingRef],
+                                ["dispatch_type", '=', "ff"]
+                            ]]
+                        ],
+                    ],
+                    "id" => 107
+                ];
+                $ffRes = jsonRpcRequest($odooUrl, $searchFF);
+                $ffIds = $ffRes['result'] ?? [];
+
+                if (!empty($ffIds)) {
+                    // ✅ Update container_number only in ff
+                    $updateFFContainer = [
+                        "jsonrpc" => "2.0",
+                        "method" => "call",
+                        "params" => [
+                            "service" => "object",
+                            "method" => "execute_kw",
+                            "args" => [
+                                $db,
+                                $uid,
+                                $odooPassword,
+                                "dispatch.manager",
+                                "write",
+                                [
+                                    $ffIds,
+                                    [
+                                        "container_number" => $containerNumber
+                                    ]
+                                ]
+                            ]
+                        ],
+                        "id" => 108
+                    ];
+                    $ffUpdateRes = jsonRpcRequest($odooUrl, $updateFFContainer);
+                    Log::info("Updated container_number in FF for bookingRef {$bookingRef}, ffIds: " . json_encode($ffIds));
+                } else {
+                    Log::warning("No FF found for bookingRef {$bookingRef}");
+                }
+            }
         } elseif ($type['dispatch_type'] == "dt" && $type['pe_request_no'] == $requestNumber) {
             Log::info("Updating PE proof and signature for request number: {$requestNumber}");
             $updateField = [
@@ -1550,8 +1605,62 @@ class TransactionController extends Controller
                 "pe_signature" => $signature,
                 "dl_receive_by" => $enteredName,
                 "pe_request_status" => $newStatus,
-                "container_number" => $containerNumber
             ];
+            $bookingRef = $type['booking_reference_no'] ?? null;
+            if ($bookingRef && $containerNumber) {
+                $searchFF = [
+                    "jsonrpc" => "2.0",
+                    "method" => "call",
+                    "params" => [
+                        "service" => "object",
+                        "method" => "execute_kw",
+                        "args" => [
+                            $db,
+                            $uid,
+                            $odooPassword,
+                            "dispatch.manager",
+                            "search",
+                            [[
+                                ["booking_reference_no", '=', $bookingRef],
+                                ["dispatch_type", '=', "ff"]
+                            ]]
+                        ],
+                    ],
+                    "id" => 109
+                ];
+                $ffRes = jsonRpcRequest($odooUrl, $searchFF);
+                $ffIds = $ffRes['result'] ?? [];
+
+                if (!empty($ffIds)) {
+                    // ✅ Update container_number only in ff
+                    $updateFFContainer = [
+                        "jsonrpc" => "2.0",
+                        "method" => "call",
+                        "params" => [
+                            "service" => "object",
+                            "method" => "execute_kw",
+                            "args" => [
+                                $db,
+                                $uid,
+                                $odooPassword,
+                                "dispatch.manager",
+                                "write",
+                                [
+                                    $ffIds,
+                                    [
+                                        "container_number" => $containerNumber
+                                    ]
+                                ]
+                            ]
+                        ],
+                        "id" => 110
+                    ];
+                    $ffUpdateRes = jsonRpcRequest($odooUrl, $updateFFContainer);
+                    Log::info("Updated container_number in FF for bookingRef {$bookingRef}, ffIds: " . json_encode($ffIds));
+                } else {
+                    Log::warning("No FF found for bookingRef {$bookingRef}");
+                }
+            }
         }
       
         Log::info("Requested status update: {$newStatus}");
@@ -1866,6 +1975,7 @@ class TransactionController extends Controller
             'dispatch_type' => $dispatchType,
             'requestNumber' => $request->requestNumber,
             'actualTime' => $actualTime,
+            'enteredContainerNumber' => $containerNumber,
             
             // 'images' => $request->input('images'),
             // 'signature' => $request->input('signature'),
@@ -1891,7 +2001,7 @@ class TransactionController extends Controller
                     "dispatch.manager", 
                     "search_read",
                     [[["id", "=", $transactionId]]],  // Search by Request Number
-                    ["fields" => ["dispatch_type","de_request_no", "pl_request_no", "dl_request_no", "pe_request_no","service_type" ]]
+                    ["fields" => ["dispatch_type","de_request_no", "pl_request_no", "dl_request_no", "pe_request_no","service_type", "booking_reference_no" ]]
                 ]
             ],
             "id" => 1
@@ -1936,6 +2046,61 @@ class TransactionController extends Controller
                 "container_number" => $containerNumber
                 
             ];
+            $bookingRef = $type['booking_reference_no'] ?? null;
+            if ($bookingRef && $containerNumber) {
+                $searchFF = [
+                    "jsonrpc" => "2.0",
+                    "method" => "call",
+                    "params" => [
+                        "service" => "object",
+                        "method" => "execute_kw",
+                        "args" => [
+                            $db,
+                            $uid,
+                            $odooPassword,
+                            "dispatch.manager",
+                            "search",
+                            [[
+                                ["booking_reference_no", '=', $bookingRef],
+                                ["dispatch_type", '=', "ff"]
+                            ]]
+                        ],
+                    ],
+                    "id" => 120
+                ];
+                $ffRes = jsonRpcRequest($odooUrl, $searchFF);
+                $ffIds = $ffRes['result'] ?? [];
+
+                if (!empty($ffIds)) {
+                    // ✅ Update container_number only in ff
+                    $updateFFContainer = [
+                        "jsonrpc" => "2.0",
+                        "method" => "call",
+                        "params" => [
+                            "service" => "object",
+                            "method" => "execute_kw",
+                            "args" => [
+                                $db,
+                                $uid,
+                                $odooPassword,
+                                "dispatch.manager",
+                                "write",
+                                [
+                                    $ffIds,
+                                    [
+                                        "container_number" => $containerNumber
+                                    ]
+                                ]
+                            ]
+                        ],
+                        "id" => 119
+                    ];
+                    $ffUpdateRes = jsonRpcRequest($odooUrl, $updateFFContainer);
+                    Log::info("Updated container_number in FF for bookingRef {$bookingRef}, ffIds: " . json_encode($ffIds));
+                } else {
+                    Log::warning("No FF found for bookingRef {$bookingRef}");
+                }
+            }
         } elseif ($type['dispatch_type'] == "ot" && $type['pl_request_no'] == $requestNumber) {
             Log::info("Updating DL proof and signature for request number: {$requestNumber}");
             $updateField = [
@@ -1947,6 +2112,61 @@ class TransactionController extends Controller
                 // "pl_request_status" => $newStatus,
                 "container_number" => $containerNumber
             ];
+            $bookingRef = $type['booking_reference_no'] ?? null;
+            if ($bookingRef && $containerNumber) {
+                $searchFF = [
+                    "jsonrpc" => "2.0",
+                    "method" => "call",
+                    "params" => [
+                        "service" => "object",
+                        "method" => "execute_kw",
+                        "args" => [
+                            $db,
+                            $uid,
+                            $odooPassword,
+                            "dispatch.manager",
+                            "search",
+                            [[
+                                ["booking_reference_no", '=', $bookingRef],
+                                ["dispatch_type", '=', "ff"]
+                            ]]
+                        ],
+                    ],
+                    "id" => 117
+                ];
+                $ffRes = jsonRpcRequest($odooUrl, $searchFF);
+                $ffIds = $ffRes['result'] ?? [];
+
+                if (!empty($ffIds)) {
+                    // ✅ Update container_number only in ff
+                    $updateFFContainer = [
+                        "jsonrpc" => "2.0",
+                        "method" => "call",
+                        "params" => [
+                            "service" => "object",
+                            "method" => "execute_kw",
+                            "args" => [
+                                $db,
+                                $uid,
+                                $odooPassword,
+                                "dispatch.manager",
+                                "write",
+                                [
+                                    $ffIds,
+                                    [
+                                        "container_number" => $containerNumber
+                                    ]
+                                ]
+                            ]
+                        ],
+                        "id" => 118
+                    ];
+                    $ffUpdateRes = jsonRpcRequest($odooUrl, $updateFFContainer);
+                    Log::info("Updated container_number in FF for bookingRef {$bookingRef}, ffIds: " . json_encode($ffIds));
+                } else {
+                    Log::warning("No FF found for bookingRef {$bookingRef}");
+                }
+            }
         }
 
         if ($type['dispatch_type'] === "dt" && $type['dl_request_no'] === $requestNumber && isset($type['service_type']) && $type['service_type'] == 2) {
@@ -1960,6 +2180,61 @@ class TransactionController extends Controller
                 // "dl_request_status" => $newStatus,
                 "container_number" => $containerNumber
             ];
+            $bookingRef = $type['booking_reference_no'] ?? null;
+            if ($bookingRef && $containerNumber) {
+                $searchFF = [
+                    "jsonrpc" => "2.0",
+                    "method" => "call",
+                    "params" => [
+                        "service" => "object",
+                        "method" => "execute_kw",
+                        "args" => [
+                            $db,
+                            $uid,
+                            $odooPassword,
+                            "dispatch.manager",
+                            "search",
+                            [[
+                                ["booking_reference_no", '=', $bookingRef],
+                                ["dispatch_type", '=', "ff"]
+                            ]]
+                        ],
+                    ],
+                    "id" => 115
+                ];
+                $ffRes = jsonRpcRequest($odooUrl, $searchFF);
+                $ffIds = $ffRes['result'] ?? [];
+
+                if (!empty($ffIds)) {
+                    // ✅ Update container_number only in ff
+                    $updateFFContainer = [
+                        "jsonrpc" => "2.0",
+                        "method" => "call",
+                        "params" => [
+                            "service" => "object",
+                            "method" => "execute_kw",
+                            "args" => [
+                                $db,
+                                $uid,
+                                $odooPassword,
+                                "dispatch.manager",
+                                "write",
+                                [
+                                    $ffIds,
+                                    [
+                                        "container_number" => $containerNumber
+                                    ]
+                                ]
+                            ]
+                        ],
+                        "id" => 116
+                    ];
+                    $ffUpdateRes = jsonRpcRequest($odooUrl, $updateFFContainer);
+                    Log::info("Updated container_number in FF for bookingRef {$bookingRef}, ffIds: " . json_encode($ffIds));
+                } else {
+                    Log::warning("No FF found for bookingRef {$bookingRef}");
+                }
+            }
         } elseif($type['dispatch_type'] === "dt" && $type['dl_request_no'] === $requestNumber) {
              $updateField = [
                 "dl_proof" => $images,
@@ -1969,6 +2244,61 @@ class TransactionController extends Controller
                 // "dl_request_status" => $newStatus,
                 "container_number" => $containerNumber
             ];
+            $bookingRef = $type['booking_reference_no'] ?? null;
+            if ($bookingRef && $containerNumber) {
+                $searchFF = [
+                    "jsonrpc" => "2.0",
+                    "method" => "call",
+                    "params" => [
+                        "service" => "object",
+                        "method" => "execute_kw",
+                        "args" => [
+                            $db,
+                            $uid,
+                            $odooPassword,
+                            "dispatch.manager",
+                            "search",
+                            [[
+                                ["booking_reference_no", '=', $bookingRef],
+                                ["dispatch_type", '=', "ff"]
+                            ]]
+                        ],
+                    ],
+                    "id" => 113
+                ];
+                $ffRes = jsonRpcRequest($odooUrl, $searchFF);
+                $ffIds = $ffRes['result'] ?? [];
+
+                if (!empty($ffIds)) {
+                    // ✅ Update container_number only in ff
+                    $updateFFContainer = [
+                        "jsonrpc" => "2.0",
+                        "method" => "call",
+                        "params" => [
+                            "service" => "object",
+                            "method" => "execute_kw",
+                            "args" => [
+                                $db,
+                                $uid,
+                                $odooPassword,
+                                "dispatch.manager",
+                                "write",
+                                [
+                                    $ffIds,
+                                    [
+                                        "container_number" => $containerNumber
+                                    ]
+                                ]
+                            ]
+                        ],
+                        "id" => 114
+                    ];
+                    $ffUpdateRes = jsonRpcRequest($odooUrl, $updateFFContainer);
+                    Log::info("Updated container_number in FF for bookingRef {$bookingRef}, ffIds: " . json_encode($ffIds));
+                } else {
+                    Log::warning("No FF found for bookingRef {$bookingRef}");
+                }
+            }
         } elseif ($type['dispatch_type'] === "dt" && $type['pe_request_no'] === $requestNumber) {
             Log::info("Updating DE proof and signature for request number: {$requestNumber}");
             $updateField = [
@@ -1980,6 +2310,61 @@ class TransactionController extends Controller
                 // "pe_request_status" => $newStatus,
                 "container_number" => $containerNumber
             ];
+            $bookingRef = $type['booking_reference_no'] ?? null;
+            if ($bookingRef && $containerNumber) {
+                $searchFF = [
+                    "jsonrpc" => "2.0",
+                    "method" => "call",
+                    "params" => [
+                        "service" => "object",
+                        "method" => "execute_kw",
+                        "args" => [
+                            $db,
+                            $uid,
+                            $odooPassword,
+                            "dispatch.manager",
+                            "search",
+                            [[
+                                ["booking_reference_no", '=', $bookingRef],
+                                ["dispatch_type", '=', "ff"]
+                            ]]
+                        ],
+                    ],
+                    "id" => 111
+                ];
+                $ffRes = jsonRpcRequest($odooUrl, $searchFF);
+                $ffIds = $ffRes['result'] ?? [];
+
+                if (!empty($ffIds)) {
+                    // ✅ Update container_number only in ff
+                    $updateFFContainer = [
+                        "jsonrpc" => "2.0",
+                        "method" => "call",
+                        "params" => [
+                            "service" => "object",
+                            "method" => "execute_kw",
+                            "args" => [
+                                $db,
+                                $uid,
+                                $odooPassword,
+                                "dispatch.manager",
+                                "write",
+                                [
+                                    $ffIds,
+                                    [
+                                        "container_number" => $containerNumber
+                                    ]
+                                ]
+                            ]
+                        ],
+                        "id" => 112
+                    ];
+                    $ffUpdateRes = jsonRpcRequest($odooUrl, $updateFFContainer);
+                    Log::info("Updated container_number in FF for bookingRef {$bookingRef}, ffIds: " . json_encode($ffIds));
+                } else {
+                    Log::warning("No FF found for bookingRef {$bookingRef}");
+                }
+            }
         }
 
        

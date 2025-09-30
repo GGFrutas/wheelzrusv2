@@ -255,3 +255,20 @@ final relatedFFProvider = Provider.family<Transaction?, String>((ref, bookingNum
   );
 });
 
+
+final combinedTransactionProvider = FutureProvider<List<Transaction>>((ref) async {
+  final todayTx = await ref.refresh(filteredItemsProvider.future);
+  final allTx = await ref.refresh(allTransactionProvider.future);
+
+  // Combine and deduplicate by bookingRefNumber
+  final combined = [
+    ...todayTx,
+    ...allTx.where((tx) =>
+      !todayTx.any((t) => t.bookingRefNumber == tx.bookingRefNumber))
+  ];
+
+  ref.read(transactionListProvider.notifier).loadTransactions(combined);
+  return combined;
+});
+
+

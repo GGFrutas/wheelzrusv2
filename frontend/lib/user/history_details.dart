@@ -772,7 +772,7 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
                 ),
                 Text(
                 (widget.transaction?.containerNumber?.isNotEmpty ?? false)
-                  ? widget.transaction!.sealNumber!
+                  ? widget.transaction!.containerNumber!
                   : '—',
                   // Use the originPort variable here
                   style: AppTextStyles.body.copyWith(
