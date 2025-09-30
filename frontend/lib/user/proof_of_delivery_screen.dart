@@ -270,7 +270,7 @@ void initState() {
                     _enteredContainerNumber = val;
                   });
                 },
-                enabled: widget.transaction?.deRequestStatus != "Ongoing" && (widget.transaction!.containerNumber?.isNotEmpty ?? false) ,
+                enabled: !(widget.transaction?.deRequestStatus == "Ongoing" && (widget.transaction!.containerNumber?.isNotEmpty ?? false)) ,
                 controller: _containerController,
                 decoration: InputDecoration(
                 border: const OutlineInputBorder(),
