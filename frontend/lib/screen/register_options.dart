@@ -7,10 +7,10 @@ class RegisterOptionsScreen extends StatefulWidget {
   const RegisterOptionsScreen({super.key});
 
   @override
-  _RegisterOptionsScreenState createState() => _RegisterOptionsScreenState();
+  RegisterOptionsScreenState createState() => RegisterOptionsScreenState();
 }
 
-class _RegisterOptionsScreenState extends State<RegisterOptionsScreen> {
+class RegisterOptionsScreenState extends State<RegisterOptionsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(

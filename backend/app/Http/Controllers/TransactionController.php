@@ -23,31 +23,65 @@ function jsonRpcRequest($url, $payload){
             'verify' => false,
             'headers' => [
                 'Content-Type' => 'application/json',
-            ]
+                'Accept-Encoding' => 'gzip, deflate, br'
+            ],
+            'timeout' => 30,
+            'connect_timeout' => 10,
         ]);
         
         $response = $client->post($url, [
-            'body' => json_encode($payload)
+            'body' => json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+
         ]);
 
-        return json_decode($response->getBody(), true );
+        $rawBody = (string) $response->getBody();
 
+        $cleanBody = trim($rawBody);
+        $lastBrace = strrpos($cleanBody, '}');
+        if ($lastBrace !== false) {
+            $cleanBody = substr($cleanBody, 0, $lastBrace + 1);
+        }
+
+        $decoded = json_decode($cleanBody, true);
+
+        if(json_last_error() !== JSON_ERROR_NONE){
+            Log::error('X JSON_RPC Invalid JSON Response', [
+                'url' => $url,
+                'error' => json_last_error_msg(),
+                'raw' => substr($cleanBody, -500),
+            ]);
+            return ['error' => 'Malformed JSON response'];
+        }
+
+        return $decoded;
+
+    } catch (\GuzzleHttp\Exception\RequestException $e) {
+        // ✅ More specific catch for network errors
+        Log::error('X JSON_RPC Network Error', [
+            'url' => $url,
+            'payload' => $payload,
+            'error' => $e->getMessage(),
+            'code' => $e->getCode(),
+        ]);
+        return ['error' => 'Network error'];
     } catch (\Exception $e) {
         Log::error('X JSON_RPC Request Failed', [
             'url' => $url,
             'payload' => $payload,
             'error' => $e->getMessage(),
         ]);
-        return [];
+        return ['error' => 'Unexpected error'];
     }
+
 }
 
 class TransactionController extends Controller
-{
-    protected $url = "https://jralejandria-alpha-dev-yxe.odoo.com";
-    protected $db = 'jralejandria-alpha-dev-yxe1-production-alpha-23252939';
-    // protected $odoo_url = "http://192.168.118.102:8000/odoo/jsonrpc";
-    protected $odoo_url = "https://jralejandria-alpha-dev-yxe.odoo.com/jsonrpc";
+
+{   
+    protected $url = "https://jralejandria-beta-dev-yxe.odoo.com";
+    protected $db = 'jralejandria-beta-dev-yxe-beta-production-24066960';
+    // protected $odoo_url = "http://192.168.76.45:8080/odoo/jsonrpc";
+    protected $odoo_url = "https://jralejandria-beta-dev-yxe.odoo.com/jsonrpc";
 
     private function authenticateDriver(Request $request)
     {
@@ -166,6 +200,210 @@ class TransactionController extends Controller
         ];
     }
 
+    private function processDispatchManagers(array $domain, string $partnerId, bool $filterByDriver = true): array
+    {
+        $odooUrl = "{$this->url}/jsonrpc";
+        $jobUrl = "{$this->url}/job_dispatcher/queue_job";
+        $db = $this->db;
+        $uid = request()->query('uid');
+        $login = request()->header('login');
+        $password = request()->header('password');
+
+        $fields = [
+            "id", "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
+            "dispatch_type", "de_truck_driver_name", "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name",
+            "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", "origin_port_terminal_address", "destination_port_terminal_address", "arrival_date", "delivery_date",
+            "container_number", "seal_number", "booking_reference_no", "origin_forwarder_name", "destination_forwarder_name", "freight_booking_number",
+            "origin_container_location", "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
+            "freight_forwarder_name", "shipper_phone", "consignee_phone", "dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", "pl_truck_plate_no",
+            "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
+            "pickup_date", "departure_date","origin", "destination", "de_rejection_time", "pl_rejection_time", "dl_rejection_time", "pe_rejection_time", "de_completion_time", 
+            "pl_completion_time", "dl_completion_time", "pe_completion_time", "shipper_province","shipper_city","shipper_barangay","shipper_street", 
+            "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime", "service_type", "booking_service", "write_date",
+            "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time", "name", "stage_id", "pe_release_by", "de_release_by","pl_receive_by","dl_receive_by"
+        ];
+
+        $fieldsToString =[
+            "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
+            "dispatch_type", 
+            "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", "origin_port_terminal_address", "destination_port_terminal_address", "arrival_date", "delivery_date",
+            "container_number", "seal_number", "booking_reference_no", "origin_forwarder_name", "destination_forwarder_name", "freight_booking_number",
+            "origin_container_location", "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
+            "freight_forwarder_name", "shipper_phone", "consignee_phone", "dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", "pl_truck_plate_no",
+            "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
+            "pickup_date", "departure_date","origin", "destination","de_rejection_time", "pl_rejection_time", "dl_rejection_time", "pe_rejection_time", "de_completion_time", 
+            "pl_completion_time", "dl_completion_time", "pe_completion_time","shipper_province","shipper_city","shipper_barangay","shipper_street",
+            "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime",  "service_type","booking_service","write_date",
+            "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time","stage_id", "pe_release_by", "de_release_by","pl_receive_by","dl_receive_by"
+        ];
+
+       
+
+        // Step 1: Fetch dispatch.manager records
+        $response = jsonRpcRequest($odooUrl, [
+            'jsonrpc' => '2.0',
+            'method' => 'call',
+            'params' => [
+                'service' => 'object',
+                'method' => 'execute_kw',
+                'args' => [
+                    $db,
+                    $uid,
+                    $password,
+                    'dispatch.manager',
+                    'search_read',
+                    [$domain],
+                    ['fields' => $fields,'limit' => 30]
+                ]
+            ],
+            'id' => rand(1000, 9999)
+        ]);
+
+        $records = $response['result'] ?? [];
+       
+
+        if (empty($records)) {
+            Log::warning("❌ No dispatch.manager records found for driver $partnerId");
+            return [];
+        }
+
+        // Step 2: Filter by driver name
+         $filtered = $records;
+        if ($filterByDriver) {
+            $filtered = array_filter($records, function ($manager) use ($partnerId) {
+                foreach (["de_truck_driver_name", "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name"] as $field) {
+                    if (isset($manager[$field][1]) && $manager[$field][1] === $partnerId) {
+                        return true;
+                    }
+                }
+                return false;
+            });
+            $filtered = array_values($filtered);
+        }
+
+
+        // Step 3: Normalize fields and enrich with history
+        $results = [];
+
+        foreach ($filtered as &$manager) {
+            foreach ($fieldsToString as $field) {
+                $value = $manager[$field] ?? null;
+                $manager[$field] = match (true) {
+                    $value === null, $value === false => "",
+                    is_array($value) && isset($value[1]) => $value[1],
+                    is_bool($value) => $value ? "true" : "false",
+                    default => (string) $value
+                };
+            }
+        }
+        unset($manager);
+
+        foreach($filtered as $manager) {
+            jsonRpcRequest($jobUrl, [
+                'jsonrpc' => '2.0',
+                'method' => 'call',
+                'params' => [
+                    'model' => 'dispatch.manager',
+                    'id' => $manager['id'],
+                    'method' => 'run_laravel_job',
+                ],
+                'id' => rand(1000, 9999)
+            ]);
+        }
+            
+
+        // ✅ Step 3: Fetch ALL milestone histories in one go
+        $dispatchIds = array_column($filtered, 'id');
+        $historyRes = jsonRpcRequest($odooUrl, [
+            'jsonrpc' => '2.0',
+            'method' => 'call',
+            'params' => [
+                'service' => 'object',
+                'method' => 'execute_kw',
+                'args' => [
+                    $db,
+                    $uid,
+                    $password,
+                    'dispatch.milestone.history',
+                    'search_read',
+                    [[['dispatch_id', 'in', $dispatchIds]]],
+                    ['fields' => [
+                        "id", "dispatch_id", "dispatch_type", "fcl_code",
+                        "scheduled_datetime", "actual_datetime", "service_type",
+                    ]]
+                ]
+            ],
+            'id' => rand(1000, 9999)
+        ]);
+
+        $histories = $historyRes['result'] ?? [];
+        // 
+        // ✅ Step 4: Group histories by dispatch_id
+        $historyMap = [];
+        foreach ($histories as $history) {
+            $dispatchId = is_array($history['dispatch_id']) ? $history['dispatch_id'][0] : $history['dispatch_id'];
+            if ($dispatchId !== null) {
+                $historyMap[$dispatchId][] = $history;
+            }
+        }
+
+
+        
+        foreach ($filtered as &$manager) {
+            $manager['history'] = $historyMap[$manager['id']] ?? [];
+
+            $notebookRes = jsonRpcRequest($odooUrl, [
+                'jsonrpc' => '2.0',
+                'method' => 'call',
+                'params' => [
+                    'service' => 'object',
+                    'method' => 'execute_kw',
+                    'args' => [$db, $uid, $password, 'consol.type.notebook', 'search_read',
+                        [['|', ['consol_origin', '=', $manager['id']], ['consol_destination', '=', $manager['id']]]],
+                        ['fields' => ['id', 'consolidation_id']]
+                    ]
+                ],
+                'id' => rand(1000, 9999)
+            ]);
+
+            $conslMasterId = null;
+            foreach ($notebookRes['result'] as $nb) {
+                $raw = $nb['consolidation_id'] ?? null;
+                if (is_array($raw) && isset($raw[0])) {
+                    $conslMasterId = $raw[0];
+                    break; // take the first valid consolidation
+                }
+            }
+
+
+            if ($conslMasterId) {
+                $masterRes = jsonRpcRequest($odooUrl, [
+                    'jsonrpc' => '2.0',
+                    'method' => 'call',
+                    'params' => [
+                        'service' => 'object',
+                        'method' => 'execute_kw',
+                        'args' => [$db, $uid, $password, 'pd.consol.master', 'search_read',
+                            [[['id', '=', $conslMasterId]]],
+                            ['fields' => ['id', 'name', 'consolidated_date']]
+                        ]
+                    ],
+                    'id' => rand(1000, 9999)
+                ]);
+
+                $consolidationData = $masterRes['result'][0] ?? null;
+                if ($consolidationData) {
+                    $consolidationData['consolidated_date'] = is_string($consolidationData['consolidated_date']) ? $consolidationData['consolidated_date'] : '';
+                    $manager['backload_consolidation'] = $consolidationData;
+                }
+            }
+        }
+        unset($manager);
+
+        return $filtered;
+    }
+
+    
    
 
     public function getTodayBooking(Request $request)
@@ -185,166 +423,65 @@ class TransactionController extends Controller
 
         $today = date('Y-m-d');
         $tomorrow = date('Y-m-d', strtotime('+1 day'));
-        // Step 4: Find all dispatch.manager records where driver name matches
-        $dispatchRes =jsonRpcRequest("$odooUrl", [
-            'jsonrpc' => '2.0',
-            'method' => 'call',
-            'params' => [
-                'service' => 'object',
-                'method' => 'execute_kw',
-                'args' => [
-                    $db,
-                    $uid,
-                    $odooPassword,
-                    'dispatch.manager',
-                    'search_read',
-                    [[
-                        "&",  // AND all of the following
-                            ["dispatch_type", "!=", "ff"],
 
-                            "|",  // OR: date range match
-                                "&", 
-                                    [ "arrival_date", ">=", $today ],
-                                    [ "arrival_date", "<=", $tomorrow ],
-                                "&", 
-                                    [ "departure_date", ">=", $today ],
-                                    [ "departure_date", "<=", $tomorrow ],
 
-                            "|", "|", "|",  // OR: driver match
-                                ["de_truck_driver_name", "=", $partnerId],
-                                ["dl_truck_driver_name", "=", $partnerId],
-                                ["pe_truck_driver_name", "=", $partnerId],
-                                ["pl_truck_driver_name", "=", $partnerId],
+         $domain = [
+            "&",  // AND all of the following
+                // ["dispatch_type", "!=", "ff"],
 
-                         
-                         
-                    ]],
+                "|",  // OR: date range match
+                    "&", 
+                        [ "pickup_date", ">=", $today ],
+                        [ "pickup_date", "<=", $tomorrow ],
+                    "&", 
+                        [ "delivery_date", ">=", $today ],
+                        [ "delivery_date", "<=", $tomorrow ],
 
-                    ["fields" => [
-                        "id", "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
-                        "dispatch_type", "de_truck_driver_name", "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name",
-                        "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", "origin_port_terminal_address", "destination_port_terminal_address", "arrival_date", "delivery_date",
-                        "container_number", "seal_number", "booking_reference_no", "origin_forwarder_name", "destination_forwarder_name", "freight_booking_number",
-                        "origin_container_location", "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
-                        "freight_forwarder_name", "shipper_phone", "consignee_phone", "dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", "pl_truck_plate_no",
-                        "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
-                        "pickup_date", "departure_date","origin", "destination", "de_rejection_time", "pl_rejection_time", "dl_rejection_time", "pe_rejection_time", "de_completion_time", 
-                        "pl_completion_time", "dl_completion_time", "pe_completion_time", "shipper_province","shipper_city","shipper_barangay","shipper_street", 
-                        "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime", "service_type", "booking_service",
-                        "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time", "name", "stage_id"
-                    ]],
-                ]
-            ],
-            'id' => 4
-        ]);
-
-        $dispatchManagers = $dispatchRes['result'] ?? [];
-
-        if (empty($dispatchManagers)) {
-            Log::warning("❌ No dispatch.manager records found for driver $partnerName");
-            // return response()->json(['success' => false, 'message' => 'No dispatch manager records found'], 404);
-        }
-
-        $filteredManagers = array_filter($dispatchManagers, function ($manager) use ($partnerName) {
-            foreach (["de_truck_driver_name", "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name"] as $field) {
-                if (
-                    isset($manager[$field][1]) && $manager[$field][1] == $partnerName
-                ) {
-                    return true;
-                }
-            }
-            return false;
-        });
-
-        $filteredManagers = array_values($filteredManagers);
-
-        // Step 5: Queue a job for each dispatch.manager record
-        $fieldsToString = [
-            "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
-            "dispatch_type", 
-            "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", "origin_port_terminal_address", "destination_port_terminal_address", "arrival_date", "delivery_date",
-            "container_number", "seal_number", "booking_reference_no", "origin_forwarder_name", "destination_forwarder_name", "freight_booking_number",
-            "origin_container_location", "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
-            "freight_forwarder_name", "shipper_phone", "consignee_phone", "dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", "pl_truck_plate_no",
-            "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
-            "pickup_date", "departure_date","origin", "destination","de_rejection_time", "pl_rejection_time", "dl_rejection_time", "pe_rejection_time", "de_completion_time", 
-            "pl_completion_time", "dl_completion_time", "pe_completion_time","shipper_province","shipper_city","shipper_barangay","shipper_street",
-            "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime",  "service_type","booking_service",
-            "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time","stage_id"
+                "|", "|", "|",  // OR: driver match
+                    ["de_truck_driver_name", "=", $partnerId],
+                    ["dl_truck_driver_name", "=", $partnerId],
+                    ["pe_truck_driver_name", "=", $partnerId],
+                    ["pl_truck_driver_name", "=", $partnerId],
+                
         ];
 
-        $jobResponses = [];
+        
+        $driverData = $this->processDispatchManagers($domain, $partnerName);
 
-        foreach ($filteredManagers  as $manager) {
+        // 🔹 Step 2: collect booking refs from driverData
+        $bookingRefs = collect($driverData)
+            ->pluck('booking_reference_no') // ⚠️ ensure this matches Odoo field
+            ->filter()
+            ->unique()
+            ->toArray();
 
-            foreach ($fieldsToString as $field){
-                if (!isset($manager[$field]) || $manager[$field] === null || $manager[$field] === false) {
-                    $manager[$field] = "";
-                } elseif (is_array($manager[$field]) && count($manager[$field]) > 1 && is_string($manager[$field][1])) {
-                    $manager[$field] = $manager[$field][1]; // ✅ convert [id, name] to name
-                } elseif (is_bool($manager[$field])) {
-                    $manager[$field] = $manager[$field] ? "true" : "false";
-                } else {
-                    $manager[$field] = (string) $manager[$field];
-                }
-            }
+        \Log::info("Booking Refs collected:", $bookingRefs);
 
-            $jobRes = jsonRpcRequest("$url/job_dispatcher/queue_job", [
-                'jsonrpc' => '2.0',
-                'method' => 'call',
-                'params' => [
-                    'model' => 'dispatch.manager',
-                    'id' => $manager['id'],
-                    'method' => 'run_laravel_job',
-                ],
-                'id' => 5
-            ]);
+        // 🔹 Step 3: fetch FF by those booking refs
+        $ffData = [];
+        if (!empty($bookingRefs)) {
+            $ffDomain = [
+                ["dispatch_type", "ilike", "ff"], // case-insensitive match
+                ["booking_reference_no", "in", array_values($bookingRefs)],
+            ];
+            // \Log::info("FF Domain:", $ffDomain);
 
-              $dispatchId = $manager['id'];
-
-            
-
-            $historyRes = jsonRpcRequest("$odooUrl", [
-                'jsonrpc' => '2.0',
-                'method' => 'call',
-                'params' => [
-                    'service' => 'object',
-                    'method' => 'execute_kw',
-                    'args' => [
-                        $db,
-                        $uid,
-                        $odooPassword,
-                        'dispatch.milestone.history',
-                        'search_read',
-                        [[[
-
-                            'dispatch_id','=', $dispatchId
-                            
-                        ]]],
-                        ["fields" => [
-                            "id", "dispatch_id", "dispatch_type", "fcl_code", "scheduled_datetime","service_type"
-                        ]],
-                    ]
-                ],
-                'id' => 6
-            ]);
-
-            $dispatchHistory = is_array($historyRes['result']) ? $historyRes['result'] : [];
-            $manager['history'] = $dispatchHistory;
-
-
-            
-
-            $jobResponses[] = $manager;
+            $ffData = $this->processDispatchManagers($ffDomain, $partnerName, false);
+            // \Log::info("FF Data fetched:", $ffData);
         }
+
+        // 🔹 Step 4: merge driver + FF results
+        $data = array_merge($driverData, $ffData);
+
 
         // ✅ Final return
         return response()->json([
             'data' => [
-                'transactions' => $jobResponses
+                'transactions' => $data
             ]
         ]);
     }
+
     public function getOngoingBooking(Request $request)
     {
         $user = $this->authenticateDriver($request);
@@ -366,171 +503,32 @@ class TransactionController extends Controller
         $today = date('Y-m-d');
         $tomorrow = date('Y-m-d', strtotime('+1 day'));
         // Step 4: Find all dispatch.manager records where driver name matches
-        $dispatchRes =jsonRpcRequest("$odooUrl", [
-            'jsonrpc' => '2.0',
-            'method' => 'call',
-            'params' => [
-                'service' => 'object',
-                'method' => 'execute_kw',
-                'args' => [
-                    $db,
-                    $uid,
-                    $odooPassword,
-                    'dispatch.manager',
-                    'search_read',
-                    [[
-                        "&",  // AND all of the following
-                            "|", "|", "|", // OR: status is "Ongoing" in any leg
-                                ["de_request_status", "=", "Ongoing"],
-                                ["pl_request_status", "=", "Ongoing"],
-                                ["dl_request_status", "=", "Ongoing"],
-                                ["pe_request_status", "=", "Ongoing"],
+        $domain =[
+            "&",  // AND all of the following
+                "|", "|", "|", // OR: status is "Ongoing" in any leg
+                    ["de_request_status", "=", "Ongoing"],
+                    ["pl_request_status", "=", "Ongoing"],
+                    ["dl_request_status", "=", "Ongoing"],
+                    ["pe_request_status", "=", "Ongoing"],
 
-                            "|", "|", "|",  // OR: driver match
-                                ["de_truck_driver_name", "=", $partnerId],
-                                ["dl_truck_driver_name", "=", $partnerId],
-                                ["pe_truck_driver_name", "=", $partnerId],
-                                ["pl_truck_driver_name", "=", $partnerId]
-                    ]],
-
-                    ["fields" => [
-                        "id", "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
-                        "dispatch_type", "de_truck_driver_name", "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name",
-                        "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", "origin_port_terminal_address", "destination_port_terminal_address", "arrival_date", "delivery_date",
-                        "container_number", "seal_number", "booking_reference_no", "origin_forwarder_name", "destination_forwarder_name", "freight_booking_number",
-                        "origin_container_location", "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
-                        "freight_forwarder_name", "shipper_phone", "consignee_phone", "dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", "pl_truck_plate_no",
-                        "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
-                        "pickup_date", "departure_date","origin", "destination", "de_rejection_time", "pl_rejection_time", "dl_rejection_time", "pe_rejection_time", "de_completion_time", 
-                        "pl_completion_time", "dl_completion_time", "pe_completion_time", "shipper_province","shipper_city","shipper_barangay","shipper_street", 
-                        "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime", "service_type", "booking_service",
-                        "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time", "name"
-                    ]],
-                ]
-            ],
-            'id' => 4
-        ]);
-
-        $dispatchManagers = $dispatchRes['result'] ?? [];
-
-        if (empty($dispatchManagers)) {
-            Log::warning("❌ No dispatch.manager records found for driver $partnerName");
-            // return response()->json(['success' => false, 'message' => 'No dispatch manager records found'], 404);
-        }
-
-        $filteredManagers = array_filter($dispatchManagers, function ($manager) use ($partnerName) {
-            foreach (["de_truck_driver_name", "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name"] as $field) {
-                if (
-                    isset($manager[$field][1]) && $manager[$field][1] == $partnerName
-                ) {
-                    return true;
-                }
-            }
-            return false;
-        });
-
-        $filteredManagers = array_values($filteredManagers);
-
-        // Step 5: Queue a job for each dispatch.manager record
-        $fieldsToString = [
-            "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
-            "dispatch_type", 
-            "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", "origin_port_terminal_address", "destination_port_terminal_address", "arrival_date", "delivery_date",
-            "container_number", "seal_number", "booking_reference_no", "origin_forwarder_name", "destination_forwarder_name", "freight_booking_number",
-            "origin_container_location", "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
-            "freight_forwarder_name", "shipper_phone", "consignee_phone", "dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", "pl_truck_plate_no",
-            "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
-            "pickup_date", "departure_date","origin", "destination","de_rejection_time", "pl_rejection_time", "dl_rejection_time", "pe_rejection_time", "de_completion_time", 
-            "pl_completion_time", "dl_completion_time", "pe_completion_time","shipper_province","shipper_city","shipper_barangay","shipper_street",
-            "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime",  "service_type","booking_service",
-            "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time"
+                "|", "|", "|",  // OR: driver match
+                    ["de_truck_driver_name", "=", $partnerId],
+                    ["dl_truck_driver_name", "=", $partnerId],
+                    ["pe_truck_driver_name", "=", $partnerId],
+                    ["pl_truck_driver_name", "=", $partnerId]
         ];
 
-        $jobResponses = [];
+        $data = $this->processDispatchManagers($domain,  $partnerName);
 
-        foreach ($filteredManagers  as $manager) {
-
-            foreach ($fieldsToString as $field){
-                if (!isset($manager[$field]) || $manager[$field] === null || $manager[$field] === false) {
-                    $manager[$field] = "";
-                } elseif (is_array($manager[$field]) && count($manager[$field]) > 1 && is_string($manager[$field][1])) {
-                    $manager[$field] = $manager[$field][1]; // ✅ convert [id, name] to name
-                } elseif (is_bool($manager[$field])) {
-                    $manager[$field] = $manager[$field] ? "true" : "false";
-                } else {
-                    $manager[$field] = (string) $manager[$field];
-                }
-            }
-
-            $jobRes = jsonRpcRequest("$url/job_dispatcher/queue_job", [
-                'jsonrpc' => '2.0',
-                'method' => 'call',
-                'params' => [
-                    'model' => 'dispatch.manager',
-                    'id' => $manager['id'],
-                    'method' => 'run_laravel_job',
-                ],
-                'id' => 5
-            ]);
-
-              $dispatchId = $manager['id'];
-
-            
-
-            $historyRes = jsonRpcRequest("$odooUrl", [
-                'jsonrpc' => '2.0',
-                'method' => 'call',
-                'params' => [
-                    'service' => 'object',
-                    'method' => 'execute_kw',
-                    'args' => [
-                        $db,
-                        $uid,
-                        $odooPassword,
-                        'dispatch.milestone.history',
-                        'search_read',
-                        [[[
-
-                            'dispatch_id','=', $dispatchId
-                            
-                        ]]],
-                        ["fields" => [
-                            "id", "dispatch_id", "dispatch_type", "fcl_code", "scheduled_datetime","service_type"
-                        ]],
-                    ]
-                ],
-                'id' => 6
-            ]);
-
-            $dispatchHistory = is_array($historyRes['result']) ? $historyRes['result'] : [];
-            $manager['history'] = $dispatchHistory;
-
-
-            
-
-            $jobResponses[] = $manager;
-
-            
-        }
-        $totalCount = count($jobResponses);
-        $totalPages = ceil($totalCount / $limit);
-        $hasMore = $page < $totalPages;
-
-        $pageResponse = array_slice($jobResponses, $offset, $limit);
 
         // ✅ Final return
         return response()->json([
             'data' => [
-                'transactions' => $jobResponses,
-                'pagination' => [
-                    'current_page' => $page,
-                    'per_page' => $limit,
-                    'total_count' => $totalCount,
-                    'total_pages' => ceil($totalCount / $limit),
-                    'has_more' => ($offset + $limit) < $totalCount
-                ]
+                'transactions' => $data
             ]
         ]);
+
+        
     }
 
     public function getHistoryBooking(Request $request)
@@ -538,273 +536,66 @@ class TransactionController extends Controller
         $url = $this->url;
         $db = $this->db;
       
-        $uid = $request->query('uid') ;
-        $login = $request->header('login'); 
+        $user = $this->authenticateDriver($request);
+        if(!is_array($user)) return $user;
+
+        
+        $odooUrl = $this->odoo_url;  
+
+        $uid = $user['uid'];
         $odooPassword = $request->header('password');
-        Log::info('🔐 Login request', [
-            'uid' => $request->query('uid'),
-            'headers' => [
-                'login' => $request->header('login'),
-                'password' => $request->header('password'), // ⚠️ don't log in production
-            ],
-            'body' => $request->all(), // This shows form or JSON body content
-        ]);
-        
-        Log::info("Login is {$login}, UID is {$uid}, Password is {$odooPassword}");
-        
-        if (!$uid) {
-            return response()->json(['success' => false, 'message' => 'UID is required'], 400);
-        }
-
-        $odooUrl = "{$this->url}/jsonrpc"; 
-       
-        
-        $response = jsonRpcRequest("$odooUrl", [
-            'jsonrpc' => '2.0',
-            'method' => 'call',
-            'params' => [
-                'service' => 'common',
-                'method' => 'login',
-                'args' => [$db, $login, $odooPassword],
-            ],
-            'id' => 1
-        ]);
-      
-
-        if (!isset($response['result']) || !is_numeric($response['result'])) {
-            Log::error('❌ Auth failed', [
-                'login' => $login,
-                'db' => $db,
-                'response' => $response
-            ]);
-            return response()->json(['success' => false, 'message' => 'Login failed'], 403);
-        }
-
-      
-        $uid = $response['result'];
-
-        // Step 2: Get res.users to find partner_id
-        $userRes = jsonRpcRequest("$odooUrl", [
-            'jsonrpc' => '2.0',
-            'method' => 'call',
-            'params' => [
-                'service' => 'object',
-                'method' => 'execute_kw',
-                'args' => [
-                    $db,
-                    $uid,
-                    $odooPassword,
-                    'res.users',
-                    'search_read',
-                    [[['id', '=', $uid]]],
-                    ['fields' => ['partner_id', 'login']]
-                ]
-            ],
-            'id' => 2
-        ]);
-
-        $userData = $userRes['result'][0] ?? null;
-        if (!$userData || !isset($userData['partner_id'][0])) {
-            Log::error("❌ No partner_id for user $uid");
-            return response()->json(['success' => false, 'message' => 'No partner found'], 404);
-        }
-
-        $partnerId = $userData['partner_id'][0];
-        $partnerName = $userData['partner_id'][1] ?? '';
-        $user = [
-            'id' => $uid,
-            'login' => $login
-        ];
-
-        // Step 3: Get res.partner to check driver_access
-        $partnerRes = jsonRpcRequest("$odooUrl", [
-            'jsonrpc' => '2.0',
-            'method' => 'call',
-            'params' => [
-                'service' => 'object',
-                'method' => 'execute_kw',
-                'args' => [
-                    $db,
-                    $uid,
-                    $odooPassword,
-                    'res.partner',
-                    'search_read',
-                    [[['id', '=', $partnerId]]],
-                    ['fields' => ['name', 'driver_access']]
-                ]
-            ],
-            'id' => 3
-        ]);
-
-        $isDriver = $partnerRes['result'][0]['driver_access'] ?? false;
-        if (!$isDriver) {
-            Log::warning("❌ Partner $partnerId is not a driver");
-            return response()->json(['success' => false, 'message' => 'Not a driver'], 403);
-        }
+        $partnerId = $user['partner_id'];
+        $partnerName = $user['partner_name'];
 
         $today = date('Y-m-d');
         $tomorrow = date('Y-m-d', strtotime('+1 day'));
-        // Step 4: Find all dispatch.manager records where driver name matches
-        $dispatchRes =jsonRpcRequest("$odooUrl", [
-            'jsonrpc' => '2.0',
-            'method' => 'call',
-            'params' => [
-                'service' => 'object',
-                'method' => 'execute_kw',
-                'args' => [
-                    $db,
-                    $uid,
-                    $odooPassword,
-                    'dispatch.manager',
-                    'search_read',
-                    [[
-                        "&",  // AND all of the following
-                            // Grouped ORs for Completed or Rejected
-                         "|",
-                            // Group 1: Completed statuses
-                            "|", 
-                                ["de_request_status", "=", "Completed"],
-                                "|",
-                                    ["pl_request_status", "=", "Completed"],
-                                    "|",
-                                        ["dl_request_status", "=", "Completed"],
-                                        ["pe_request_status", "=", "Completed"],
+        
 
-                            // Group 2: Rejected statuses
-                            "|", ["stage_id", "=", 6], ["stage_id", "=", 7],
+        $domain = [
+            "&",  // AND all of the following
+                // Grouped ORs for Completed or Rejected
+                "|",
+                // Group 1: Completed statuses
+                "|", 
+                    ["de_request_status", "=", "Completed"],
+                    "|",
+                        ["pl_request_status", "=", "Completed"],
+                        "|",
+                            ["dl_request_status", "=", "Completed"],
+                            ["pe_request_status", "=", "Completed"],
 
-                            "|", "|", "|",  // OR: driver match
-                                ["de_truck_driver_name", "=", $partnerId],
-                                ["dl_truck_driver_name", "=", $partnerId],
-                                ["pe_truck_driver_name", "=", $partnerId],
-                                ["pl_truck_driver_name", "=", $partnerId]
-                    ]],
+                "|",
+                    // Group 1: Completed statuses
+                    "|", 
+                        ["de_request_status", "=", "Backload"],
+                        "|",
+                            ["pl_request_status", "=", "Backload"],
+                            "|",
+                                ["dl_request_status", "=", "Backload"],
+                                ["pe_request_status", "=", "Backload"],
 
-                    ["fields" => [
-                        "id", "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
-                        "dispatch_type", "de_truck_driver_name", "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name",
-                        "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", "origin_port_terminal_address", "destination_port_terminal_address", "arrival_date", "delivery_date",
-                        "container_number", "seal_number", "booking_reference_no", "origin_forwarder_name", "destination_forwarder_name", "freight_booking_number",
-                        "origin_container_location", "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
-                        "freight_forwarder_name", "shipper_phone", "consignee_phone", "dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", "pl_truck_plate_no",
-                        "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
-                        "pickup_date", "departure_date","origin", "destination", "de_rejection_time", "pl_rejection_time", "dl_rejection_time", "pe_rejection_time", "de_completion_time", 
-                        "pl_completion_time", "dl_completion_time", "pe_completion_time", "shipper_province","shipper_city","shipper_barangay","shipper_street", 
-                        "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime", "service_type", "booking_service",
-                        "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time", "stage_id", "write_date", "name", "pe_release_by", "de_release_by",
-                        "dl_receive_by", "pl_receive_by"
-                    ]],
-                ]
-            ],
-            'id' => 4
-        ]);
+                // Group 2: Rejected statuses
+                "|", ["stage_id", "=", 6], ["stage_id", "=", 7],
 
-        $dispatchManagers = $dispatchRes['result'] ?? [];
-
-        if (empty($dispatchManagers)) {
-            Log::warning("❌ No dispatch.manager records found for driver $partnerName");
-            // return response()->json(['success' => false, 'message' => 'No dispatch manager records found'], 404);
-        }
-
-        $filteredManagers = array_filter($dispatchManagers, function ($manager) use ($partnerName) {
-            foreach (["de_truck_driver_name", "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name"] as $field) {
-                if (
-                    isset($manager[$field][1]) && $manager[$field][1] == $partnerName
-                ) {
-                    return true;
-                }
-            }
-            return false;
-        });
-
-        $filteredManagers = array_values($filteredManagers);
-
-        // Step 5: Queue a job for each dispatch.manager record
-        $fieldsToString = [
-            "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
-            "dispatch_type", 
-            "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", "origin_port_terminal_address", "destination_port_terminal_address", "arrival_date", "delivery_date",
-            "container_number", "seal_number", "booking_reference_no", "origin_forwarder_name", "destination_forwarder_name", "freight_booking_number",
-            "origin_container_location", "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
-            "freight_forwarder_name", "shipper_phone", "consignee_phone", "dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", "pl_truck_plate_no",
-            "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
-            "pickup_date", "departure_date","origin", "destination","de_rejection_time", "pl_rejection_time", "dl_rejection_time", "pe_rejection_time", "de_completion_time", 
-            "pl_completion_time", "dl_completion_time", "pe_completion_time","shipper_province","shipper_city","shipper_barangay","shipper_street",
-            "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime",  "service_type","booking_service",
-            "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time","stage_id", "write_date",
+                "|", "|", "|",  // OR: driver match
+                    ["de_truck_driver_name", "=", $partnerId],
+                    ["dl_truck_driver_name", "=", $partnerId],
+                    ["pe_truck_driver_name", "=", $partnerId],
+                    ["pl_truck_driver_name", "=", $partnerId]
         ];
 
-        $jobResponses = [];
+        
+        $data = $this->processDispatchManagers($domain, $partnerName);
 
-        foreach ($filteredManagers  as $manager) {
-
-            foreach ($fieldsToString as $field){
-                if (!isset($manager[$field]) || $manager[$field] === null || $manager[$field] === false) {
-                    $manager[$field] = "";
-                } elseif (is_array($manager[$field]) && count($manager[$field]) > 1 && is_string($manager[$field][1])) {
-                    $manager[$field] = $manager[$field][1]; // ✅ convert [id, name] to name
-                } elseif (is_bool($manager[$field])) {
-                    $manager[$field] = $manager[$field] ? "true" : "false";
-                } else {
-                    $manager[$field] = (string) $manager[$field];
-                }
-            }
-
-            $jobRes = jsonRpcRequest("$url/job_dispatcher/queue_job", [
-                'jsonrpc' => '2.0',
-                'method' => 'call',
-                'params' => [
-                    'model' => 'dispatch.manager',
-                    'id' => $manager['id'],
-                    'method' => 'run_laravel_job',
-                ],
-                'id' => 5
-            ]);
-
-              $dispatchId = $manager['id'];
-
-            
-
-            $historyRes = jsonRpcRequest("$odooUrl", [
-                'jsonrpc' => '2.0',
-                'method' => 'call',
-                'params' => [
-                    'service' => 'object',
-                    'method' => 'execute_kw',
-                    'args' => [
-                        $db,
-                        $uid,
-                        $odooPassword,
-                        'dispatch.milestone.history',
-                        'search_read',
-                        [[[
-
-                            'dispatch_id','=', $dispatchId
-                            
-                        ]]],
-                        ["fields" => [
-                            "id", "dispatch_id", "dispatch_type", "fcl_code", "scheduled_datetime","actual_datetime","service_type"
-                        ]],
-                    ]
-                ],
-                'id' => 6
-            ]);
-
-            $dispatchHistory = is_array($historyRes['result']) ? $historyRes['result'] : [];
-            $manager['history'] = $dispatchHistory;
-
-
-            
-
-            $jobResponses[] = $manager;
-        }
 
         // ✅ Final return
         return response()->json([
             'data' => [
-                'transactions' => $jobResponses
+                'transactions' => $data
             ]
         ]);
+        
+
     }
 
     public function getAllHistory(Request $request)
@@ -812,274 +603,61 @@ class TransactionController extends Controller
         $url = $this->url;
         $db = $this->db;
       
-        $uid = $request->query('uid') ;
-        $login = $request->header('login'); 
+        $user = $this->authenticateDriver($request);
+        if(!is_array($user)) return $user;
+
+        $odooUrl = $this->odoo_url;  
+
+        $uid = $user['uid'];
         $odooPassword = $request->header('password');
-        Log::info('🔐 Login request', [
-            'uid' => $request->query('uid'),
-            'headers' => [
-                'login' => $request->header('login'),
-                'password' => $request->header('password'), // ⚠️ don't log in production
-            ],
-            'body' => $request->all(), // This shows form or JSON body content
-        ]);
-        
-        Log::info("Login is {$login}, UID is {$uid}, Password is {$odooPassword}");
-        
-        if (!$uid) {
-            return response()->json(['success' => false, 'message' => 'UID is required'], 400);
-        }
+        $partnerId = $user['partner_id'];
+        $partnerName = $user['partner_name'];
 
-        $odooUrl = "{$this->url}/jsonrpc"; 
-       
-        
-        $response = jsonRpcRequest("$odooUrl", [
-            'jsonrpc' => '2.0',
-            'method' => 'call',
-            'params' => [
-                'service' => 'common',
-                'method' => 'login',
-                'args' => [$db, $login, $odooPassword],
-            ],
-            'id' => 1
-        ]);
-      
-
-        if (!isset($response['result']) || !is_numeric($response['result'])) {
-            Log::error('❌ Auth failed', [
-                'login' => $login,
-                'db' => $db,
-                'response' => $response
-            ]);
-            return response()->json(['success' => false, 'message' => 'Login failed'], 403);
-        }
-
-      
-        $uid = $response['result'];
-
-        // Step 2: Get res.users to find partner_id
-        $userRes = jsonRpcRequest("$odooUrl", [
-            'jsonrpc' => '2.0',
-            'method' => 'call',
-            'params' => [
-                'service' => 'object',
-                'method' => 'execute_kw',
-                'args' => [
-                    $db,
-                    $uid,
-                    $odooPassword,
-                    'res.users',
-                    'search_read',
-                    [[['id', '=', $uid]]],
-                    ['fields' => ['partner_id', 'login']]
-                ]
-            ],
-            'id' => 2
-        ]);
-
-        $userData = $userRes['result'][0] ?? null;
-        if (!$userData || !isset($userData['partner_id'][0])) {
-            Log::error("❌ No partner_id for user $uid");
-            return response()->json(['success' => false, 'message' => 'No partner found'], 404);
-        }
-
-        $partnerId = $userData['partner_id'][0];
-        $partnerName = $userData['partner_id'][1] ?? '';
-        $user = [
-            'id' => $uid,
-            'login' => $login
-        ];
-
-        // Step 3: Get res.partner to check driver_access
-        $partnerRes = jsonRpcRequest("$odooUrl", [
-            'jsonrpc' => '2.0',
-            'method' => 'call',
-            'params' => [
-                'service' => 'object',
-                'method' => 'execute_kw',
-                'args' => [
-                    $db,
-                    $uid,
-                    $odooPassword,
-                    'res.partner',
-                    'search_read',
-                    [[['id', '=', $partnerId]]],
-                    ['fields' => ['name', 'driver_access']]
-                ]
-            ],
-            'id' => 3
-        ]);
-
-        $isDriver = $partnerRes['result'][0]['driver_access'] ?? false;
-        if (!$isDriver) {
-            Log::warning("❌ Partner $partnerId is not a driver");
-            return response()->json(['success' => false, 'message' => 'Not a driver'], 403);
-        }
 
         $today = date('Y-m-d');
         $tomorrow = date('Y-m-d', strtotime('+1 day'));
-        // Step 4: Find all dispatch.manager records where driver name matches
-        $dispatchRes =jsonRpcRequest("$odooUrl", [
-            'jsonrpc' => '2.0',
-            'method' => 'call',
-            'params' => [
-                'service' => 'object',
-                'method' => 'execute_kw',
-                'args' => [
-                    $db,
-                    $uid,
-                    $odooPassword,
-                    'dispatch.manager',
-                    'search_read',
-                    [[
-                        "&",  // AND all of the following
-                            // Grouped ORs for Completed or Rejected
-                         "|",
-                            // Group 1: Completed statuses
-                            "|", 
-                                ["de_request_status", "=", "Completed"],
+     
+         $domain = [
+            "&",  // AND all of the following
+                // Grouped ORs for Completed or Rejected
+                "|",
+                // Group 1: Completed statuses
+                "|", 
+                    ["de_request_status", "=", "Completed"],
+                    "|",
+                        ["pl_request_status", "=", "Completed"],
+                        "|",
+                            ["dl_request_status", "=", "Completed"],
+                            ["pe_request_status", "=", "Completed"],
+
+                "|",
+                        // Group 1: Completed statuses
+                        "|", 
+                            ["de_request_status", "=", "Backload"],
+                            "|",
+                                ["pl_request_status", "=", "Backload"],
                                 "|",
-                                    ["pl_request_status", "=", "Completed"],
-                                    "|",
-                                        ["dl_request_status", "=", "Completed"],
-                                        ["pe_request_status", "=", "Completed"],
+                                    ["dl_request_status", "=", "Backload"],
+                                ["pe_request_status", "=", "Backload"],
 
-                            // Group 2: Rejected statuses
-                            "|", ["stage_id", "=", 6], ["stage_id", "=", 7],
+                // Group 2: Rejected statuses
+                "|", ["stage_id", "=", 6], ["stage_id", "=", 7],
 
-                            "|", "|", "|",  // OR: driver match
-                                ["de_truck_driver_name", "=", $partnerId],
-                                ["dl_truck_driver_name", "=", $partnerId],
-                                ["pe_truck_driver_name", "=", $partnerId],
-                                ["pl_truck_driver_name", "=", $partnerId]
-                    ]],
-
-                    ["fields" => [
-                        "id", "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
-                        "dispatch_type", "de_truck_driver_name", "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name",
-                        "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", "origin_port_terminal_address", "destination_port_terminal_address", "arrival_date", "delivery_date",
-                        "container_number", "seal_number", "booking_reference_no", "origin_forwarder_name", "destination_forwarder_name", "freight_booking_number",
-                        "origin_container_location", "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
-                        "freight_forwarder_name", "shipper_phone", "consignee_phone", "dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", "pl_truck_plate_no",
-                        "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
-                        "pickup_date", "departure_date","origin", "destination", "de_rejection_time", "pl_rejection_time", "dl_rejection_time", "pe_rejection_time", "de_completion_time", 
-                        "pl_completion_time", "dl_completion_time", "pe_completion_time", "shipper_province","shipper_city","shipper_barangay","shipper_street", 
-                        "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime", "service_type", "booking_service",
-                        "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time", "stage_id", "write_date", "name", "pe_release_by", "de_release_by",
-                        "dl_receive_by", "pl_receive_by"
-
-
-                    ]],
-                ]
-            ],
-            'id' => 4
-        ]);
-
-        $dispatchManagers = $dispatchRes['result'] ?? [];
-
-        if (empty($dispatchManagers)) {
-            Log::warning("❌ No dispatch.manager records found for driver $partnerName");
-            // return response()->json(['success' => false, 'message' => 'No dispatch manager records found'], 404);
-        }
-
-        $filteredManagers = array_filter($dispatchManagers, function ($manager) use ($partnerName) {
-            foreach (["de_truck_driver_name", "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name"] as $field) {
-                if (
-                    isset($manager[$field][1]) && $manager[$field][1] == $partnerName
-                ) {
-                    return true;
-                }
-            }
-            return false;
-        });
-
-        $filteredManagers = array_values($filteredManagers);
-
-        // Step 5: Queue a job for each dispatch.manager record
-        $fieldsToString = [
-            "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
-            "dispatch_type", 
-            "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", "origin_port_terminal_address", "destination_port_terminal_address", "arrival_date", "delivery_date",
-            "container_number", "seal_number", "booking_reference_no", "origin_forwarder_name", "destination_forwarder_name", "freight_booking_number",
-            "origin_container_location", "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
-            "freight_forwarder_name", "shipper_phone", "consignee_phone", "dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", "pl_truck_plate_no",
-            "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
-            "pickup_date", "departure_date","origin", "destination","de_rejection_time", "pl_rejection_time", "dl_rejection_time", "pe_rejection_time", "de_completion_time", 
-            "pl_completion_time", "dl_completion_time", "pe_completion_time","shipper_province","shipper_city","shipper_barangay","shipper_street",
-            "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime",  "service_type","booking_service",
-            "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time","stage_id", "write_date", "pe_release_by", "de_release_by",
-                        "dl_receive_by", "pl_receive_by"
+                "|", "|", "|",  // OR: driver match
+                    ["de_truck_driver_name", "=", $partnerId],
+                    ["dl_truck_driver_name", "=", $partnerId],
+                    ["pe_truck_driver_name", "=", $partnerId],
+                    ["pl_truck_driver_name", "=", $partnerId]
         ];
 
-        $jobResponses = [];
+        
+        $data = $this->processDispatchManagers($domain, $partnerName);
 
-        foreach ($filteredManagers  as $manager) {
-
-            foreach ($fieldsToString as $field){
-                if (!isset($manager[$field]) || $manager[$field] === null || $manager[$field] === false) {
-                    $manager[$field] = "";
-                } elseif (is_array($manager[$field]) && count($manager[$field]) > 1 && is_string($manager[$field][1])) {
-                    $manager[$field] = $manager[$field][1]; // ✅ convert [id, name] to name
-                } elseif (is_bool($manager[$field])) {
-                    $manager[$field] = $manager[$field] ? "true" : "false";
-                } else {
-                    $manager[$field] = (string) $manager[$field];
-                }
-            }
-
-            $jobRes = jsonRpcRequest("$url/job_dispatcher/queue_job", [
-                'jsonrpc' => '2.0',
-                'method' => 'call',
-                'params' => [
-                    'model' => 'dispatch.manager',
-                    'id' => $manager['id'],
-                    'method' => 'run_laravel_job',
-                ],
-                'id' => 5
-            ]);
-
-              $dispatchId = $manager['id'];
-
-            
-
-            $historyRes = jsonRpcRequest("$odooUrl", [
-                'jsonrpc' => '2.0',
-                'method' => 'call',
-                'params' => [
-                    'service' => 'object',
-                    'method' => 'execute_kw',
-                    'args' => [
-                        $db,
-                        $uid,
-                        $odooPassword,
-                        'dispatch.milestone.history',
-                        'search_read',
-                        [[[
-
-                            'dispatch_id','=', $dispatchId
-                            
-                        ]]],
-                        ["fields" => [
-                            "id", "dispatch_id", "dispatch_type", "fcl_code", "scheduled_datetime","actual_datetime","service_type"
-                        ]],
-                    ]
-                ],
-                'id' => 6
-            ]);
-
-            $dispatchHistory = is_array($historyRes['result']) ? $historyRes['result'] : [];
-            $manager['history'] = $dispatchHistory;
-
-
-            
-
-            $jobResponses[] = $manager;
-        }
 
         // ✅ Final return
         return response()->json([
             'data' => [
-                'transactions' => $jobResponses
+                'transactions' => $data
             ]
         ]);
     }
@@ -1088,541 +666,75 @@ class TransactionController extends Controller
     {
         $url = $this->url;
         $db = $this->db;
-
-        $inputStart =  Carbon::parse($request->input('start'));
-
-        $start =$inputStart->copy()->subDays($inputStart->dayOfWeek % 7)->startOfDay();
-
-        $end = $start->copy()->addDays(6)->endOfDay();
-
-       
-
-        $page = (int) request()->query('page', 1);
-        $limit = (int) request()->query('limit', 5);
-        $offset = ($page - 1) * $limit;
       
-        $uid = $request->query('uid') ;
-        $login = $request->header('login'); 
+        $user = $this->authenticateDriver($request);
+        if(!is_array($user)) return $user;
+
+        $odooUrl = $this->odoo_url;  
+
+        $uid = $user['uid'];
         $odooPassword = $request->header('password');
-        Log::info('🔐 Login request', [
-            'uid' => $request->query('uid'),
-            'headers' => [
-                'login' => $request->header('login'),
-                'password' => $request->header('password'), // ⚠️ don't log in production
-            ],
-            'body' => $request->all(), // This shows form or JSON body content
-        ]);
-        
-        Log::info("Login is {$login}, UID is {$uid}, Password is {$odooPassword}");
-        
-        if (!$uid) {
-            return response()->json(['success' => false, 'message' => 'UID is required'], 400);
-        }
-
-        $odooUrl = "{$this->url}/jsonrpc"; 
-       
-        
-        $response = jsonRpcRequest("$odooUrl", [
-            'jsonrpc' => '2.0',
-            'method' => 'call',
-            'params' => [
-                'service' => 'common',
-                'method' => 'login',
-                'args' => [$db, $login, $odooPassword],
-            ],
-            'id' => 1
-        ]);
-      
-
-        if (!isset($response['result']) || !is_numeric($response['result'])) {
-            Log::error('❌ Auth failed', [
-                'login' => $login,
-                'db' => $db,
-                'response' => $response
-            ]);
-            return response()->json(['success' => false, 'message' => 'Login failed'], 403);
-        }
-
-      
-        $uid = $response['result'];
-
-        // Step 2: Get res.users to find partner_id
-        $userRes = jsonRpcRequest("$odooUrl", [
-            'jsonrpc' => '2.0',
-            'method' => 'call',
-            'params' => [
-                'service' => 'object',
-                'method' => 'execute_kw',
-                'args' => [
-                    $db,
-                    $uid,
-                    $odooPassword,
-                    'res.users',
-                    'search_read',
-                    [[['id', '=', $uid]]],
-                    ['fields' => ['partner_id', 'login']]
-                ]
-            ],
-            'id' => 2
-        ]);
-
-        $userData = $userRes['result'][0] ?? null;
-        if (!$userData || !isset($userData['partner_id'][0])) {
-            Log::error("❌ No partner_id for user $uid");
-            return response()->json(['success' => false, 'message' => 'No partner found'], 404);
-        }
-
-        $partnerId = $userData['partner_id'][0];
-        $partnerName = $userData['partner_id'][1] ?? '';
-        $user = [
-            'id' => $uid,
-            'login' => $login
-        ];
-
-        // Step 3: Get res.partner to check driver_access
-        $partnerRes = jsonRpcRequest("$odooUrl", [
-            'jsonrpc' => '2.0',
-            'method' => 'call',
-            'params' => [
-                'service' => 'object',
-                'method' => 'execute_kw',
-                'args' => [
-                    $db,
-                    $uid,
-                    $odooPassword,
-                    'res.partner',
-                    'search_read',
-                    [[['id', '=', $partnerId]]],
-                    ['fields' => ['name', 'driver_access']]
-                ]
-            ],
-            'id' => 3
-        ]);
-
-        $isDriver = $partnerRes['result'][0]['driver_access'] ?? false;
-        if (!$isDriver) {
-            Log::warning("❌ Partner $partnerId is not a driver");
-            return response()->json(['success' => false, 'message' => 'Not a driver'], 403);
-        }
+        $partnerId = $user['partner_id'];
+        $partnerName = $user['partner_name'];
 
         $today = date('Y-m-d');
-        
-        
-        // Step 4: Find all dispatch.manager records where driver name matches
-        $dispatchRes =jsonRpcRequest("$odooUrl", [
-            'jsonrpc' => '2.0',
-            'method' => 'call',
-            'params' => [
-                'service' => 'object',
-                'method' => 'execute_kw',
-                'args' => [
-                    $db,
-                    $uid,
-                    $odooPassword,
-                    'dispatch.manager',
-                    'search_read',
-                    [[
-                    
-                        "|", "|", "|",
-                        ["de_truck_driver_name", "=", $partnerId],
-                        ["dl_truck_driver_name", "=", $partnerId],
-                        ["pe_truck_driver_name", "=", $partnerId],
-                        ["pl_truck_driver_name", "=", $partnerId],
-
-                        "|",
-                        ['arrival_date', ">=", $today],
-                        ['departure_date', ">=", $today],
-
-                        "|",
-                        ['arrival_date', ">=", $today],
-                        ['departure_date', ">=", $today],
-                    
-                        
-                    
-                        ["dispatch_type", "!=", "ff"]
-                    ]],
-                    ["fields" => [
-                        "id", "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
-                        "dispatch_type", "de_truck_driver_name", "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name",
-                        "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", "origin_port_terminal_address", "destination_port_terminal_address", "arrival_date", "delivery_date",
-                        "container_number", "seal_number", "booking_reference_no", "origin_forwarder_name", "destination_forwarder_name", "freight_booking_number",
-                        "origin_container_location", "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
-                        "freight_forwarder_name", "shipper_phone", "consignee_phone", "dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", "pl_truck_plate_no",
-                        "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
-                        "pickup_date", "departure_date","origin", "destination", "de_rejection_time", "pl_rejection_time", "dl_rejection_time", "pe_rejection_time", "de_completion_time", 
-                        "pl_completion_time", "dl_completion_time", "pe_completion_time", "shipper_province","shipper_city","shipper_barangay","shipper_street", 
-                        "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime", "service_type", "booking_service",
-                        "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time", "name", "stage_id"
-                    ]
-                    ]
-                ]
-            ],
-            'id' => 4
-        ]);
-
-        $dispatchManagers = $dispatchRes['result'] ?? [];
-
-        if (empty($dispatchManagers)) {
-            Log::warning("❌ No dispatch.manager records found for driver $partnerName");
-            // return response()->json(['success' => false, 'message' => 'No dispatch manager records found'], 404);
-        }
-
-        $filteredManagers = array_filter($dispatchManagers, function ($manager) use ($partnerName) {
-            foreach (["de_truck_driver_name", "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name"] as $field) {
-                if (
-                    isset($manager[$field][1]) && $manager[$field][1] == $partnerName
-                ) {
-                    return true;
-                }
-            }
-            return false;
-        });
-
-        $filteredManagers = array_values($filteredManagers);
 
         // Step 5: Queue a job for each dispatch.manager record
-        $fieldsToString = [
-            "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
-            "dispatch_type", 
-            "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", "origin_port_terminal_address", "destination_port_terminal_address", "arrival_date", "delivery_date",
-            "container_number", "seal_number", "booking_reference_no", "origin_forwarder_name", "destination_forwarder_name", "freight_booking_number",
-            "origin_container_location", "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
-            "freight_forwarder_name", "shipper_phone", "consignee_phone", "dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", "pl_truck_plate_no",
-            "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
-            "pickup_date", "departure_date","origin", "destination","de_rejection_time", "pl_rejection_time", "dl_rejection_time", "pe_rejection_time", "de_completion_time", 
-            "pl_completion_time", "dl_completion_time", "pe_completion_time","shipper_province","shipper_city","shipper_barangay","shipper_street",
-            "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime",  "service_type","booking_service",
-            "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time","stage_id"
+        $domain =[
+            "|", "|", "|", // OR: driver match
+            ["de_truck_driver_name", "=", $partnerId],
+            ["dl_truck_driver_name", "=", $partnerId],
+            ["pe_truck_driver_name", "=", $partnerId],
+            ["pl_truck_driver_name", "=", $partnerId],
+            // "|",
+            // ['pickup_date', ">=", $today],
+            // ['delivery_date', ">=", $today],
+            // "|",
+            // ['pickup_date', ">=", $today],
+            // ['delivery_date', ">=", $today],
+           
+            // ["dispatch_type", "=", "ff"]
+            
+
         ];
 
-        $jobResponses = [];
-
-        foreach ($filteredManagers  as $manager) {
-
-            foreach ($fieldsToString as $field){
-                if (!isset($manager[$field]) || $manager[$field] === null || $manager[$field] === false) {
-                    $manager[$field] = "";
-                } elseif (is_array($manager[$field]) && count($manager[$field]) > 1 && is_string($manager[$field][1])) {
-                    $manager[$field] = $manager[$field][1]; // ✅ convert [id, name] to name
-                } elseif (is_bool($manager[$field])) {
-                    $manager[$field] = $manager[$field] ? "true" : "false";
-                } else {
-                    $manager[$field] = (string) $manager[$field];
-                }
-            }
-
-            $jobRes = jsonRpcRequest("$url/job_dispatcher/queue_job", [
-                'jsonrpc' => '2.0',
-                'method' => 'call',
-                'params' => [
-                    'model' => 'dispatch.manager',
-                    'id' => $manager['id'],
-                    'method' => 'run_laravel_job',
-                ],
-                'id' => 5
-            ]);
-
-              $dispatchId = $manager['id'];
-
-            
-
-            $historyRes = jsonRpcRequest("$odooUrl", [
-                'jsonrpc' => '2.0',
-                'method' => 'call',
-                'params' => [
-                    'service' => 'object',
-                    'method' => 'execute_kw',
-                    'args' => [
-                        $db,
-                        $uid,
-                        $odooPassword,
-                        'dispatch.milestone.history',
-                        'search_read',
-                        [[[
-
-                            'dispatch_id','=', $dispatchId
-                            
-                        ]]],
-                        ["fields" => [
-                            "id", "dispatch_id", "dispatch_type", "fcl_code", "scheduled_datetime","service_type"
-                        ]],
-                    ]
-                ],
-                'id' => 6
-            ]);
-
-            $dispatchHistory = is_array($historyRes['result']) ? $historyRes['result'] : [];
-            $manager['history'] = $dispatchHistory;
-
-
-            
-
-            $jobResponses[] = $manager;
-
-
-            
-        }
-        $totalCount = count($jobResponses);
-        $totalPages = ceil($totalCount / $limit);
-        $hasMore = $page < $totalPages;
-
-        $pageResponse = array_slice($jobResponses, $offset, $limit);
-
-        return response()->json([
-            'data' => [
-                 'week' => $start->toDateString() . ' to ' . $end->toDateString(),
-
-                'transactions' => $jobResponses,
-                'pagination' => [
-                    'current_page' => $page,
-                    'per_page' => $limit,
-                    'total_count' => $totalCount,
-                    'total_pages' => ceil($totalCount / $limit),
-                    'has_more' => ($offset + $limit) < $totalCount
-                ]
-            ]
-        ]);
-    }
-
-    public function getHistory(Request $request)
-    {
-        $url = $this->url;
-        $db = $this->db;
-
-       
-      
-        $uid = $request->query('uid') ;
-        $login = $request->header('login'); 
-        $odooPassword = $request->header('password');
-        $bookingId = $request->query('booking_id'); // Get booking ID from query
-        Log::info('🔐 Login request', [
-            'uid' => $request->query('uid'),
-            'headers' => [
-                'login' => $request->header('login'),
-                'password' => $request->header('password'), // ⚠️ don't log in production
-            ],
-            'body' => $request->all(), // This shows form or JSON body content
-        ]);
         
-      
-        
-        if (!$uid) {
-            return response()->json(['success' => false, 'message' => 'UID is required for details'], 400);
+        $driverData = $this->processDispatchManagers($domain, $partnerName);
+
+        // 🔹 Step 2: collect booking refs from driverData
+        $bookingRefs = collect($driverData)
+            ->pluck('booking_reference_no') // ⚠️ ensure this matches Odoo field
+            ->filter()
+            ->unique()
+            ->toArray();
+
+        \Log::info("Booking Refs collected:", $bookingRefs);
+
+        // 🔹 Step 3: fetch FF by those booking refs
+        $ffData = [];
+        if (!empty($bookingRefs)) {
+            $ffDomain = [
+                ["dispatch_type", "ilike", "ff"], // case-insensitive match
+                ["booking_reference_no", "in", array_values($bookingRefs)],
+            ];
+            // \Log::info("FF Domain:", $ffDomain);
+
+            $ffData = $this->processDispatchManagers($ffDomain, $partnerName, false);
+            // \Log::info("FF Data fetched:", $ffData);
         }
 
-        $odooUrl = "{$this->url}/jsonrpc"; 
-       
-        
-        $response = jsonRpcRequest("$odooUrl", [
-            'jsonrpc' => '2.0',
-            'method' => 'call',
-            'params' => [
-                'service' => 'common',
-                'method' => 'login',
-                'args' => [$db, $login, $odooPassword],
-            ],
-            'id' => 1
-        ]);
-      
+        // 🔹 Step 4: merge driver + FF results
+        $data = array_merge($driverData, $ffData);
 
-        if (!isset($response['result']) || !is_numeric($response['result'])) {
-            Log::error('❌ Auth failed', [
-                'login' => $login,
-                'db' => $db,
-                'response' => $response
-            ]);
-            return response()->json(['success' => false, 'message' => 'Login failed'], 403);
-        }
-
-      
-        $uid = $response['result'];
-
-        // Step 2: Get res.users to find partner_id
-        $userRes = jsonRpcRequest("$odooUrl", [
-            'jsonrpc' => '2.0',
-            'method' => 'call',
-            'params' => [
-                'service' => 'object',
-                'method' => 'execute_kw',
-                'args' => [
-                    $db,
-                    $uid,
-                    $odooPassword,
-                    'res.users',
-                    'search_read',
-                    [[['id', '=', $uid]]],
-                    ['fields' => ['partner_id', 'login']]
-                ]
-            ],
-            'id' => 2
-        ]);
-
-        $userData = $userRes['result'][0] ?? null;
-        if (!$userData || !isset($userData['partner_id'][0])) {
-            Log::error("❌ No partner_id for user $uid");
-            return response()->json(['success' => false, 'message' => 'No partner found'], 404);
-        }
-
-        $partnerId = $userData['partner_id'][0];
-        $partnerName = $userData['partner_id'][1] ?? '';
-        $user = [
-            'id' => $uid,
-            'login' => $login
-        ];
-
-        // Step 3: Get res.partner to check driver_access
-        $partnerRes = jsonRpcRequest("$odooUrl", [
-            'jsonrpc' => '2.0',
-            'method' => 'call',
-            'params' => [
-                'service' => 'object',
-                'method' => 'execute_kw',
-                'args' => [
-                    $db,
-                    $uid,
-                    $odooPassword,
-                    'res.partner',
-                    'search_read',
-                    [[['id', '=', $partnerId]]],
-                    ['fields' => ['name', 'driver_access']]
-                ]
-            ],
-            'id' => 3
-        ]);
-
-        $isDriver = $partnerRes['result'][0]['driver_access'] ?? false;
-        if (!$isDriver) {
-            Log::warning("❌ Partner $partnerId is not a driver");
-            return response()->json(['success' => false, 'message' => 'Not a driver'], 403);
-        }
-
-        
-        // Step 4: Find all dispatch.manager records where driver name matches
-        $dispatchRes =jsonRpcRequest("$odooUrl", [
-            'jsonrpc' => '2.0',
-            'method' => 'call',
-            'params' => [
-                'service' => 'object',
-                'method' => 'execute_kw',
-                'args' => [
-                    $db,
-                    $uid,
-                    $odooPassword,
-                    'dispatch.manager',
-                    'search_read',
-                    [[
-                    
-                        "|", "|", "|",
-                        ["de_truck_driver_name", "=", $partnerId],
-                        ["dl_truck_driver_name", "=", $partnerId],
-                        ["pe_truck_driver_name", "=", $partnerId],
-                        ["pl_truck_driver_name", "=", $partnerId],
-                    
-                        
-                    
-                        
-                    ]],
-                    ["fields" => [
-                        "id", "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
-                        "dispatch_type", "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", 
-                    ]],
-                ]
-            ],
-            'id' => 4
-        ]);
-       
-
-        $dispatchManagers = $dispatchRes['result'] ?? [];
-
-        if (empty($dispatchManagers)) {
-            Log::warning("❌ No dispatch.manager records found for driver $partnerName");
-            return response()->json(['success' => false, 'message' => 'No dispatch manager records found'], 404);
-        }
-
-        
-
-  
-
-        // Step 5: Queue a job for each dispatch.manager record
-        $fieldsToString = [
-           "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
-            "dispatch_type", 
-            "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", 
-        ];
-
-        $jobResponses = [];
-
-        foreach ($dispatchManagers  as $manager) {
-
-            foreach ($fieldsToString as $field){
-                if (!isset($manager[$field]) || $manager[$field] === null || $manager[$field] === false) {
-                    $manager[$field] = "";
-                } elseif (is_array($manager[$field]) && count($manager[$field]) > 1 && is_string($manager[$field][1])) {
-                    $manager[$field] = $manager[$field][1]; // ✅ convert [id, name] to name
-                } elseif (is_bool($manager[$field])) {
-                    $manager[$field] = $manager[$field] ? "true" : "false";
-                } else {
-                    $manager[$field] = (string) $manager[$field];
-                }
-            }
-
-            $jobRes = jsonRpcRequest("$url/job_dispatcher/queue_job", [
-                'jsonrpc' => '2.0',
-                'method' => 'call',
-                'params' => [
-                    'model' => 'dispatch.manager',
-                    'id' => $manager['id'],
-                    'method' => 'run_laravel_job',
-                ],
-                'id' => 5
-            ]);
-
-            
-
-          
-
-            $dispatchId = $manager['id'];
-
-            
-
-            $historyRes = jsonRpcRequest("$odooUrl", [
-                'jsonrpc' => '2.0',
-                'method' => 'call',
-                'params' => [
-                    'service' => 'object',
-                    'method' => 'execute_kw',
-                    'args' => [
-                        $db,
-                        $uid,
-                        $odooPassword,
-                        'dispatch.milestone.history',
-                        'search_read',
-                        [[[
-
-                            'dispatch_id','=', $dispatchId
-                            
-                        ]]],
-                        ["fields" => [
-                            "id", "dispatch_id", "dispatch_type", "fcl_code", "scheduled_datetime","service_type"
-                        ]],
-                    ]
-                ],
-                'id' => 6
-            ]);
-
-            $dispatchHistory = $historyRes['result'] ?? [];
-            $manager['history'] = $dispatchHistory;
-
-            $jobResponses[] = $manager;
-        }
 
         // ✅ Final return
         return response()->json([
             'data' => [
-                'transactions' => $jobResponses
+                'transactions' => $data
             ]
         ]);
     }
+
    
     public function getRejectionReason(Request $request)
     {
@@ -2214,6 +1326,7 @@ class TransactionController extends Controller
         $actualTime = $request->input('timestamp');
         $enteredName = $request->input('enteredName');
         $newStatus = $request->input('newStatus');
+        $containerNumber = $request->input('enteredContainerNumber');
 
         Log::info('Received file uplodad request', [
             'uid' => $uid,
@@ -2222,6 +1335,7 @@ class TransactionController extends Controller
             'requestNumber' => $request->requestNumber,
             'actualTime' => $actualTime,
             
+            'enteredContainerNumber' => $containerNumber,
             // 'images' => $request->input('images'),
             // 'signature' => $request->input('signature'),
         ]); 
@@ -2246,7 +1360,7 @@ class TransactionController extends Controller
                     "dispatch.manager", 
                     "search_read",
                     [[["id", "=", $transactionId]]],  // Search by Request Number
-                    ["fields" => ["dispatch_type","de_request_no", "pl_request_no", "dl_request_no", "pe_request_no","service_type" ]]
+                    ["fields" => ["dispatch_type","de_request_no", "pl_request_no", "dl_request_no", "pe_request_no","service_type", "booking_reference_no" ]]
                 ]
             ],
             "id" => 1
@@ -2280,6 +1394,8 @@ class TransactionController extends Controller
 
         $updateField = [];
 
+        $serviceType = is_array($type['service_type']) ? $type['service_type'][0] : $type['service_type'];
+
         if ($type['dispatch_type'] == "ot" && $type['de_request_no'] == $requestNumber) {
             Log::info("Updating PE proof and signature for request number: {$requestNumber}");
             $updateField = [
@@ -2289,6 +1405,62 @@ class TransactionController extends Controller
                 "stage_id" => 5,
                 "de_request_status" => $newStatus,
             ];
+
+            $bookingRef = $type['booking_reference_no'] ?? null;
+            if ($bookingRef && $containerNumber) {
+                $searchFF = [
+                    "jsonrpc" => "2.0",
+                    "method" => "call",
+                    "params" => [
+                        "service" => "object",
+                        "method" => "execute_kw",
+                        "args" => [
+                            $db,
+                            $uid,
+                            $odooPassword,
+                            "dispatch.manager",
+                            "search",
+                            [[
+                                ["booking_reference_no", '=', $bookingRef],
+                                ["dispatch_type", '=', "ff"]
+                            ]]
+                        ],
+                    ],
+                    "id" => 101
+                ];
+                $ffRes = jsonRpcRequest($odooUrl, $searchFF);
+                $ffIds = $ffRes['result'] ?? [];
+
+                if (!empty($ffIds)) {
+                    // ✅ Update container_number only in ff
+                    $updateFFContainer = [
+                        "jsonrpc" => "2.0",
+                        "method" => "call",
+                        "params" => [
+                            "service" => "object",
+                            "method" => "execute_kw",
+                            "args" => [
+                                $db,
+                                $uid,
+                                $odooPassword,
+                                "dispatch.manager",
+                                "write",
+                                [
+                                    $ffIds,
+                                    [
+                                        "container_number" => $containerNumber
+                                    ]
+                                ]
+                            ]
+                        ],
+                        "id" => 102
+                    ];
+                    $ffUpdateRes = jsonRpcRequest($odooUrl, $updateFFContainer);
+                    Log::info("Updated container_number in FF for bookingRef {$bookingRef}, ffIds: " . json_encode($ffIds));
+                } else {
+                    Log::warning("No FF found for bookingRef {$bookingRef}");
+                }
+            }
         } elseif ($type['dispatch_type'] == "ot" && $type['pl_request_no'] == $requestNumber) {
             Log::info("Updating PL proof and signature for request number: {$requestNumber}");
             $updateField = [
@@ -2296,7 +1468,66 @@ class TransactionController extends Controller
                 "pl_signature" => $signature,
                 "dl_receive_by" => $enteredName,
                 "pl_request_status" => $newStatus,
+                "container_number" => $containerNumber
             ];
+            if($serviceType == 2){
+                $updateField["stage_id"] = 5;
+            }
+            $bookingRef = $type['booking_reference_no'] ?? null;
+            if ($bookingRef && $containerNumber) {
+                $searchFF = [
+                    "jsonrpc" => "2.0",
+                    "method" => "call",
+                    "params" => [
+                        "service" => "object",
+                        "method" => "execute_kw",
+                        "args" => [
+                            $db,
+                            $uid,
+                            $odooPassword,
+                            "dispatch.manager",
+                            "search",
+                            [[
+                                ["booking_reference_no", '=', $bookingRef],
+                                ["dispatch_type", '=', "ff"]
+                            ]]
+                        ],
+                    ],
+                    "id" => 105
+                ];
+                $ffRes = jsonRpcRequest($odooUrl, $searchFF);
+                $ffIds = $ffRes['result'] ?? [];
+
+                if (!empty($ffIds)) {
+                    // ✅ Update container_number only in ff
+                    $updateFFContainer = [
+                        "jsonrpc" => "2.0",
+                        "method" => "call",
+                        "params" => [
+                            "service" => "object",
+                            "method" => "execute_kw",
+                            "args" => [
+                                $db,
+                                $uid,
+                                $odooPassword,
+                                "dispatch.manager",
+                                "write",
+                                [
+                                    $ffIds,
+                                    [
+                                        "container_number" => $containerNumber
+                                    ]
+                                ]
+                            ]
+                        ],
+                        "id" => 106
+                    ];
+                    $ffUpdateRes = jsonRpcRequest($odooUrl, $updateFFContainer);
+                    Log::info("Updated container_number in FF for bookingRef {$bookingRef}, ffIds: " . json_encode($ffIds));
+                } else {
+                    Log::warning("No FF found for bookingRef {$bookingRef}");
+                }
+            }
         }
 
         if ($type['dispatch_type'] == "dt" && $type['dl_request_no'] == $requestNumber) {
@@ -2307,7 +1538,67 @@ class TransactionController extends Controller
                 "pe_release_by" => $enteredName,
                 "stage_id" => 5,
                 "dl_request_status" => $newStatus,
+                "container_number" => $containerNumber
             ];
+            if($serviceType == 2){
+                $updateField["stage_id"] = 5;
+            }
+
+            $bookingRef = $type['booking_reference_no'] ?? null;
+            if ($bookingRef && $containerNumber) {
+                $searchFF = [
+                    "jsonrpc" => "2.0",
+                    "method" => "call",
+                    "params" => [
+                        "service" => "object",
+                        "method" => "execute_kw",
+                        "args" => [
+                            $db,
+                            $uid,
+                            $odooPassword,
+                            "dispatch.manager",
+                            "search",
+                            [[
+                                ["booking_reference_no", '=', $bookingRef],
+                                ["dispatch_type", '=', "ff"]
+                            ]]
+                        ],
+                    ],
+                    "id" => 107
+                ];
+                $ffRes = jsonRpcRequest($odooUrl, $searchFF);
+                $ffIds = $ffRes['result'] ?? [];
+
+                if (!empty($ffIds)) {
+                    // ✅ Update container_number only in ff
+                    $updateFFContainer = [
+                        "jsonrpc" => "2.0",
+                        "method" => "call",
+                        "params" => [
+                            "service" => "object",
+                            "method" => "execute_kw",
+                            "args" => [
+                                $db,
+                                $uid,
+                                $odooPassword,
+                                "dispatch.manager",
+                                "write",
+                                [
+                                    $ffIds,
+                                    [
+                                        "container_number" => $containerNumber
+                                    ]
+                                ]
+                            ]
+                        ],
+                        "id" => 108
+                    ];
+                    $ffUpdateRes = jsonRpcRequest($odooUrl, $updateFFContainer);
+                    Log::info("Updated container_number in FF for bookingRef {$bookingRef}, ffIds: " . json_encode($ffIds));
+                } else {
+                    Log::warning("No FF found for bookingRef {$bookingRef}");
+                }
+            }
         } elseif ($type['dispatch_type'] == "dt" && $type['pe_request_no'] == $requestNumber) {
             Log::info("Updating PE proof and signature for request number: {$requestNumber}");
             $updateField = [
@@ -2316,6 +1607,61 @@ class TransactionController extends Controller
                 "dl_receive_by" => $enteredName,
                 "pe_request_status" => $newStatus,
             ];
+            $bookingRef = $type['booking_reference_no'] ?? null;
+            if ($bookingRef && $containerNumber) {
+                $searchFF = [
+                    "jsonrpc" => "2.0",
+                    "method" => "call",
+                    "params" => [
+                        "service" => "object",
+                        "method" => "execute_kw",
+                        "args" => [
+                            $db,
+                            $uid,
+                            $odooPassword,
+                            "dispatch.manager",
+                            "search",
+                            [[
+                                ["booking_reference_no", '=', $bookingRef],
+                                ["dispatch_type", '=', "ff"]
+                            ]]
+                        ],
+                    ],
+                    "id" => 109
+                ];
+                $ffRes = jsonRpcRequest($odooUrl, $searchFF);
+                $ffIds = $ffRes['result'] ?? [];
+
+                if (!empty($ffIds)) {
+                    // ✅ Update container_number only in ff
+                    $updateFFContainer = [
+                        "jsonrpc" => "2.0",
+                        "method" => "call",
+                        "params" => [
+                            "service" => "object",
+                            "method" => "execute_kw",
+                            "args" => [
+                                $db,
+                                $uid,
+                                $odooPassword,
+                                "dispatch.manager",
+                                "write",
+                                [
+                                    $ffIds,
+                                    [
+                                        "container_number" => $containerNumber
+                                    ]
+                                ]
+                            ]
+                        ],
+                        "id" => 110
+                    ];
+                    $ffUpdateRes = jsonRpcRequest($odooUrl, $updateFFContainer);
+                    Log::info("Updated container_number in FF for bookingRef {$bookingRef}, ffIds: " . json_encode($ffIds));
+                } else {
+                    Log::warning("No FF found for bookingRef {$bookingRef}");
+                }
+            }
         }
       
         Log::info("Requested status update: {$newStatus}");
@@ -2345,7 +1691,7 @@ class TransactionController extends Controller
                     ]
                 ]
             ],
-            "id" => 2
+            "id" => 4
         ];
 
         $updateResponse = json_decode(file_get_contents($odooUrl,false,stream_context_create([
@@ -2373,10 +1719,10 @@ class TransactionController extends Controller
                         "dispatch.milestone.history", 
                         "search_read",
                         [[["dispatch_id", "=", $transactionId]]],  // Search by Request Number
-                        ["fields" => ["id","dispatch_type","actual_datetime","scheduled_datetime","fcl_code"]]
+                        ["fields" => ["id","dispatch_type","actual_datetime","scheduled_datetime","fcl_code","is_backload"]]
                     ]
                 ],
-                "id" => 3
+                "id" => 5
             ];
         
             $fcl_code_response = json_decode(file_get_contents($odooUrl, false, stream_context_create([
@@ -2464,12 +1810,13 @@ class TransactionController extends Controller
                                     [
                                         'actual_datetime' => $actualTime,
                                         'button_readonly' => true, 
-                                        'clicked_by' => $uid,
+                                        'button_confirm_semd' => false,
+                                        'clicked_by' => (int) $uid,
                                     ]
                                 ]
                             ]
                         ],
-                        "id" => 4
+                        "id" => 6
                     ];
 
                     $updateActualResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
@@ -2517,7 +1864,7 @@ class TransactionController extends Controller
                                        
                                     ]
                                 ],
-                                "id" => 5
+                                "id" => 7
                             ];
                             $templateResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
                                 "http" => [
@@ -2554,7 +1901,7 @@ class TransactionController extends Controller
                                             ]
                                         ]
                                     ],
-                                    "id" => 6
+                                    "id" => 8
                                 ];
 
                                 $sendEmailResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
@@ -2621,6 +1968,7 @@ class TransactionController extends Controller
         $actualTime = $request->input('timestamp');
         $enteredName = $request->input('enteredName');
         $newStatus = $request->input('newStatus');
+        $containerNumber = $request->input('enteredContainerNumber');
 
         Log::info('Received file uplodad request', [
             'uid' => $uid,
@@ -2628,6 +1976,7 @@ class TransactionController extends Controller
             'dispatch_type' => $dispatchType,
             'requestNumber' => $request->requestNumber,
             'actualTime' => $actualTime,
+            'enteredContainerNumber' => $containerNumber,
             
             // 'images' => $request->input('images'),
             // 'signature' => $request->input('signature'),
@@ -2653,7 +2002,7 @@ class TransactionController extends Controller
                     "dispatch.manager", 
                     "search_read",
                     [[["id", "=", $transactionId]]],  // Search by Request Number
-                    ["fields" => ["dispatch_type","de_request_no", "pl_request_no", "dl_request_no", "pe_request_no","service_type" ]]
+                    ["fields" => ["dispatch_type","de_request_no", "pl_request_no", "dl_request_no", "pe_request_no","service_type", "booking_reference_no" ]]
                 ]
             ],
             "id" => 1
@@ -2695,8 +2044,64 @@ class TransactionController extends Controller
                 "de_release_by" => $enteredName,
                 "de_completion_time" => $actualTime,
                 // "de_request_status" => $newStatus,
+                "container_number" => $containerNumber
                 
             ];
+            $bookingRef = $type['booking_reference_no'] ?? null;
+            if ($bookingRef && $containerNumber) {
+                $searchFF = [
+                    "jsonrpc" => "2.0",
+                    "method" => "call",
+                    "params" => [
+                        "service" => "object",
+                        "method" => "execute_kw",
+                        "args" => [
+                            $db,
+                            $uid,
+                            $odooPassword,
+                            "dispatch.manager",
+                            "search",
+                            [[
+                                ["booking_reference_no", '=', $bookingRef],
+                                ["dispatch_type", '=', "ff"]
+                            ]]
+                        ],
+                    ],
+                    "id" => 120
+                ];
+                $ffRes = jsonRpcRequest($odooUrl, $searchFF);
+                $ffIds = $ffRes['result'] ?? [];
+
+                if (!empty($ffIds)) {
+                    // ✅ Update container_number only in ff
+                    $updateFFContainer = [
+                        "jsonrpc" => "2.0",
+                        "method" => "call",
+                        "params" => [
+                            "service" => "object",
+                            "method" => "execute_kw",
+                            "args" => [
+                                $db,
+                                $uid,
+                                $odooPassword,
+                                "dispatch.manager",
+                                "write",
+                                [
+                                    $ffIds,
+                                    [
+                                        "container_number" => $containerNumber
+                                    ]
+                                ]
+                            ]
+                        ],
+                        "id" => 119
+                    ];
+                    $ffUpdateRes = jsonRpcRequest($odooUrl, $updateFFContainer);
+                    Log::info("Updated container_number in FF for bookingRef {$bookingRef}, ffIds: " . json_encode($ffIds));
+                } else {
+                    Log::warning("No FF found for bookingRef {$bookingRef}");
+                }
+            }
         } elseif ($type['dispatch_type'] == "ot" && $type['pl_request_no'] == $requestNumber) {
             Log::info("Updating DL proof and signature for request number: {$requestNumber}");
             $updateField = [
@@ -2706,7 +2111,63 @@ class TransactionController extends Controller
                 "stage_id" => 7,
                 "pl_completion_time" => $actualTime,
                 // "pl_request_status" => $newStatus,
+                "container_number" => $containerNumber
             ];
+            $bookingRef = $type['booking_reference_no'] ?? null;
+            if ($bookingRef && $containerNumber) {
+                $searchFF = [
+                    "jsonrpc" => "2.0",
+                    "method" => "call",
+                    "params" => [
+                        "service" => "object",
+                        "method" => "execute_kw",
+                        "args" => [
+                            $db,
+                            $uid,
+                            $odooPassword,
+                            "dispatch.manager",
+                            "search",
+                            [[
+                                ["booking_reference_no", '=', $bookingRef],
+                                ["dispatch_type", '=', "ff"]
+                            ]]
+                        ],
+                    ],
+                    "id" => 117
+                ];
+                $ffRes = jsonRpcRequest($odooUrl, $searchFF);
+                $ffIds = $ffRes['result'] ?? [];
+
+                if (!empty($ffIds)) {
+                    // ✅ Update container_number only in ff
+                    $updateFFContainer = [
+                        "jsonrpc" => "2.0",
+                        "method" => "call",
+                        "params" => [
+                            "service" => "object",
+                            "method" => "execute_kw",
+                            "args" => [
+                                $db,
+                                $uid,
+                                $odooPassword,
+                                "dispatch.manager",
+                                "write",
+                                [
+                                    $ffIds,
+                                    [
+                                        "container_number" => $containerNumber
+                                    ]
+                                ]
+                            ]
+                        ],
+                        "id" => 118
+                    ];
+                    $ffUpdateRes = jsonRpcRequest($odooUrl, $updateFFContainer);
+                    Log::info("Updated container_number in FF for bookingRef {$bookingRef}, ffIds: " . json_encode($ffIds));
+                } else {
+                    Log::warning("No FF found for bookingRef {$bookingRef}");
+                }
+            }
         }
 
         if ($type['dispatch_type'] === "dt" && $type['dl_request_no'] === $requestNumber && isset($type['service_type']) && $type['service_type'] == 2) {
@@ -2718,7 +2179,63 @@ class TransactionController extends Controller
                 "dl_completion_time" => $actualTime,
                 "stage_id" => 7,
                 // "dl_request_status" => $newStatus,
+                "container_number" => $containerNumber
             ];
+            $bookingRef = $type['booking_reference_no'] ?? null;
+            if ($bookingRef && $containerNumber) {
+                $searchFF = [
+                    "jsonrpc" => "2.0",
+                    "method" => "call",
+                    "params" => [
+                        "service" => "object",
+                        "method" => "execute_kw",
+                        "args" => [
+                            $db,
+                            $uid,
+                            $odooPassword,
+                            "dispatch.manager",
+                            "search",
+                            [[
+                                ["booking_reference_no", '=', $bookingRef],
+                                ["dispatch_type", '=', "ff"]
+                            ]]
+                        ],
+                    ],
+                    "id" => 115
+                ];
+                $ffRes = jsonRpcRequest($odooUrl, $searchFF);
+                $ffIds = $ffRes['result'] ?? [];
+
+                if (!empty($ffIds)) {
+                    // ✅ Update container_number only in ff
+                    $updateFFContainer = [
+                        "jsonrpc" => "2.0",
+                        "method" => "call",
+                        "params" => [
+                            "service" => "object",
+                            "method" => "execute_kw",
+                            "args" => [
+                                $db,
+                                $uid,
+                                $odooPassword,
+                                "dispatch.manager",
+                                "write",
+                                [
+                                    $ffIds,
+                                    [
+                                        "container_number" => $containerNumber
+                                    ]
+                                ]
+                            ]
+                        ],
+                        "id" => 116
+                    ];
+                    $ffUpdateRes = jsonRpcRequest($odooUrl, $updateFFContainer);
+                    Log::info("Updated container_number in FF for bookingRef {$bookingRef}, ffIds: " . json_encode($ffIds));
+                } else {
+                    Log::warning("No FF found for bookingRef {$bookingRef}");
+                }
+            }
         } elseif($type['dispatch_type'] === "dt" && $type['dl_request_no'] === $requestNumber) {
              $updateField = [
                 "dl_proof" => $images,
@@ -2726,7 +2243,63 @@ class TransactionController extends Controller
                 "de_release_by" => $enteredName,
                 "dl_completion_time" => $actualTime,
                 // "dl_request_status" => $newStatus,
+                "container_number" => $containerNumber
             ];
+            $bookingRef = $type['booking_reference_no'] ?? null;
+            if ($bookingRef && $containerNumber) {
+                $searchFF = [
+                    "jsonrpc" => "2.0",
+                    "method" => "call",
+                    "params" => [
+                        "service" => "object",
+                        "method" => "execute_kw",
+                        "args" => [
+                            $db,
+                            $uid,
+                            $odooPassword,
+                            "dispatch.manager",
+                            "search",
+                            [[
+                                ["booking_reference_no", '=', $bookingRef],
+                                ["dispatch_type", '=', "ff"]
+                            ]]
+                        ],
+                    ],
+                    "id" => 113
+                ];
+                $ffRes = jsonRpcRequest($odooUrl, $searchFF);
+                $ffIds = $ffRes['result'] ?? [];
+
+                if (!empty($ffIds)) {
+                    // ✅ Update container_number only in ff
+                    $updateFFContainer = [
+                        "jsonrpc" => "2.0",
+                        "method" => "call",
+                        "params" => [
+                            "service" => "object",
+                            "method" => "execute_kw",
+                            "args" => [
+                                $db,
+                                $uid,
+                                $odooPassword,
+                                "dispatch.manager",
+                                "write",
+                                [
+                                    $ffIds,
+                                    [
+                                        "container_number" => $containerNumber
+                                    ]
+                                ]
+                            ]
+                        ],
+                        "id" => 114
+                    ];
+                    $ffUpdateRes = jsonRpcRequest($odooUrl, $updateFFContainer);
+                    Log::info("Updated container_number in FF for bookingRef {$bookingRef}, ffIds: " . json_encode($ffIds));
+                } else {
+                    Log::warning("No FF found for bookingRef {$bookingRef}");
+                }
+            }
         } elseif ($type['dispatch_type'] === "dt" && $type['pe_request_no'] === $requestNumber) {
             Log::info("Updating DE proof and signature for request number: {$requestNumber}");
             $updateField = [
@@ -2736,7 +2309,63 @@ class TransactionController extends Controller
                 "stage_id" => 7,
                 "pe_completion_time" => $actualTime,
                 // "pe_request_status" => $newStatus,
+                "container_number" => $containerNumber
             ];
+            $bookingRef = $type['booking_reference_no'] ?? null;
+            if ($bookingRef && $containerNumber) {
+                $searchFF = [
+                    "jsonrpc" => "2.0",
+                    "method" => "call",
+                    "params" => [
+                        "service" => "object",
+                        "method" => "execute_kw",
+                        "args" => [
+                            $db,
+                            $uid,
+                            $odooPassword,
+                            "dispatch.manager",
+                            "search",
+                            [[
+                                ["booking_reference_no", '=', $bookingRef],
+                                ["dispatch_type", '=', "ff"]
+                            ]]
+                        ],
+                    ],
+                    "id" => 111
+                ];
+                $ffRes = jsonRpcRequest($odooUrl, $searchFF);
+                $ffIds = $ffRes['result'] ?? [];
+
+                if (!empty($ffIds)) {
+                    // ✅ Update container_number only in ff
+                    $updateFFContainer = [
+                        "jsonrpc" => "2.0",
+                        "method" => "call",
+                        "params" => [
+                            "service" => "object",
+                            "method" => "execute_kw",
+                            "args" => [
+                                $db,
+                                $uid,
+                                $odooPassword,
+                                "dispatch.manager",
+                                "write",
+                                [
+                                    $ffIds,
+                                    [
+                                        "container_number" => $containerNumber
+                                    ]
+                                ]
+                            ]
+                        ],
+                        "id" => 112
+                    ];
+                    $ffUpdateRes = jsonRpcRequest($odooUrl, $updateFFContainer);
+                    Log::info("Updated container_number in FF for bookingRef {$bookingRef}, ffIds: " . json_encode($ffIds));
+                } else {
+                    Log::warning("No FF found for bookingRef {$bookingRef}");
+                }
+            }
         }
 
        
@@ -2881,7 +2510,8 @@ class TransactionController extends Controller
                                     [
                                         'actual_datetime' => $actualTime,
                                         'button_readonly' => true, 
-                                        'clicked_by' => $uid,
+                                        'button_confirm_semd' => false,
+                                        'clicked_by' => (int) $uid,
                                     ]
                                 ]
                             ]

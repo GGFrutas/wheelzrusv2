@@ -59,20 +59,20 @@ Future<List<Transaction>> fetchHistory(FutureProviderRef<List<Transaction>> ref,
 
       if (data is Map) {
         if (data.containsKey("transactions")) {
-          print("🔍 'transactions' found: ${data['transactions']}"); // Debugging
+          // print("🔍 'transactions' found: ${data['transactions']}"); // Debugging
           
           final transactions = data["transactions"];
 
           // Check what type "transactions" actually is
-          print("🔍 Type of 'transactions': ${transactions.runtimeType}");
+          // print("🔍 Type of 'transactions': ${transactions.runtimeType}");
 
           if (transactions is Map<String, dynamic>) {
             final transactionsList = transactions.values.toList();
-            print("✅ Parsed transactions count: ${transactionsList.length}");
+            // print("✅ Parsed transactions count: ${transactionsList.length}");
             return transactionsList.map((json) => Transaction.fromJson(json)).toList();
           } 
           else if (transactions is List) {
-            print("✅ Transactions is a List with ${transactions.length} items.");
+            // print("✅ Transactions is a List with ${transactions.length} items.");
             return transactions.map((json) => Transaction.fromJson(json)).toList();
           } 
           

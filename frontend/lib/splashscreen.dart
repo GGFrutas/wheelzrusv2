@@ -6,15 +6,16 @@ class Splashscreen extends StatefulWidget {
   const Splashscreen({super.key});
 
   @override
-  _SplashscreenState createState() => _SplashscreenState();
+  SplashscreenState createState() => SplashscreenState();
 }
 
-class _SplashscreenState extends State<Splashscreen> {
+class SplashscreenState extends State<Splashscreen> {
   @override
   void initState() {
     super.initState();
     // Delay navigation to the login screen after the splash screen animation
     Future.delayed(const Duration(seconds: 4), () {
+      if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (context) => const LoginScreen(),

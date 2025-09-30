@@ -6,6 +6,7 @@ class MilestoneHistoryModel {
   final String scheduledDatetime;
   final String serviceType;
   final String actualDatetime;
+  final String? isBackload;
 
   const MilestoneHistoryModel({
     required this.id,
@@ -14,7 +15,8 @@ class MilestoneHistoryModel {
     required this.fclCode,
     required this.scheduledDatetime,
     required this.serviceType,
-    required this.actualDatetime
+    required this.actualDatetime,
+    required this.isBackload,
   });
 
   factory MilestoneHistoryModel.fromJson(Map<String, dynamic> json) {
@@ -34,6 +36,7 @@ class MilestoneHistoryModel {
         actualDatetime: (json['actual_datetime'] is String && json['actual_datetime'].isNotEmpty)
         ? json['actual_datetime']
         : '',
+      isBackload: json['is_backload']?.toString(),
 
     );
   }
@@ -58,7 +61,8 @@ class MilestoneHistoryModel {
      fclCode: fclCode,
      scheduledDatetime: scheduledDatetime,
      serviceType: serviceType,
-     actualDatetime: actualDatetime
+     actualDatetime: actualDatetime, 
+     isBackload: isBackload
 
     );
   }

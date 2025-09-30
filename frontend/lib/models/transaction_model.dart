@@ -1,3 +1,4 @@
+import 'package:frontend/models/consolidation_model.dart';
 import 'package:frontend/models/milestone_history_model.dart';
 
 class Transaction {
@@ -100,7 +101,12 @@ class Transaction {
 
  final String? writeDate;
 
+ final String? bookingRefNumber;
+
   final List<MilestoneHistoryModel> history;
+  final ConsolidationModel? backloadConsolidation;
+
+  // final String? completeAddress ;
 
 
   const Transaction({
@@ -193,10 +199,14 @@ class Transaction {
     required this.peReleasedBy,
     required this.dlReceivedBy,
     required this.plReceivedBy,
+    required this.backloadConsolidation,
+    required this.bookingRefNumber,
+    // required this.completeAddress,
   });
 
   factory Transaction.fromJson(Map<String, dynamic> json) {
     // print('knii Raw transaction JSON: $json');
+    final rawConsolidation = json['backload_consolidation'];
 
     return Transaction(
       id: json['id'] ?? 0,
@@ -314,12 +324,22 @@ class Transaction {
       deReleasedBy: json['de_release_by'].toString(),
       dlReceivedBy: json['dl_receive_by'].toString(),
 
+      bookingRefNumber: json['booking_reference_no']?.toString() ?? 'N/A',
+
       history: (json['history'] is List) 
         ? (json['history'] as List).map((e) => MilestoneHistoryModel.fromJson(e)).toList() : [],
 
       writeDate: json['write_date']?.toString() ?? 'Unknown Date', // Provide a default value
 
       isAccepted: false,  // set default or map from API
+
+    backloadConsolidation: rawConsolidation != null && rawConsolidation is Map
+        ? ConsolidationModel.fromJson(Map<String, dynamic>.from(rawConsolidation))
+        : null,
+
+      // completeAddress: json['origin']?.toString() ?? 'N/A',
+
+
       
     );
   }
@@ -440,10 +460,15 @@ class Transaction {
       deReleasedBy: deReleasedBy,
       dlReceivedBy: dlReceivedBy,
       plReceivedBy: plReceivedBy,
+
+      bookingRefNumber:bookingRefNumber,
       
 
       login: login,
        history: history,
+       backloadConsolidation: backloadConsolidation,
+
+        // completeAddress: completeAddress, 
 
     );
   }

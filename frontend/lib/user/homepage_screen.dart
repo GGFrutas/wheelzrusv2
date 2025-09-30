@@ -50,6 +50,16 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
     }
    }
 
+  @override
+  void initState() {
+    super.initState();
+
+    Future.microtask(() async {
+      ref.invalidate(bookingProvider);
+      await ref.refresh(allTransactionProvider.future); // if async
+    });
+  }
+
 
    final List<Map<String, String>> carouselItems = [
     {
@@ -321,6 +331,7 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                                 assignedDate:item.deAssignedDate,
                                 originAddress: "Deliver Empty Container to Shipper",
                                 freightBookingNumber:item.freightBookingNumber,
+                                // // completeAddress: buildShipperAddress(item),
                                 // truckPlateNumber: item.deTruckPlateNumber,
                               ),
                           //   ];
@@ -337,6 +348,7 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                                 assignedDate:item.plAssignedDate,
                                 originAddress: descriptionMsg(item),
                                 freightBookingNumber:item.freightBookingNumber,
+                                // // completeAddress: shipperDestination,
                                 // truckPlateNumber: item.plTruckPlateNumber,
                               ),
                             ];
@@ -359,6 +371,7 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                                 assignedDate:item.dlAssignedDate,
                                 originAddress: "Deliver Laden Container to Consignee",
                                 freightBookingNumber:item.freightBookingNumber,
+                                // // completeAddress: consigneeOrigin,
                                 // truckPlateNumber: item.dlTruckPlateNumber,
                               ),
                           //   ];
@@ -375,6 +388,7 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                                 assignedDate:item.peAssignedDate,
                                 originAddress: "Pickup Empty Container from Consignee",
                                 freightBookingNumber:item.freightBookingNumber,
+                                // // completeAddress: consigneeDestination,
                                 // truckPlateNumber: item.peTruckPlateNumber,
                               ),
                             ];  
@@ -402,14 +416,19 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
 
                       final ongoingTransactions = expandedTransactions
                           .where((tx) {
-                            final statusOk = tx.requestStatus == "Accepted" || tx.requestStatus == "Assigned" || tx.requestStatus == "Pending";
+                            // final statusOk = tx.requestStatus == "Accepted" || tx.requestStatus == "Assigned" || tx.requestStatus == "Pending";
                             final notCancelled = tx.stageId != "Cancelled";
                             // Get the relevant date depending on dispatch type
                             String? dateStr;
-                            if (tx.dispatchType == 'ot') {
-                              dateStr = tx.departureDate;
-                            } else if (tx.dispatchType == 'dt') {
-                              dateStr = tx.arrivalDate;
+                            
+                            if (tx.dispatchType == "ot") {
+                              if (tx.requestStatus == "Accepted" || tx.requestStatus == "Assigned" || tx.requestStatus == "Pending"){
+                                dateStr = tx.pickupDate;
+                              }
+                            } else if (tx.dispatchType == "dt") {
+                              if (tx.requestStatus == "Accepted" || tx.requestStatus == "Assigned" || tx.requestStatus == "Pending"){
+                                dateStr = tx.deliveryDate;
+                              }
                             }
 
                             if (dateStr == null || dateStr.isEmpty) return false;
@@ -419,7 +438,7 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
 
                             final dateOnly = DateTime(date.year, date.month, date.day);
 
-                            return statusOk && notCancelled && (dateOnly == today || dateOnly == tomorrow);
+                            return notCancelled && (dateOnly == today || dateOnly == tomorrow);
                           })
                           .take(5)
                           .toList();

@@ -42,12 +42,17 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
   late final String uid;
 
  String? _enteredName;
+  String? _enteredContainerNumber;
    
   final SignatureController _controller = SignatureController(
     penStrokeWidth: 5,
     penColor: Colors.black,
     exportBackgroundColor: Colors.white,
   );
+ 
+ late TextEditingController _containerController;
+late String _originalContainerNumber;
+
 
   
 
@@ -56,11 +61,16 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
     Uint8List? signatureImage = await _controller.toPngBytes();
     String? base64Signature = signatureImage != null ? base64Encode(signatureImage) : null;
     final now = DateTime.now();
-final adjustedTime = now.subtract(const Duration(hours: 8));
-final timestamp = DateFormat("yyyy-MM-dd HH:mm:ss").format(adjustedTime);
+    final adjustedTime = now.subtract(const Duration(hours: 8));
+    final timestamp = DateFormat("yyyy-MM-dd HH:mm:ss").format(adjustedTime);
 
     String? enteredName = _enteredName;
-
+    // String? enteredContainerNumber = _enteredContainerNumber;
+final enteredContainerNumber = (_enteredContainerNumber == null || 
+                                 _enteredContainerNumber!.trim().isEmpty || 
+                                 _enteredContainerNumber == _originalContainerNumber)
+      ? _originalContainerNumber
+      : _enteredContainerNumber!.trim();
 
     if(_controller.isNotEmpty){
       Uint8List? signatureImage = await _controller.toPngBytes();
@@ -80,6 +90,7 @@ final timestamp = DateFormat("yyyy-MM-dd HH:mm:ss").format(adjustedTime);
     final baseUrl = ref.watch(baseUrlProvider);
     
     print("Entered Name: $enteredName");
+     print("Entered Container number: $enteredContainerNumber");
     print("Current Status: $currentStatus");
     Uri url;
   
@@ -94,6 +105,7 @@ final timestamp = DateFormat("yyyy-MM-dd HH:mm:ss").format(adjustedTime);
       nextStatus = "Completed";
      url = Uri.parse('$baseUrl/api/odoo/pod-ongoing-to-complete?uid=$uid');
     } else {
+      if (!mounted) return;
       showSuccessDialog(context, "Invalid transaction!");
       return;
     }
@@ -114,11 +126,13 @@ final timestamp = DateFormat("yyyy-MM-dd HH:mm:ss").format(adjustedTime);
         'request_number': widget.transaction?.requestNumber,
         'timestamp': timestamp,
         'enteredName': enteredName,
+        'enteredContainerNumber': enteredContainerNumber
       }),
     );
     print("Response status code: ${response.statusCode}");
     
     print('Posting to: $url for status update to $nextStatus');
+    if (!mounted) return;
     if (response.statusCode == 200) {
       print("Files uploaded successfully!");
       print("Response body: ${response.body}");
@@ -152,9 +166,9 @@ final timestamp = DateFormat("yyyy-MM-dd HH:mm:ss").format(adjustedTime);
         );
 
       print('Updated to Ongoing: ${updatedTransaction.requestStatus}');
-
+      if (!mounted) return;
       Navigator.of(context).pop(); // Close the loading dialog
-      showSuccessDialog(context, "Proof of delivery has been successfully uploaded!");
+      showSuccessDialog(context, "Success!");
       
     } else {
       showSuccessDialog(context, "Failed to upload files!");
@@ -164,18 +178,21 @@ final timestamp = DateFormat("yyyy-MM-dd HH:mm:ss").format(adjustedTime);
     
   }
 
-  @override
-  void initState() {
-    // initLocation();
-    super.initState();
-    uid = ref.read(authNotifierProvider).uid ?? '';
-    _controller.addListener(() {
-      if (mounted) {  
-        setState(() {}); // Update the UI whenever the signature content changes
-      }
-      setState(() {}); // Rebuild to update the visibility of the Clear button
-    });
-  }
+ @override
+void initState() {
+  super.initState();
+  uid = ref.read(authNotifierProvider).uid ?? '';
+
+  _controller.addListener(() {
+    if (mounted) {
+      setState(() {});
+    }
+  });
+
+  _originalContainerNumber = widget.transaction?.containerNumber ?? '';
+  _containerController = TextEditingController(text: _originalContainerNumber);
+}
+
 
   @override
   void dispose() {
@@ -232,6 +249,62 @@ final timestamp = DateFormat("yyyy-MM-dd HH:mm:ss").format(adjustedTime);
               ),
             ),
            const SizedBox(height: 20),
+           if(widget.transaction?.requestNumber == widget.transaction?.deRequestNumber) ... [
+            Text(
+              "Container Number: ",
+              style: AppTextStyles.subtitle.copyWith(
+                color: mainColor
+              ),
+            ),
+            
+             const SizedBox(height: 10),
+            Container (
+              width: MediaQuery.of(context).size.width * 0.9,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: TextField(
+                onChanged: (val){
+                  setState(() {
+                    _enteredContainerNumber = val;
+                  });
+                },
+                enabled: !(widget.transaction?.deRequestStatus == "Ongoing" && (widget.transaction!.containerNumber?.isNotEmpty ?? false)) ,
+                controller: _containerController,
+                decoration: InputDecoration(
+                border: const OutlineInputBorder(),
+                label: (widget.transaction?.containerNumber ?? '').isEmpty
+                  ? RichText(
+                      text: TextSpan(
+                        children: [
+                          TextSpan(
+                            text: 'Enter container number ',
+                            style: AppTextStyles.body,
+                          ),
+                          TextSpan(
+                            text: '(optional)',
+                            style: AppTextStyles.caption.copyWith(
+                              fontStyle: FontStyle.italic,
+                              color: Colors.red,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : Text(
+                      '',
+                      style: AppTextStyles.body,
+                    ),
+
+              ),
+
+              ),
+            ),
+           ],
+            
+          
+           const SizedBox(height: 20),
             Text(
               'Please provide your signature below:',
               style: AppTextStyles.subtitle.copyWith(
@@ -275,7 +348,7 @@ final timestamp = DateFormat("yyyy-MM-dd HH:mm:ss").format(adjustedTime);
         mainAxisSize: MainAxisSize.min,
         children: [
           Padding(
-            padding: EdgeInsets.all(8.0),
+            padding: const EdgeInsets.all(8.0),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -371,6 +444,7 @@ final timestamp = DateFormat("yyyy-MM-dd HH:mm:ss").format(adjustedTime);
                           print("Request Number: ${widget.transaction?.requestNumber}");
                           print("Request Number: ${widget.transaction?.requestStatus}");
                           print("Entered Name: $_enteredName");
+                          print("Entered Container: $_enteredName");
                             _printFilenames();
                         } catch (e) {
                           print("Error: $e");
@@ -418,7 +492,7 @@ final timestamp = DateFormat("yyyy-MM-dd HH:mm:ss").format(adjustedTime);
         builder: (context, ref, _) {
           return PopScope(
             canPop: false, // Prevent default pop behavior
-            onPopInvoked: (didPop) {
+            onPopInvokedWithResult: (didPop, result) {
               if (!didPop) {
                 // Navigate to home if system back button is pressed
                 ref.invalidate(bookingProvider);

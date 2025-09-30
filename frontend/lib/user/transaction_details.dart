@@ -60,7 +60,7 @@ class TransactionDetails extends ConsumerStatefulWidget {
   
 class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
   
-  final Map<String, bool> _loadingStates = {};
+  // final Map<String, bool> _loadingStates = {};
 
   gmaps.GoogleMapController? _googleMapController;
 
@@ -69,7 +69,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
   // bool _isMapReady = false;
   PermissionStatus? _permissionGranted;
   bool _serviceEnabled = false;
-  LocationData? _locationData;
+  // LocationData? _locationData;
   static const gmaps.LatLng _pointA = gmaps.LatLng(10.300233284867856, 123.91189477293283);
   static const gmaps.LatLng _pointB = gmaps.LatLng(10.298462163232422, 123.8950565989957);
   static const gmaps.LatLng _pointC = gmaps.LatLng(10.308225643109328, 123.90735316709156);
@@ -179,7 +179,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
             fclCode: '',
             scheduledDatetime: '',
             actualDatetime: '',
-            serviceType: '',
+            serviceType: '', isBackload: '',
            
           ),
         );
@@ -199,7 +199,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
             fclCode: '',
             scheduledDatetime: '',
             actualDatetime: '',
-            serviceType: '',
+            serviceType: '', isBackload: '',
             
           ),
         );
@@ -238,7 +238,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
       if (_permissionGranted != PermissionStatus.granted) return;
     }
 
-    _locationData = await location.getLocation();
+    // _locationData = await location.getLocation();
 
     
   }
@@ -259,9 +259,15 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
     }
   } 
 
+  
+
 
   @override
   Widget build(BuildContext context) {
+   final bookingNumber = widget.transaction?.bookingRefNumber?.trim();
+ 
+   
+   
     // If transaction is null, display a fallback message
       final scheduleMap = getPickupAndDeliverySchedule(widget.transaction!);
 final pickup = scheduleMap['pickup'];
@@ -269,7 +275,15 @@ final delivery = scheduleMap['delivery'];
     final showTabs = widget.transaction?.requestStatus == "Ongoing";
     return Consumer(
       builder: (context, ref, child) {
-        
+         final allTransactions = ref.watch(transactionListProvider);
+
+  final relatedFF = allTransactions.cast<Transaction?>().firstWhere(
+    (tx) =>
+      tx?.bookingRefNumber?.trim() == bookingNumber &&
+      tx?.dispatchType?.toLowerCase().trim() == 'ff',
+    orElse: () => null,
+  );
+
         if (widget.transaction == null) {
           return Scaffold(
             appBar: AppBar(
@@ -451,6 +465,119 @@ final delivery = scheduleMap['delivery'];
                     ],
                   ),
                 ),
+
+                Container(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center, // Align top of icon and text
+                    children: [
+                      const Icon(
+                        Icons.check_circle,
+                        color: mainColor,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8), // Space between icon and text
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Space between label and value
+                          
+                          Text(
+                            "Freight Booking Number",
+                            style: AppTextStyles.caption.copyWith(
+                              fontSize: 12,
+                              color: mainColor,
+                            ),
+                          ),
+                          Text(
+                            (widget.transaction?.freightBookingNumber?.isNotEmpty ?? false)
+                              ? widget.transaction!.freightBookingNumber! : '—',
+                            style: AppTextStyles.subtitle.copyWith(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: mainColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center, // Align top of icon and text
+                    children: [
+                      const Icon(
+                        Icons.check_circle,
+                        color: mainColor,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8), // Space between icon and text
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Space between label and value
+                          
+                          Text(
+                            "Freight BL Number",
+                            style: AppTextStyles.caption.copyWith(
+                              fontSize: 12,
+                              color: mainColor,
+                            ),
+                          ),
+                          Text(
+                            (widget.transaction?.freightBlNumber?.isNotEmpty ?? false)
+                              ? widget.transaction!.freightBlNumber! : '—',
+                            style: AppTextStyles.subtitle.copyWith(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: mainColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center, // Align top of icon and text
+                    children: [
+                      const Icon(
+                        Icons.check_circle,
+                        color: mainColor,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8), // Space between icon and text
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Space between label and value
+                          
+                          Text(
+                            "Container Number",
+                            style: AppTextStyles.caption.copyWith(
+                              fontSize: 12,
+                              color: mainColor,
+                            ),
+                          ),
+                          Text(
+                            (widget.transaction?.containerNumber?.isNotEmpty ?? false)
+                              ? widget.transaction!.containerNumber! : '—',
+                            style: AppTextStyles.subtitle.copyWith(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: mainColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
                 Column( // Use a Column to arrange the widgets vertically
                   crossAxisAlignment: CrossAxisAlignment.center, // Align text to the left
                   children: [
@@ -558,7 +685,8 @@ final delivery = scheduleMap['delivery'];
               size: 24,
             ),
             const SizedBox(width: 8),
-            Column(
+            Expanded(
+              child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
@@ -576,6 +704,8 @@ final delivery = scheduleMap['delivery'];
                 ),
               ],
             ),
+            )
+            
           ],
         ),
       ),
@@ -593,7 +723,8 @@ final delivery = scheduleMap['delivery'];
               size: 24,
             ),
             const SizedBox(width: 8),
-            Column(
+            Expanded(
+              child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
@@ -611,6 +742,8 @@ final delivery = scheduleMap['delivery'];
                 ),
               ],
             ),
+            )
+            
           ],
         ),
       ),
@@ -630,7 +763,8 @@ final delivery = scheduleMap['delivery'];
                             size: 24,
                           ),
                           const SizedBox(width: 8), // Space between icon and text
-                          Column(
+                          Expanded(
+                            child:Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               // Space between label and value
@@ -651,6 +785,8 @@ final delivery = scheduleMap['delivery'];
                               ),
                             ],
                           ),
+                          )
+                          
                         ],
                       ),
                     ),
@@ -716,14 +852,14 @@ final delivery = scheduleMap['delivery'];
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => ConfirmationScreen(uid: widget.uid, transaction: widget.transaction),
+                              builder: (context) => ConfirmationScreen(uid: widget.uid, transaction: widget.transaction, relatedFF:relatedFF ,),
                             ),
                           );
                         }else {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => DetailedDetailScreen(uid: widget.uid, transaction: widget.transaction),
+                              builder: (context) => DetailedDetailScreen(uid: widget.uid, transaction: widget.transaction, relatedFF: relatedFF),
                             ),
                           );
                         }
@@ -937,7 +1073,7 @@ final delivery = scheduleMap['delivery'];
     final isDT = widget.transaction?.dispatchType == 'dt';
    
 
-    Uint8List? _decodeBase64(String? data) {
+    Uint8List? decodeBase64(String? data) {
       if(data == null || data.isEmpty)  return null;
       try{
       
@@ -970,8 +1106,8 @@ final delivery = scheduleMap['delivery'];
       }
     }
 
-    final signBytes = _decodeBase64(signBase64);
-    final proofBytes = _decodeBase64(proofBase64);
+    final signBytes = decodeBase64(signBase64);
+    final proofBytes = decodeBase64(proofBase64);
 
 
     return Column(
@@ -1021,7 +1157,7 @@ final delivery = scheduleMap['delivery'];
   Widget _buildShipConsTab (){
     final isDT = widget.transaction?.dispatchType == 'dt';
 
-    Uint8List? _decodeBase64(String? data) {
+    Uint8List? decodeBase64(String? data) {
       if(data == null || data.isEmpty)  return null;
       try{
       
@@ -1054,8 +1190,8 @@ final delivery = scheduleMap['delivery'];
       }
     }
 
-    final signBytes = _decodeBase64(signBase64);
-    final proofBytes = _decodeBase64(proofBase64);
+    final signBytes = decodeBase64(signBase64);
+    final proofBytes = decodeBase64(proofBase64);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

@@ -144,7 +144,7 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
             fclCode: '',
             scheduledDatetime: '',
             serviceType: '',
-            actualDatetime: ''
+            actualDatetime: '', isBackload: ''
           ),
         );
         if(pickupSchedule.id == -1) pickupSchedule  = null;
@@ -163,7 +163,7 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
             fclCode: '',
             scheduledDatetime: '',
             serviceType: '',
-            actualDatetime: ''
+            actualDatetime: '', isBackload: ''
           ),
         );
         if(deliverySchedule.id == -1) deliverySchedule  = null;
@@ -302,6 +302,7 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
                                   ? formatDateTime(widget.transaction?.completedTime)
                                   : widget.transaction?.stageId == 'Cancelled'
                                     ? formatDateTime(widget.transaction?.writeDate)
+                                    : widget.transaction?.requestStatus == 'Backload' ? formatDateTime( widget.transaction?.backloadConsolidation?.consolidatedDatetime)
                                     : '—',
                                 
                                 style: AppTextStyles.subtitle.copyWith(
@@ -312,7 +313,8 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
                                (widget.transaction?.requestStatus == 'Completed' || widget.transaction?.stageId == 'Completed')
                                               ? 'Completed Date'
                                               : widget.transaction?.stageId == 'Cancelled'
-                                                ? 'Cancelled Date'
+                                                ? 'Cancelled Date' 
+                                                : widget.transaction?.requestStatus == 'Backload' ? 'Consolidated Date'
                                                 : '—',
                                 style: AppTextStyles.caption.copyWith(
                                   color: Colors.white,
@@ -328,7 +330,7 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
                 ),
               ),  
               (widget.transaction?.stageId == "Cancelled") ?
-               Center(
+              Center(
                 child: Padding(
                   padding: const EdgeInsets.all(20.0),
                     child: Text(
@@ -338,7 +340,18 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
                     ),
                   )
                 )
-                : Column(
+                : (widget.transaction?.requestStatus == "Backload") ?
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                    child: Text(
+                      'This booking has been backloaded: ${widget.transaction?.backloadConsolidation?.name.trim().isNotEmpty == true ? widget.transaction?.backloadConsolidation!.name : 'N/A'}',
+                      style: AppTextStyles.subtitle,
+                      textAlign: TextAlign.center,
+                    ),
+
+                  )
+                ) : Column(
                   children: [
                     Row(
                         children: List.generate(tabTitles.length, (index) {
@@ -393,8 +406,8 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
 
                 const SizedBox(height: 20),
               ],
-                    )
-                  ]
+            )
+          ]
                   
    
       
@@ -751,7 +764,36 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Container Seal Number",
+                  "Container Number",
+                  style: AppTextStyles.subtitle.copyWith(
+                    color: Colors.black,
+                    fontWeight: FontWeight.bold
+                  ),
+                ),
+                Text(
+                (widget.transaction?.containerNumber?.isNotEmpty ?? false)
+                  ? widget.transaction!.containerNumber!
+                  : '—',
+                  // Use the originPort variable here
+                  style: AppTextStyles.body.copyWith(
+                    color: Colors.black,
+                  ),
+                ),
+                
+              ],
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 20),
+        Row(
+          children: [
+            const SizedBox(width: 30), // Space between icon and text
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Seal Number",
                   style: AppTextStyles.subtitle.copyWith(
                     color: Colors.black,
                     fontWeight: FontWeight.bold

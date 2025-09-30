@@ -17,6 +17,7 @@ import 'package:frontend/screen/navigation_menu.dart';
 import 'package:frontend/theme/colors.dart';
 import 'package:frontend/theme/text_styles.dart';
 import 'package:frontend/user/proof_of_delivery_screen.dart';
+import 'package:frontend/widgets/progress_row.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
@@ -27,7 +28,7 @@ class ConfirmationScreen extends ConsumerStatefulWidget {
   final String uid;
   final Transaction? transaction;
 
-  const ConfirmationScreen({super.key, required this.uid, required this.transaction});
+  const ConfirmationScreen({super.key, required this.uid, required this.transaction, required relatedFF});
 
   @override
   ConsumerState<ConfirmationScreen> createState() => _ConfirmationState();
@@ -50,21 +51,21 @@ class _ConfirmationState extends ConsumerState<ConfirmationScreen> {
                 leading: const Icon(Icons.photo_library),
                 title: const Text('Gallery'),
                 onTap: () async {
-                  final List<XFile>? pickedFile = await picker.pickMultiImage();
-                  if (mounted && pickedFile != null) {
+                  final navigator = Navigator.of(context);
+                  final List<XFile> pickedFile = await picker.pickMultiImage();
+                  if (mounted) {
                     setState(() {
                       _images.addAll(pickedFile.map((pickedFile) => File(pickedFile.path))); // Add image to the list
                     });
                   }
-                  if (mounted) {
-                    Navigator.of(context).pop();
-                  }
+                  navigator.pop();
                 },
               ),
               ListTile(
                 leading: const Icon(Icons.camera_alt),
                 title: const Text('Camera'),
                 onTap: () async {
+                  final navigator = Navigator.of(context);
                   final XFile? pickedFile =
                       await picker.pickImage(source: ImageSource.camera);
                   if (pickedFile != null) {
@@ -73,9 +74,7 @@ class _ConfirmationState extends ConsumerState<ConfirmationScreen> {
                           .add(File(pickedFile.path)); // Add image to the list
                     });
                   }
-                  if (mounted) {
-                    Navigator.of(context).pop();
-                  }
+                  navigator.pop();
                 },
               ),
             ],
@@ -110,6 +109,32 @@ class _ConfirmationState extends ConsumerState<ConfirmationScreen> {
   @override
   Widget build(BuildContext context) {
    
+  int currentStep = 3; // Assuming Confirmation is step 3 (0-based index)
+
+  final bookingNumber = widget.transaction?.bookingRefNumber;
+
+    final allTransactions = ref.watch(transactionListProvider);
+    print("All Transaction: $allTransactions");
+
+    for (var tx in allTransactions) {
+      print("🔍 TX → bookingRefNumber: '${tx.bookingRefNumber}', dispatchType: '${tx.dispatchType}'");
+    }
+
+    final relatedFF = allTransactions.cast<Transaction?>().firstWhere(
+        (tx) {
+          final refNum = tx?.bookingRefNumber?.trim();
+          final currentRef = bookingNumber?.trim();
+          final dispatch = tx?.dispatchType.toLowerCase().trim();
+
+          return refNum != null &&
+                refNum == currentRef &&
+                dispatch == 'ff'; // ✅ specifically look for FF
+        },
+        orElse: () => null,
+      );
+   
+
+   
     return Scaffold(
       appBar: AppBar(
         iconTheme: const IconThemeData(color: mainColor),
@@ -130,7 +155,7 @@ class _ConfirmationState extends ConsumerState<ConfirmationScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              progressRow(3), // Pass an integer value for currentStep
+              ProgressRow(currentStep: currentStep, uid: widget.uid, transaction: widget.transaction,relatedFF: relatedFF,),
 
               const SizedBox(height: 20),
               Container(
@@ -180,7 +205,7 @@ class _ConfirmationState extends ConsumerState<ConfirmationScreen> {
                             ],
                           ),
                         );
-                      }).toList(),
+                      }),
                     ],
                   ),
                 ),
@@ -303,10 +328,10 @@ class _ConfirmationState extends ConsumerState<ConfirmationScreen> {
                         if (validImages.isEmpty) {
                           return;
                         }
+                        final navigator  = Navigator.of(context);
                         final base64Images =  await _convertImagestoBase64(validImages);
                           print('Base64 Image: $base64Images\n');
-                        Navigator.push(
-                          context,
+                        navigator.push(
                           MaterialPageRoute(
                             builder: (context) => ProofOfDeliveryScreen(uid: widget.uid, transaction: widget.transaction,base64Images: base64Images),
                           ),
