@@ -50,7 +50,10 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
     exportBackgroundColor: Colors.white,
   );
  
- final TextEditingController _containerController = TextEditingController();
+ late TextEditingController _containerController;
+late String _originalContainerNumber;
+
+
   
 
   Future<void> _printFilenames() async {
@@ -62,8 +65,12 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
     final timestamp = DateFormat("yyyy-MM-dd HH:mm:ss").format(adjustedTime);
 
     String? enteredName = _enteredName;
-    String? enteredContainerNumber = _enteredContainerNumber;
-
+    // String? enteredContainerNumber = _enteredContainerNumber;
+final enteredContainerNumber = (_enteredContainerNumber == null || 
+                                 _enteredContainerNumber!.trim().isEmpty || 
+                                 _enteredContainerNumber == _originalContainerNumber)
+      ? _originalContainerNumber
+      : _enteredContainerNumber!.trim();
 
     if(_controller.isNotEmpty){
       Uint8List? signatureImage = await _controller.toPngBytes();
@@ -171,21 +178,21 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
     
   }
 
-  @override
-  void initState() {
-    // initLocation();
-    super.initState();
-    uid = ref.read(authNotifierProvider).uid ?? '';
-    _controller.addListener(() {
-      if (mounted) {  
-        setState(() {}); // Update the UI whenever the signature content changes
-      }
-      setState(() {}); // Rebuild to update the visibility of the Clear button
-    });
-    if(widget.transaction!.containerNumber != null && widget.transaction!.containerNumber!.isNotEmpty) {
-      _containerController.text = widget.transaction!.containerNumber!;
+ @override
+void initState() {
+  super.initState();
+  uid = ref.read(authNotifierProvider).uid ?? '';
+
+  _controller.addListener(() {
+    if (mounted) {
+      setState(() {});
     }
-  }
+  });
+
+  _originalContainerNumber = widget.transaction?.containerNumber ?? '';
+  _containerController = TextEditingController(text: _originalContainerNumber);
+}
+
 
   @override
   void dispose() {
@@ -249,8 +256,8 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
                 color: mainColor
               ),
             ),
-            const SizedBox(height: 10),
             
+             const SizedBox(height: 10),
             Container (
               width: MediaQuery.of(context).size.width * 0.9,
               decoration: BoxDecoration(
@@ -263,13 +270,35 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
                     _enteredContainerNumber = val;
                   });
                 },
-                enabled: widget.transaction?.deRequestStatus != "Ongoing",
+                enabled: (widget.transaction?.containerNumber ?? '').isEmpty,
                 controller: _containerController,
                 decoration: InputDecoration(
-                  border: const OutlineInputBorder(),
-                  hintText: 'Enter container number',
-                  hintStyle: AppTextStyles.body, // Use caption style for hint text
-                ),
+                border: const OutlineInputBorder(),
+                label: (widget.transaction?.containerNumber ?? '').isEmpty
+                  ? RichText(
+                      text: TextSpan(
+                        children: [
+                          TextSpan(
+                            text: 'Enter container number ',
+                            style: AppTextStyles.body,
+                          ),
+                          TextSpan(
+                            text: '(optional)',
+                            style: AppTextStyles.caption.copyWith(
+                              fontStyle: FontStyle.italic,
+                              color: Colors.red,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : Text(
+                      '',
+                      style: AppTextStyles.body,
+                    ),
+
+              ),
+
               ),
             ),
            ],
@@ -415,6 +444,7 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
                           print("Request Number: ${widget.transaction?.requestNumber}");
                           print("Request Number: ${widget.transaction?.requestStatus}");
                           print("Entered Name: $_enteredName");
+                          print("Entered Container: $_enteredName");
                             _printFilenames();
                         } catch (e) {
                           print("Error: $e");

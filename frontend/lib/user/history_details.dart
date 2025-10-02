@@ -345,7 +345,7 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
                 child: Padding(
                   padding: const EdgeInsets.all(20.0),
                     child: Text(
-                      'This booking has been backloaded: ${widget.transaction?.backloadConsolidation?.name?.trim().isNotEmpty == true ? widget.transaction?.backloadConsolidation!.name : 'N/A'}',
+                      'This booking has been backloaded: ${widget.transaction?.backloadConsolidation?.name.trim().isNotEmpty == true ? widget.transaction?.backloadConsolidation!.name : 'N/A'}',
                       style: AppTextStyles.subtitle,
                       textAlign: TextAlign.center,
                     ),
@@ -430,6 +430,10 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
     final delivery = scheduleMap['delivery'];
 
  print('pickup actual datetime: ${pickup?.actualDatetime}');
+
+ print("Container Number: ${widget.transaction?.containerNumber}");
+print("Seal Number: ${widget.transaction?.sealNumber}");
+
 
    
 
@@ -771,8 +775,9 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
                   ),
                 ),
                 Text(
+                  
                 (widget.transaction?.containerNumber?.isNotEmpty ?? false)
-                  ? widget.transaction!.sealNumber!
+                  ? widget.transaction!.containerNumber!
                   : '—',
                   // Use the originPort variable here
                   style: AppTextStyles.body.copyWith(

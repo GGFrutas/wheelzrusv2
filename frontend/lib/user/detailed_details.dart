@@ -42,8 +42,7 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
     uid = widget.uid; // Initialize uid
 
     Future.microtask(() async {
-      final transactions = await ref.read(allTransactionProvider.future);
-      ref.read(transactionListProvider.notifier).loadTransactions(transactions);
+      await ref.refresh(combinedTransactionProvider.future);
     });
 
   }
@@ -67,18 +66,7 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
       print("🔍 TX → bookingRefNumber: '${tx.bookingRefNumber}', dispatchType: '${tx.dispatchType}'");
     }
 
-    final relatedFF = allTransactions.cast<Transaction?>().firstWhere(
-        (tx) {
-          final refNum = tx?.bookingRefNumber?.trim();
-          final currentRef = bookingNumber?.trim();
-          final dispatch = tx?.dispatchType.toLowerCase().trim();
-
-          return refNum != null &&
-                refNum == currentRef &&
-                dispatch == 'ff'; // ✅ specifically look for FF
-        },
-        orElse: () => null,
-      );
+    final relatedFF = ref.watch(relatedFFProvider(bookingNumber ?? ''));
    
 
     String? checkPrerequisites(Transaction transaction, String requestNumber) {
@@ -97,11 +85,15 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
         }
       }
 
-      if (requestNumber == transaction.deRequestNumber) {
-        if (relatedFF == null || relatedFF.stageId?.trim() == "For Assignment") {
-          return "Associated Freight Forwarding Vendor has not yet been assigned.";
-        }
+      if(transaction.freightForwarderName!.isEmpty) {
+        return "Associated Freight Forwarding Vendor has not yet been assigned.";
       }
+
+      // if (requestNumber == transaction.deRequestNumber) {
+      //   if (relatedFF == null || relatedFF.stageId?.trim() != "Vendor Accepted") {
+      //     return "Associated Freight Forwarding Vendor has not yet been assigned.";
+      //   }
+      // }
     
       if (requestNumber == transaction.peRequestNumber &&
           transaction.dlRequestStatus != "Completed") {

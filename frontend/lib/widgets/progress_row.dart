@@ -174,7 +174,46 @@ class ProgressRow extends StatelessWidget {
 
   String? _checkPrerequisites(dynamic transaction, String requestNumber, dynamic relatedFF) {
   
-    print('Related FF Stage ID: ${relatedFF?.stageId}');
+    print('Related FF Stage ID from Progress Roww: ${relatedFF?.stageId}');
+
+ 
+    if (requestNumber == transaction.plRequestNumber &&
+        transaction.deRequestStatus == "Ongoing"){ 
+          return null;
+          }
+
+    if (requestNumber == transaction.dlRequestNumber &&
+        transaction.dlRequestStatus == "Ongoing") { 
+          return null;
+          }
+
+    if (requestNumber == transaction.deRequestNumber &&
+        transaction.deRequestStatus == "Ongoing") { 
+          return null;
+          }
+
+    if (requestNumber == transaction.peRequestNumber &&
+        transaction.peRequestStatus == "Ongoing") { 
+          return null;
+          }
+
+    if(transaction.freightForwarderName!.isEmpty) {
+      return "Associated Freight Forwarding Vendor has not yet been assigned.";
+    }
+
+    // ✅ If FF stage is expected but temporarily missing, skip validation
+    if (requestNumber == transaction.deRequestNumber &&
+        transaction.deRequestStatus == "Ongoing" &&
+        relatedFF == null) { 
+          return null;
+          }
+
+    if (requestNumber == transaction.deRequestNumber &&
+        relatedFF.stageId == "Vendor Accepted") { 
+          return null;
+          }
+
+
     if (requestNumber == transaction.plRequestNumber &&
         transaction.deRequestStatus != "Completed") {
       return "Delivery Empty should be completed first.";
@@ -185,10 +224,10 @@ class ProgressRow extends StatelessWidget {
     return "Associated Freight Forwarding should be completed first.";
   }
 
-  if (requestNumber == transaction.deRequestNumber &&
-      (relatedFF == null || relatedFF.stageId?.trim() == "For Assignment")) {
-    return "Associated Freight Forwarding Vendor has not yet been assigned.";
-  }
+  // if (requestNumber == transaction.deRequestNumber &&
+  //     (relatedFF == null || relatedFF.stageId?.trim() != "Vendor Accepted")) {
+  //   return "Associated Freight Forwarding Vendor has not yet been assigned.";
+  // }
 
 
     if (requestNumber == transaction.peRequestNumber &&
