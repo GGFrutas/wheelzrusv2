@@ -115,7 +115,8 @@ class TransactionController extends Controller
             'params' => [
                 'service' => 'common',
                 'method' => 'login',
-                'args' => [$db, $login, $odooPassword],
+                'args' => [
+                    $db, $login, $odooPassword],
             ],
             'id' => 1
         ]);
@@ -1457,7 +1458,7 @@ class TransactionController extends Controller
         return null;
     }
 
-    private function consolidationMaster($transactionId,$actualTime,$db,$uid,$odooPassword,$odooUrl)
+    private function consolidationMaster($transactionId,$actualTime,$db,$uid,$odooPassword,$odooUrl,$bookingRef)
     {
         $notebookRes = jsonRpcRequest($odooUrl, [
             'jsonrpc' => '2.0',
@@ -1476,6 +1477,8 @@ class TransactionController extends Controller
         if (empty($notebookRes['result'])) {
             return; // no consolidation notebook found
         }
+
+        $resultSummary = [];
 
         foreach ($notebookRes['result'] as $nb) {
             $raw = $nb['consolidation_id'] ?? null;
@@ -1500,6 +1503,7 @@ class TransactionController extends Controller
             ]);
 
             Log::info("Consolidation master updated", ['consolMasterId' => $consolMasterId, 'response' => $updateConsolMaster]);
+            $resultSummary['updateConsolMaster'] = $updateConsolMaster;
 
             if($consolOriginId) {
                 $updateConsolOrigin = jsonRpcRequest($odooUrl, [
@@ -1515,6 +1519,59 @@ class TransactionController extends Controller
                     'id' => rand(1000, 9999)
                 ]);
                 Log::info("Consolidation origin updated", ['consolOriginId' => $consolOriginId, 'response' => $updateConsolOrigin]);
+                $resultSummary['updateConsolOrigin'] = $updateConsolOrigin;
+
+                $searchBooking = jsonRpcRequest($odooUrl,[
+                    "jsonrpc" => "2.0",
+                    "method" => "call",
+                    "params" => [
+                        "service" => "object",
+                        "method" => "execute_kw",
+                        "args" => [
+                            $db,
+                            $uid,
+                            $odooPassword,
+                            "freight.management",
+                            "search_read",
+                            [[["booking_reference_no", '=', $bookingRef]]],
+                            ["fields" => ["id", "stage_id"]]
+                        ],
+                    ],
+                    "id" => rand(1000, 9999)
+                ]);
+               
+                
+                $bookingIds = $searchBooking['result'][0]['id'] ?? null;
+
+                if ($bookingIds) {
+                    $updateBookingStage =jsonRpcRequest($odooUrl, [
+                        "jsonrpc" => "2.0",
+                        "method" => "call",
+                        "params" => [
+                            "service" => "object",
+                            "method" => "execute_kw",
+                            "args" => [
+                                $db,
+                                $uid,
+                                $odooPassword,
+                                "freight.management",
+                                "write",
+                                [
+                                    [$bookingIds],
+                                    [
+                                        "stage_id" => 6
+                                    ]
+                                ]
+                            ]
+                        ],
+                        "id" => rand(1000, 9999)
+                    ]);
+                    $resultSummary['updateBookingStage'] = $updateBookingStage;
+                    Log::info("Updated booking stage for bookingRef {$bookingRef}, bookingId: {$bookingIds}");
+                
+                } else {
+                    Log::warning("No booking found for bookingRef {$bookingRef}");
+                }
 
                 $fclToUpdate = ['TYOT', 'TEOT'];
 
@@ -1550,11 +1607,11 @@ class TransactionController extends Controller
                         'id' => rand(1000, 9999)
                     ]);
                     Log::info("Consolidation origin milestone updated", ['consolOriginId' => $consolOriginId, 'milestoneId' => $ms['id'], 'fcl_code' => $fclToUpdate, 'response' => $updateMilestone]);
+                    $resultSummary['milestone'][] = $updateMilestone;
                 }
             }
         }
-
-        
+        return $resultSummary;
     }
 
     private function updateBookingStage1($bookingRef, $db, $uid, $odooPassword, $odooUrl)
@@ -1574,7 +1631,7 @@ class TransactionController extends Controller
                     "freight.management",
                     "search_read",
                     [[["booking_reference_no", '=', $bookingRef]]],
-                    ["fields" => ["id", "stage_id"]]
+                    ["fields" => ["id", "stage_id", "waybill_id"]]
                 ],
             ],
             "id" => rand(1000, 9999)
@@ -1588,42 +1645,47 @@ class TransactionController extends Controller
         ])), true);
         
         $bookingIds = $searchResponse['result'][0]['id'] ?? null;
+        $waybillId = $searchResponse['result'][0]['waybill_id'] ?? null;
 
         if ($bookingIds) {
-            $updateBookingStage = [
-                "jsonrpc" => "2.0",
-                "method" => "call",
-                "params" => [
-                    "service" => "object",
-                    "method" => "execute_kw",
-                    "args" => [
-                        $db,
-                        $uid,
-                        $odooPassword,
-                        "freight.management",
-                        "write",
-                        [
-                            [$bookingIds],
+            if ($waybillId) {
+                $updateBookingStage = [
+                    "jsonrpc" => "2.0",
+                    "method" => "call",
+                    "params" => [
+                        "service" => "object",
+                        "method" => "execute_kw",
+                        "args" => [
+                            $db,
+                            $uid,
+                            $odooPassword,
+                            "freight.management",
+                            "write",
                             [
-                                "stage_id" => 5
+                                [$bookingIds],
+                                [
+                                    "stage_id" => 5
+                                ]
                             ]
                         ]
+                    ],
+                    "id" => rand(1000, 9999)
+                ];
+                $response = json_decode(file_get_contents($odooUrl, false, stream_context_create([
+                    "http" => [
+                        "header" => "Content-Type: application/json",
+                        "method" => "POST",
+                        "content" => json_encode($updateBookingStage),
                     ]
-                ],
-                "id" => rand(1000, 9999)
-            ];
-            $response = json_decode(file_get_contents($odooUrl, false, stream_context_create([
-                "http" => [
-                    "header" => "Content-Type: application/json",
-                    "method" => "POST",
-                    "content" => json_encode($updateBookingStage),
-                ]
-            ])), true);
+                ])), true);
 
-            Log::info("Updated booking stage for bookingRef {$bookingRef}, bookingId: {$bookingIds}");
+                Log::info("Updated booking stage for bookingRef {$bookingRef}, bookingId: {$bookingIds}");
 
-            return $response;
-           
+                return $response;
+            } else {
+                Log::warning("No found for {$bookingRef} but no waybill");
+            }
+            
         } else {
             Log::warning("No booking found for bookingRef {$bookingRef}");
         }
@@ -1751,6 +1813,52 @@ class TransactionController extends Controller
             }
         }
 
+        if($milestoneCodeToUpdate === 'TLOT'){
+            $notebookRes = jsonRpcRequest($odooUrl, [
+                'jsonrpc' => '2.0',
+                'method' => 'call',
+                'params' => [
+                    'service' => 'object',
+                    'method' => 'execute_kw',
+                    'args' => [$db, $uid, $odooPassword, 'consol.type.notebook', 'search_read',
+                        [[['consol_origin', '=', $transactionId]]],
+                        ['fields' => ['id', 'consolidation_id', 'consol_origin']]
+                    ]
+                ],
+                'id' => rand(1000, 9999)
+            ]);
+
+            if (!empty($notebookRes['result'])) {
+                foreach ($notebookRes['result'] as $nb) {
+                    $consolMaster = $nb['consolidation_id'] ?? null;
+                    $consolMasterId = is_array($consolMaster) && isset($consolMaster[0]) ? $consolMaster[0] : null;
+
+                    if ($consolMasterId) {
+                        $updateConsolMaster = jsonRpcRequest($odooUrl, [
+                            'jsonrpc' => '2.0',
+                            'method' => 'call',
+                            'params' => [
+                                'service' => 'object',
+                                'method' => 'execute_kw',
+                                'args' => [$db, $uid, $odooPassword, 'pd.consol.master', 'write',
+                                    [[$consolMasterId], ['status' => 'completed']]
+                                ]
+                            ],
+                            'id' => rand(1000, 9999)
+                        ]);
+
+                        Log::info("✅ Consolidation master updated", [
+                            'consolMasterId' => $consolMasterId,
+                            'response' => $updateConsolMaster
+                        ]);
+                    } else {
+                        Log::warning("⚠ consolidation_id missing in notebook record", ['notebook' => $nb]);
+                    }
+                }
+            }else{
+                Log::warning("No consolidation notebook for transactio {$transactionId}");
+            }
+        }
         if ($milestoneCodeToUpdate) {
             return $this->updateMilestoneAndSendEmail(
                 $milestoneResult,   // ✅ use the same variable
@@ -1804,7 +1912,7 @@ class TransactionController extends Controller
 
         $this->updateFFContainerNumber($type, $containerNumber, $db, $uid, $odooPassword, $odooUrl);
 
-        $this->consolidationMaster($transactionId,$actualTime,$db,$uid,$odooPassword,$odooUrl);
+        $this->consolidationMaster($transactionId,$actualTime,$db,$uid,$odooPassword,$odooUrl, $bookingRef);
        
         $milestoneResult = $this->getMilestoneHistory($transactionId, $db, $uid, $odooPassword, $odooUrl);
         if ($milestoneResult instanceof \Illuminate\Http\JsonResponse) return $milestoneResult;
@@ -1813,7 +1921,7 @@ class TransactionController extends Controller
         if(in_array($milestoneCodeToUpdate, ['CYDT', 'LCLDT'])) {
             $bookingRef = $type['booking_reference_no'] ?? null;
             if($bookingRef) {
-                $this->updateBookingStage1($bookingRef, $db, $uid, $odooPassword, $odooUrl);
+                $this->updateBookingStage2($bookingRef, $db, $uid, $odooPassword, $odooUrl);
             }
         }
 
