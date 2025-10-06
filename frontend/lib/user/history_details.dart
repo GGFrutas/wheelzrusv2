@@ -197,6 +197,15 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
   
   @override
   Widget build(BuildContext context) {
+    // 1️⃣ Backloaded message
+final backloadedName = (widget.transaction?.backloadConsolidation?.name?.trim().isNotEmpty ?? false)
+    ? widget.transaction?.backloadConsolidation?.name
+    : 'N/A';
+final backloadedMessage = 'This booking has been backloaded: $backloadedName';
+
+
+
+
     return Scaffold(
       appBar: AppBar(
         iconTheme: const IconThemeData(color: mainColor),
@@ -345,7 +354,7 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
                 child: Padding(
                   padding: const EdgeInsets.all(20.0),
                     child: Text(
-                      'This booking has been backloaded: ${widget.transaction?.backloadConsolidation?.name.trim().isNotEmpty == true ? widget.transaction?.backloadConsolidation!.name : 'N/A'}',
+                      backloadedMessage,
                       style: AppTextStyles.subtitle,
                       textAlign: TextAlign.center,
                     ),
@@ -428,11 +437,16 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
     final scheduleMap = getPickupAndDeliverySchedule(widget.transaction!);
     final pickup = scheduleMap['pickup'];
     final delivery = scheduleMap['delivery'];
+    final isDiverted = widget.transaction?.backloadConsolidation?.isDiverted == "true";
+    final divertedBookingNo = isDiverted 
+    ? 'Diverted Booking No: ${widget.transaction?.backloadConsolidation?.name ?? '—'}'
+    : null;
 
- print('pickup actual datetime: ${pickup?.actualDatetime}');
 
- print("Container Number: ${widget.transaction?.containerNumber}");
-print("Seal Number: ${widget.transaction?.sealNumber}");
+    print('pickup actual datetime: ${pickup?.actualDatetime}');
+
+    print("Container Number: ${widget.transaction?.containerNumber}");
+    print("Seal Number: ${widget.transaction?.sealNumber}");
 
 
    
@@ -595,7 +609,23 @@ print("Seal Number: ${widget.transaction?.sealNumber}");
         ),
 
         // SHIPPER CONSIGNEE
+        if(isDiverted) ... [
           Text(
+            "Remarks: Diverted",
+            style: AppTextStyles.body.copyWith(
+              color: mainColor,
+              fontWeight: FontWeight.bold, 
+            )
+          ),
+          const SizedBox(height: 20),
+          Text(
+            divertedBookingNo!,
+            style: AppTextStyles.body.copyWith(
+              color: mainColor,
+            )
+          ),
+        ] else ...[
+           Text(
         //  isDT ? 'Consignee' : 'Shipper',
         title!,
           style: AppTextStyles.body.copyWith(
@@ -668,14 +698,56 @@ print("Seal Number: ${widget.transaction?.sealNumber}");
        
       ],
 
+        ]
+         
       
     );
   }
 
   Widget  _buildFreightTab(){
+    final isDiverted = widget.transaction?.backloadConsolidation?.isDiverted == "true";
+  
+
+    final divertedPortName = (widget.transaction?.dispatchType == 'dt')
+    ? (widget.transaction?.backloadConsolidation?.originName ?? '—')
+    : (widget.transaction?.backloadConsolidation?.destinationName ?? '—');
+
     return  Column( // Use a Column to arrange the widgets vertically
       crossAxisAlignment: CrossAxisAlignment.start, // Align text to the left
       children: [
+        if(isDiverted)
+      
+         Row(
+          children: [
+            const SizedBox(width: 30), // Space between icon and text
+            Expanded
+            (
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Diverted Request",
+                    style: AppTextStyles.subtitle.copyWith(
+                      color: Colors.black,
+                      fontWeight: FontWeight.bold
+                    ),
+                  ),
+                  Text(
+                  divertedPortName,
+                    // Use the originPort variable here
+                    style: AppTextStyles.body.copyWith(
+                      color: Colors.black,
+                    ),
+                  ),
+                  
+                ],
+              ),
+
+            )
+            
+          ],
+        ),
+        const SizedBox(height: 20),
         Row(
           children: [
             const SizedBox(width: 30), // Space between icon and text
@@ -702,6 +774,7 @@ print("Seal Number: ${widget.transaction?.sealNumber}");
           ],
         ),
         const SizedBox(height: 20),
+        
         Row(
           children: [
             const SizedBox(width: 30), // Space between icon and text
