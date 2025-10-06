@@ -395,7 +395,7 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
                 
               ),
               const SizedBox(height: 20),
-              if(widget.transaction?.deRequestStatus == "Ongooing" || widget.transaction?.dlRequestStatus == "Ongoing")
+              if(widget.transaction?.plRequestStatus == "Assigned" || widget.transaction?.peRequestStatus == "Assigned")
 
               Text (
                 "Optional",

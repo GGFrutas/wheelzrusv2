@@ -5,12 +5,14 @@ class PaginatedTransactionState {
   final int currentPage;
   final bool isLoading;
   final bool hasMore;
+  final String? errorMessage;
 
   PaginatedTransactionState({
     required this.transactions,
     required this.currentPage,
     required this.isLoading,
     required this.hasMore,
+    this.errorMessage,
   });
 
   factory PaginatedTransactionState.initial() {
@@ -19,6 +21,7 @@ class PaginatedTransactionState {
       currentPage: 0,
       isLoading: false,
       hasMore: true,
+      errorMessage: null,
     );
   }
 
@@ -27,12 +30,14 @@ class PaginatedTransactionState {
     bool? hasMore,
     int? currentPage,
     bool? isLoading,
+    String? errorMessage,
   }) {
     return PaginatedTransactionState(
       transactions: transactions ?? this.transactions,
       currentPage: currentPage ?? this.currentPage,
       isLoading: isLoading ?? this.isLoading,
       hasMore: hasMore ?? this.hasMore,
+      errorMessage: errorMessage,
     );
   }
 }

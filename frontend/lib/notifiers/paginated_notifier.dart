@@ -27,7 +27,7 @@ class PaginatedNotifier extends StateNotifier<PaginatedTransactionState>{
       final login = auth.login ?? '';
 
       final response = await http.get(
-          Uri.parse('$baseUrl/api/odoo/booking/$endpoint?uid=$uid&page=${state.currentPage + 1}&password=$password&login=$login'),
+          Uri.parse('$baseUrl/api/odoo/booking/$endpoint?uid=$uid&page=${state.currentPage + 1}&limit=5&password=$password&login=$login',),
         
         headers: {
           'Content-Type': 'application/json',
@@ -37,18 +37,20 @@ class PaginatedNotifier extends StateNotifier<PaginatedTransactionState>{
         },
       );
 
-        if (response.statusCode != 200) {
+        if (response.statusCode == 200) {
           final decoded = json.decode(response.body);
           final result = decoded['data'] ?? [];
           final List list = result['transactions'] as List;
           final currentPage = result['current_page'];
           final lastPage = result['last_page'];
 
+          print("Response body for show all booking: ${response.body}");
+
           final newTransactions = list.map((item) => Transaction.fromJson(item)).toList();
 
           state = state.copyWith(
             transactions: [...state.transactions, ...newTransactions],
-            currentPage: currentPage + 1,
+            currentPage: currentPage,
             hasMore: currentPage < lastPage,
             isLoading: false,
           );
@@ -62,8 +64,13 @@ class PaginatedNotifier extends StateNotifier<PaginatedTransactionState>{
      
   }
 
-  void refresh() {
+  Future<void> refresh() async {
     state = PaginatedTransactionState.initial();
-      fetchNextPage();
+      await fetchNextPage();
   }
 }
+
+final bookingProvider = StateNotifierProvider.family<
+    PaginatedNotifier, PaginatedTransactionState, String>((ref, endpoint) {
+  return PaginatedNotifier(ref, endpoint);
+});

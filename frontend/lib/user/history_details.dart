@@ -431,6 +431,10 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
 
  print('pickup actual datetime: ${pickup?.actualDatetime}');
 
+ print("Container Number: ${widget.transaction?.containerNumber}");
+print("Seal Number: ${widget.transaction?.sealNumber}");
+
+
    
 
     Uint8List? decodeBase64(String? data) {
@@ -771,6 +775,7 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
                   ),
                 ),
                 Text(
+                  
                 (widget.transaction?.containerNumber?.isNotEmpty ?? false)
                   ? widget.transaction!.containerNumber!
                   : '—',

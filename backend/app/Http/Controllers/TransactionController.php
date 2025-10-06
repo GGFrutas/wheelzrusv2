@@ -30,7 +30,8 @@ function jsonRpcRequest($url, $payload){
         ]);
         
         $response = $client->post($url, [
-            'body' => json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+            'body' => json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'decode_content' => true,
 
         ]);
 
@@ -216,7 +217,7 @@ class TransactionController extends Controller
             "origin_container_location", "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
             "freight_forwarder_name", "shipper_phone", "consignee_phone", "dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", "pl_truck_plate_no",
             "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
-            "pickup_date", "departure_date","origin", "destination", "de_rejection_time", "pl_rejection_time", "dl_rejection_time", "pe_rejection_time", "de_completion_time", 
+            "pickup_date", "departure_date","origin", "destination", "de_completion_time", 
             "pl_completion_time", "dl_completion_time", "pe_completion_time", "shipper_province","shipper_city","shipper_barangay","shipper_street", 
             "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime", "service_type", "booking_service", "write_date",
             "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time", "name", "stage_id", "pe_release_by", "de_release_by","pl_receive_by","dl_receive_by"
@@ -230,12 +231,13 @@ class TransactionController extends Controller
             "origin_container_location", "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
             "freight_forwarder_name", "shipper_phone", "consignee_phone", "dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", "pl_truck_plate_no",
             "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
-            "pickup_date", "departure_date","origin", "destination","de_rejection_time", "pl_rejection_time", "dl_rejection_time", "pe_rejection_time", "de_completion_time", 
+            "pickup_date", "departure_date","origin", "destination", "de_completion_time", 
             "pl_completion_time", "dl_completion_time", "pe_completion_time","shipper_province","shipper_city","shipper_barangay","shipper_street",
             "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime",  "service_type","booking_service","write_date",
             "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time","stage_id", "pe_release_by", "de_release_by","pl_receive_by","dl_receive_by"
         ];
 
+       
        
 
         // Step 1: Fetch dispatch.manager records
@@ -252,7 +254,7 @@ class TransactionController extends Controller
                     'dispatch.manager',
                     'search_read',
                     [$domain],
-                    ['fields' => $fields,'limit' => 30]
+                    ['fields' => $fields]
                 ]
             ],
             'id' => rand(1000, 9999)
@@ -401,9 +403,6 @@ class TransactionController extends Controller
 
         return $filtered;
     }
-
-    
-   
 
     public function getTodayBooking(Request $request)
     {
@@ -616,7 +615,7 @@ class TransactionController extends Controller
         $today = date('Y-m-d');
         $tomorrow = date('Y-m-d', strtotime('+1 day'));
      
-         $domain = [
+        $domain = [
             "&",  // AND all of the following
                 // Grouped ORs for Completed or Rejected
                 "|",
@@ -678,6 +677,10 @@ class TransactionController extends Controller
 
         $today = date('Y-m-d');
 
+        $page = (int) request()->query('page', 1);
+        $limit = (int) request()->query('limit', 5);
+        $offset = ($page - 1) * $limit;
+
         // Step 5: Queue a job for each dispatch.manager record
         $domain =[
             "|", "|", "|", // OR: driver match
@@ -693,9 +696,29 @@ class TransactionController extends Controller
             // ['delivery_date', ">=", $today],
            
             // ["dispatch_type", "=", "ff"]
-            
 
         ];
+        $countRes = jsonRpcRequest($odooUrl, [
+            'jsonrpc' => '2.0',
+            'method' => 'call',
+            'params' => [
+                'service' => 'object',
+                'method' => 'execute_kw',
+                'args' => [
+                    $db,
+                    $uid,
+                    $odooPassword,
+                    'dispatch.manager',
+                    'search_count',
+                    [$domain]
+                ]
+            ],
+            'id' => rand(1000, 9999)
+        ]);
+
+        $total = $countRes['result'] ?? 0;
+        $lastPage = (int) ceil($total / $limit);
+
 
         
         $driverData = $this->processDispatchManagers($domain, $partnerName);
@@ -729,108 +752,13 @@ class TransactionController extends Controller
         // ✅ Final return
         return response()->json([
             'data' => [
-                'transactions' => $data
+                'transactions' => $data,
+            'current_page' => $page,
+            'last_page' => $lastPage
             ]
         ]);
     }
-
-   
-    public function getRejectionReason(Request $request)
-    {
-        $url = $this->url;
-        $db = $this->db;
-
-        $uid = $request->query('uid') ;
-        $odooPassword = $request->header('password');
-        Log::info("UID is {$uid}, Password is {$odooPassword}");
-        
-        if (!$uid) {
-            return response()->json(['success' => false, 'message' => 'UID is required'], 400);
-        }
-
-        $odooUrl = $this->odoo_url;
-
-        $checkAccessRequest = [
-            "jsonrpc" => "2.0",
-            "method" => "call",
-            "params" => [
-                "service" => "object",
-                "method" => "execute_kw",
-                "args" => [
-                    $db, 
-                    $uid, 
-                    $odooPassword, 
-                    "dispatch.reject.reason", 
-                    "check_access_rights",
-                    ["read"],  // Search by UID
-                    ["raise_exception" => false] // Don't raise exception if access is denied]
-                ]
-            ],
-            "id" => 1
-        ];
-        $option = [
-            "http" => [
-                "header" => "Content-Type: application/json",
-                "method" => "POST",
-                "content" => json_encode($checkAccessRequest),
-                "ignore_errors" => true,
-            ],
-        ];
-        $context = stream_context_create($option);
-        $jsonresponse = file_get_contents($odooUrl, false, $context);
-
-        if($jsonresponse === false) {
-            Log::error("❌ Failed to connect to Odoo API", ["response" => $jsonresponse]);
-            return response()->json(['error' => 'Access Denied'], 403);
-        }
-        $jsonResult = json_decode($jsonresponse, true);
-        Log::info("JSON Raw response: ", ["response" => $jsonresponse]);
-        if(!isset($jsonResult['result']) || $jsonResult['result'] === false) {
-            Log::error("🚨 UID {$uid} cannot read `dispatch.reject.reason`.");
-            return response()->json(["error" => "Access Denied"], 403);
-        } else {
-            Log::info("✅ UID {$uid} can read 'dispatch.reject.reason`.");
-        }
-
-        
-        
-        $rejectReasons = [
-            "jsonrpc" => "2.0",
-            "method" => "call",
-            "params" => [
-                "service" => "object",
-                "method" => "execute_kw",
-                "args" => [
-                    $db, 
-                    $uid, 
-                    $odooPassword, 
-                    "dispatch.reject.reason", 
-                    "search_read",
-                    [[]],  
-                    ["fields" => [
-                        "id", "name",
-                    ]]
-                ]
-            ],
-            "id" => 2
-        ];
-    
-        $rejectResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
-            "http" => [
-                "header" => "Content-Type: application/json",
-                "method" => "POST",
-                "content" => json_encode($rejectReasons),
-            ],
-        ])), true);
-    
-        if (!isset($rejectResponse['result']) || empty($rejectResponse['result'])) {
-            Log::error("❌ No reject reasons", ["response" => $rejectResponse]);
-            return response()->json(['success' => false, 'message' => 'Reasons not found'], 404);
-        }
-        return response()->json($rejectResponse);
-        
-
-    }
+  
 
     public function updateStatus(Request $request ,$transactionId)
     {
@@ -974,347 +902,10 @@ class TransactionController extends Controller
         return response()->json($statusResponse);
     }
 
-    public function rejectBooking(Request $request)
+    private function handleDispatchRequest(Request $request)
     {
         $url = $this->url;
         $db = $this->db;
-
-        $uid = $request->uid ;
-        $odooPassword = $request->header('password');
-        $actualTime = $request->input('timestamp');
-        $requestNumber = $request->input('request_number');
-        Log::info("UID is {$uid}, Password is {$odooPassword}");
-        
-        if (!$uid) {
-            return response()->json(['success' => false, 'message' => 'UID is required'], 400);
-        }
-
-        $odooUrl = $this->odoo_url;
-
-        $checkAccessRequest = [
-            "jsonrpc" => "2.0",
-            "method" => "call",
-            "params" => [
-                "service" => "object",
-                "method" => "execute_kw",
-                "args" => [
-                    $db, 
-                    $uid, 
-                    $odooPassword, 
-                    "dispatch.reject.vendor", 
-                    "check_access_rights",
-                    ["read"],  // Search by UID
-                    ["raise_exception" => false] // Don't raise exception if access is denied]
-                ]
-            ],
-            "id" => 1
-        ];
-        $option = [
-            "http" => [
-                "header" => "Content-Type: application/json",
-                "method" => "POST",
-                "content" => json_encode($checkAccessRequest),
-                "ignore_errors" => true,
-            ],
-        ];
-        $context = stream_context_create($option);
-        $jsonresponse = file_get_contents($odooUrl, false, $context);
-        if($jsonresponse === false) {
-            Log::error("❌ Failed to connect to Odoo API", ["response" => $jsonresponse]);
-            return response()->json(['error' => 'Access Denied'], 403);
-        }
-        $jsonResult = json_decode($jsonresponse, true);
-        Log::info("JSON Raw response: ", ["response" => $jsonresponse]);
-        if(!isset($jsonResult['result']) || $jsonResult['result'] === false) {
-            Log::error("🚨 UID {$uid} cannot read `dispatch.reject.vendor`.");
-            return response()->json(["error" => "Access Denied"], 403);
-        } else {
-            Log::info("✅ UID {$uid} can read 'dispatch.reject.vendor`.");
-        }
-
-
-        
-        $rejectVendor = [
-            "jsonrpc" => "2.0",
-            "method" => "call",
-            "params" => [
-                "service" => "object",
-                "method" => "execute_kw",
-                "args" => [
-                    $db, 
-                    $uid, 
-                    $odooPassword, 
-                    "dispatch.reject.vendor", 
-                    "create",
-                    [[
-                        "dispatch_id" => $request->transaction_id,
-                        "create_uid" => $request->uid,
-                        'reason' => $request->reason,
-                        'note' => $request->feedback,
-                    ]],  
-                   
-                ]
-            ],
-            "id" => 2
-        ];
-
-        $response = json_decode(file_get_contents($odooUrl, false, stream_context_create([
-            "http" => [
-                "header" => "Content-Type: application/json",
-                "method" => "POST",
-                "content" => json_encode($rejectVendor),
-            ],
-        ])), true);
-    
-        if (!isset($response['result']) || empty($response['result'])) {
-            Log::error("❌ No reject reasons", ["response" => $response]);
-            return response()->json(['success' => false, 'message' => 'Reasons not found'], 404);
-        }
-
-        $proof_attach = [
-            "jsonrpc" => "2.0",
-            "method" => "call",
-            "params" => [
-                "service" => "object",
-                "method" => "execute_kw",
-                "args" => [
-                    $db, 
-                    $uid, 
-                    $odooPassword, 
-                    "dispatch.manager", 
-                    "search_read",
-                    [[["id", "=", $request->transaction_id]]],  // Search by Request Number
-                    ["fields" => ["dispatch_type","de_request_no", "pl_request_no", "dl_request_no", "pe_request_no","service_type" ]]
-                ]
-            ],
-            "id" => 3
-        ];
-        
-        $statusResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
-            "http" => [
-                "header" => "Content-Type: application/json",
-                "method" => "POST",
-                "content" => json_encode($proof_attach),
-            ],
-        ])), true);
-    
-        if (!isset($statusResponse['result']) || empty($statusResponse['result'])) {
-            Log::error("❌ No data on this ID", ["response" => $statusResponse]);
-            return response()->json(['success' => false, 'message' => 'Data not found'], 404);
-        }
-
-        $type = $statusResponse['result'][0] ?? null;
-      
-        if (!$type) {
-            Log::error("❌ Missing dispatch_type", ["response" => $statusResponse]);
-            return response()->json(['success' => false, 'message' => 'dispatch_type is missing or invalid'], 404);
-        }
-        
-        // Check that the type is valid before proceeding
-        if (!in_array($type['dispatch_type'], ['ot', 'dt'])) {
-            Log::error("Incorrect dispatch_type", ["dispatch_type" => $type, "response" => $statusResponse]);
-            return response()->json(['success' => false, 'message' => 'Invalid dispatch_type value'], 404);
-        }
-
-        $updateField = [];
-
-        if ($type['dispatch_type'] == "ot" && $type['de_request_no'] == $requestNumber) {
-            $updateField = [
-                "de_rejection_time" => $actualTime,
-            ];
-        } elseif ($type['dispatch_type'] == "ot" && $type['pl_request_no'] == $requestNumber) {
-            $updateField = [
-                "pl_rejection_time" => $actualTime,
-            ];
-        }
-
-        if ($type['dispatch_type'] == "dt" && $type['dl_request_no'] == $requestNumber) {
-            $updateField = [
-                "dl_rejection_time" => $actualTime,
-            ];
-        } elseif ($type['dispatch_type'] == "dt" && $type['pe_request_no'] == $requestNumber) {
-            $updateField = [
-                "pe_rejection_time" => $actualTime,
-            ];
-        }
-
-        $updatePOD = [
-            "jsonrpc" => "2.0",
-            "method" => "call",
-            "params" => [
-                "service" => "object",
-                "method" => "execute_kw",
-                "args" => [
-                    $db, 
-                    $uid, 
-                    $odooPassword, 
-                    "dispatch.manager", 
-                    "write",
-                    [
-                        [$request->transaction_id],
-                       
-                        $updateField,
-                        
-                    ]
-                ]
-            ],
-            "id" => 4
-        ];
-
-        $updateResponse = json_decode(file_get_contents($odooUrl,false,stream_context_create([
-            "http" => [
-                "header" => "Content-Type: application/json",
-                "method" => "POST",
-                "content" => json_encode($updatePOD),
-            ]
-        ])), true);
-
-
-        if (isset($updateResponse['result']) && $updateResponse['result']) {
-            Log::info("✅ POD uploaded. Proceeding with milestone update.");
-
-            
-            return response()->json(['success' => true, 'message' => 'POD uploaded, but no matching milestone found']);
-
-        }else{
-            Log::error("Failed to insert image", ["response" => $updateResponse]);
-            return response()->json(['success' => false,'message'=>'Failed to upload POD'], 500);
-        }
-    
-        return response()->json($statusResponse);
-       
-
-    }
-
-
-    public function rejectVendor(Request $request)
-    {
-        
-        $url = $this->url;
-        $db = $this->db;
-
-        $uid = $request->query('uid') ;
-        $odooPassword = $request->header('password');
-        Log::info("UID is {$uid}, Password is {$odooPassword}");
-        
-        if (!$uid) {
-            return response()->json(['success' => false, 'message' => 'UID is required'], 400);
-        }
-
-        $odooUrl = $this->odoo_url;
-        // $client = new Client("$url/xmlrpc/2/object");
-
-        // $checkAccessRequest = new XmlRpcRequest('execute_kw', [
-        //     new Value($db, "string"),
-        //     new Value($uid, "int"),
-        //     new Value($odooPassword, "string"),
-        //     new Value("dispatch.reject.vendor", "string"),
-        //     new Value("check_access_rights", "string"), 
-        //     new Value([new Value("read", "string")], "array"), // ✅ Corrected array wrapping
-        //     new Value(["raise_exception" => new Value(false, "boolean")], "struct") // ✅ Fixed boolean format
-                
-        // ]);
-
-        
-        // $searchResponse = $client->send($checkAccessRequest);
-        // // dd($searchResponse);
-
-        // Log::info("🔍 Search Users Raw Response: ", ["response" => var_export($searchResponse->value(), true)]);
-        
-        // if (empty($searchResponse->value())) {
-        //     Log::error("🚨 UID {$uid} cannot read `dispatch.reject.vendor`.");
-        //     return response()->json(["error" => "Access Denied"], 403);
-        // } else {
-        //     Log::info("✅ UID {$uid} can read 'dispatch.reject.vendor`.");
-        // }
-
-        $checkAccessRequest = [
-            "jsonrpc" => "2.0",
-            "method" => "call",
-            "params" => [
-                "service" => "object",
-                "method" => "execute_kw",
-                "args" => [
-                    $db, 
-                    $uid, 
-                    $odooPassword, 
-                    "dispatch.reject.vendor", 
-                    "check_access_rights",
-                    ["read"],  // Search by UID
-                    ["raise_exception" => false] // Don't raise exception if access is denied]
-                ]
-            ],
-            "id" => 1
-        ];
-        $option = [
-            "http" => [
-                "header" => "Content-Type: application/json",
-                "method" => "POST",
-                "content" => json_encode($checkAccessRequest),
-                "ignore_errors" => true,
-            ],
-        ];
-        $context = stream_context_create($option); 
-        $jsonresponse = file_get_contents($this->odoo_url, false, $context);
-        if($jsonresponse === false) {
-            Log::error("❌ Failed to connect to Odoo API", ["response" => $jsonresponse]);
-            return response()->json(['error' => 'Access Denied'], 403);
-        }
-        $jsonResult = json_decode($jsonresponse, true);
-        Log::info("JSON Raw response: ", ["response" => $jsonresponse]);
-        if(!isset($jsonResult['result']) || $jsonResult['result'] === false) {
-            Log::error("🚨 UID {$uid} cannot read `dispatch.reject.vendor`.");
-            return response()->json(["error" => "Access Denied"], 403);
-        } else {
-            Log::info("✅ UID {$uid} can read 'dispatch.reject.vendor`.");
-        }
-        
-
-        
-        
-        $rejectvendors = [
-            "jsonrpc" => "2.0",
-            "method" => "call",
-            "params" => [
-                "service" => "object",
-                "method" => "execute_kw",
-                "args" => [
-                    $db, 
-                    $uid, 
-                    $odooPassword, 
-                    "dispatch.reject.vendor", 
-                    "search_read",
-                    [[]],  
-                    ["fields" => [
-                        "id", "dispatch_id", "create_uid", "reason", "note"
-                    ]]
-                ]
-            ],
-            "id" => 2
-        ];
-    
-        $rejectResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
-            "http" => [
-                "header" => "Content-Type: application/json",
-                "method" => "POST",
-                "content" => json_encode($rejectvendors),
-            ],
-        ])), true);
-    
-        if (!isset($rejectResponse['result']) || empty($rejectResponse['result'])) {
-            Log::error("❌ No reject vendors", ["response" => $rejectResponse]);
-            return response()->json(['success' => false, 'message' => 'vendors not found'], 404);
-        }
-        return response()->json($rejectResponse);
-        
-
-    }
-
-    public function uploadPOD(Request $request)
-    {
-        $url = $this->url;
-        $db = $this->db;
-       
         $uid = $request->query('uid') ;
         $odooPassword = $request->header('password');
         $images = $request->input('images');
@@ -1331,7 +922,7 @@ class TransactionController extends Controller
             'uid' => $uid,
             'id' => $transactionId,
             'dispatch_type' => $dispatchType,
-            'requestNumber' => $request->requestNumber,
+            'requestNumber' => $requestNumber,
             'actualTime' => $actualTime,
             
             'enteredContainerNumber' => $containerNumber,
@@ -1391,10 +982,11 @@ class TransactionController extends Controller
             return response()->json(['success' => false, 'message' => 'Invalid dispatch_type value'], 404);
         }
 
+        return $type;
+    }
+    private function buildUpdateField1($type, $requestNumber, $images, $signature, $enteredName, $actualTime, $containerNumber, $newStatus, $serviceType) 
+    {
         $updateField = [];
-
-        $serviceType = is_array($type['service_type']) ? $type['service_type'][0] : $type['service_type'];
-
         if ($type['dispatch_type'] == "ot" && $type['de_request_no'] == $requestNumber) {
             Log::info("Updating PE proof and signature for request number: {$requestNumber}");
             $updateField = [
@@ -1404,62 +996,8 @@ class TransactionController extends Controller
                 "stage_id" => 5,
                 "de_request_status" => $newStatus,
             ];
-
-            $bookingRef = $type['booking_reference_no'] ?? null;
-            if ($bookingRef && $containerNumber) {
-                $searchFF = [
-                    "jsonrpc" => "2.0",
-                    "method" => "call",
-                    "params" => [
-                        "service" => "object",
-                        "method" => "execute_kw",
-                        "args" => [
-                            $db,
-                            $uid,
-                            $odooPassword,
-                            "dispatch.manager",
-                            "search",
-                            [[
-                                ["booking_reference_no", '=', $bookingRef],
-                                ["dispatch_type", '=', "ff"]
-                            ]]
-                        ],
-                    ],
-                    "id" => 101
-                ];
-                $ffRes = jsonRpcRequest($odooUrl, $searchFF);
-                $ffIds = $ffRes['result'] ?? [];
-
-                if (!empty($ffIds)) {
-                    // ✅ Update container_number only in ff
-                    $updateFFContainer = [
-                        "jsonrpc" => "2.0",
-                        "method" => "call",
-                        "params" => [
-                            "service" => "object",
-                            "method" => "execute_kw",
-                            "args" => [
-                                $db,
-                                $uid,
-                                $odooPassword,
-                                "dispatch.manager",
-                                "write",
-                                [
-                                    $ffIds,
-                                    [
-                                        "container_number" => $containerNumber
-                                    ]
-                                ]
-                            ]
-                        ],
-                        "id" => 102
-                    ];
-                    $ffUpdateRes = jsonRpcRequest($odooUrl, $updateFFContainer);
-                    Log::info("Updated container_number in FF for bookingRef {$bookingRef}, ffIds: " . json_encode($ffIds));
-                } else {
-                    Log::warning("No FF found for bookingRef {$bookingRef}");
-                }
-            }
+            
+            
         } elseif ($type['dispatch_type'] == "ot" && $type['pl_request_no'] == $requestNumber) {
             Log::info("Updating PL proof and signature for request number: {$requestNumber}");
             $updateField = [
@@ -1472,66 +1010,13 @@ class TransactionController extends Controller
             if($serviceType == 2){
                 $updateField["stage_id"] = 5;
             }
-            $bookingRef = $type['booking_reference_no'] ?? null;
-            if ($bookingRef && $containerNumber) {
-                $searchFF = [
-                    "jsonrpc" => "2.0",
-                    "method" => "call",
-                    "params" => [
-                        "service" => "object",
-                        "method" => "execute_kw",
-                        "args" => [
-                            $db,
-                            $uid,
-                            $odooPassword,
-                            "dispatch.manager",
-                            "search",
-                            [[
-                                ["booking_reference_no", '=', $bookingRef],
-                                ["dispatch_type", '=', "ff"]
-                            ]]
-                        ],
-                    ],
-                    "id" => 105
-                ];
-                $ffRes = jsonRpcRequest($odooUrl, $searchFF);
-                $ffIds = $ffRes['result'] ?? [];
-
-                if (!empty($ffIds)) {
-                    // ✅ Update container_number only in ff
-                    $updateFFContainer = [
-                        "jsonrpc" => "2.0",
-                        "method" => "call",
-                        "params" => [
-                            "service" => "object",
-                            "method" => "execute_kw",
-                            "args" => [
-                                $db,
-                                $uid,
-                                $odooPassword,
-                                "dispatch.manager",
-                                "write",
-                                [
-                                    $ffIds,
-                                    [
-                                        "container_number" => $containerNumber
-                                    ]
-                                ]
-                            ]
-                        ],
-                        "id" => 106
-                    ];
-                    $ffUpdateRes = jsonRpcRequest($odooUrl, $updateFFContainer);
-                    Log::info("Updated container_number in FF for bookingRef {$bookingRef}, ffIds: " . json_encode($ffIds));
-                } else {
-                    Log::warning("No FF found for bookingRef {$bookingRef}");
-                }
-            }
+            
+            
         }
 
         if ($type['dispatch_type'] == "dt" && $type['dl_request_no'] == $requestNumber) {
             Log::info("Updating PL proof and signature for request number: {$requestNumber}");
-           $updateField = [
+            $updateField = [
                 "pl_proof" => $images,
                 "pl_signature" => $signature,
                 "pe_release_by" => $enteredName,
@@ -1542,62 +1027,8 @@ class TransactionController extends Controller
             if($serviceType == 2){
                 $updateField["stage_id"] = 5;
             }
-
-            $bookingRef = $type['booking_reference_no'] ?? null;
-            if ($bookingRef && $containerNumber) {
-                $searchFF = [
-                    "jsonrpc" => "2.0",
-                    "method" => "call",
-                    "params" => [
-                        "service" => "object",
-                        "method" => "execute_kw",
-                        "args" => [
-                            $db,
-                            $uid,
-                            $odooPassword,
-                            "dispatch.manager",
-                            "search",
-                            [[
-                                ["booking_reference_no", '=', $bookingRef],
-                                ["dispatch_type", '=', "ff"]
-                            ]]
-                        ],
-                    ],
-                    "id" => 107
-                ];
-                $ffRes = jsonRpcRequest($odooUrl, $searchFF);
-                $ffIds = $ffRes['result'] ?? [];
-
-                if (!empty($ffIds)) {
-                    // ✅ Update container_number only in ff
-                    $updateFFContainer = [
-                        "jsonrpc" => "2.0",
-                        "method" => "call",
-                        "params" => [
-                            "service" => "object",
-                            "method" => "execute_kw",
-                            "args" => [
-                                $db,
-                                $uid,
-                                $odooPassword,
-                                "dispatch.manager",
-                                "write",
-                                [
-                                    $ffIds,
-                                    [
-                                        "container_number" => $containerNumber
-                                    ]
-                                ]
-                            ]
-                        ],
-                        "id" => 108
-                    ];
-                    $ffUpdateRes = jsonRpcRequest($odooUrl, $updateFFContainer);
-                    Log::info("Updated container_number in FF for bookingRef {$bookingRef}, ffIds: " . json_encode($ffIds));
-                } else {
-                    Log::warning("No FF found for bookingRef {$bookingRef}");
-                }
-            }
+            
+            
         } elseif ($type['dispatch_type'] == "dt" && $type['pe_request_no'] == $requestNumber) {
             Log::info("Updating PE proof and signature for request number: {$requestNumber}");
             $updateField = [
@@ -1606,9 +1037,104 @@ class TransactionController extends Controller
                 "dl_receive_by" => $enteredName,
                 "pe_request_status" => $newStatus,
             ];
-            $bookingRef = $type['booking_reference_no'] ?? null;
-            if ($bookingRef && $containerNumber) {
-                $searchFF = [
+        }
+        return $updateField;
+    }
+
+    private function buildUpdateField2($type, $requestNumber, $images, $signature, $enteredName, $actualTime, $containerNumber, $newStatus, $serviceType)
+    {
+        $updateField = [];
+        if ($type['dispatch_type'] == "ot" && $type['de_request_no'] == $requestNumber) {
+            Log::info("Updating DE proof and signature for request number: {$requestNumber}");
+            $updateField = [
+                "de_proof" => $images,
+                "de_signature" => $signature,
+                "de_release_by" => $enteredName,
+                "de_completion_time" => $actualTime,
+                // "de_request_status" => $newStatus,
+            ];
+        }  
+        if ($type['dispatch_type'] == "ot" && $type['pl_request_no'] == $requestNumber) {
+            Log::info("Updating DL proof and signature for request number: {$requestNumber}");
+            $updateField = [
+                "dl_proof" => $images,
+                "dl_signature" => $signature,
+                "pl_receive_by" => $enteredName,
+                "stage_id" => 7,
+                "pl_completion_time" => $actualTime,
+                // "pl_request_status" => $newStatus,
+                "container_number" => $containerNumber
+            ];
+        }
+
+        if ($type['dispatch_type'] === "dt" && $type['dl_request_no'] === $requestNumber && isset($type['service_type']) && $type['service_type'] == 2) {
+            Log::info("Updating DL proof and signature for request number: {$requestNumber} with service_type = 2");
+            $updateField = [
+                "dl_proof" => $images,
+                "dl_signature" => $signature,
+                "de_release_by" => $enteredName,
+                "dl_completion_time" => $actualTime,
+                "stage_id" => 7,
+                // "dl_request_status" => $newStatus,
+                "container_number" => $containerNumber
+            ];
+        }   
+        if($type['dispatch_type'] === "dt" && $type['dl_request_no'] === $requestNumber) {
+            $updateField = [
+                "dl_proof" => $images,
+                "dl_signature" => $signature,
+                "de_release_by" => $enteredName,
+                "dl_completion_time" => $actualTime,
+                // "dl_request_status" => $newStatus,
+                "container_number" => $containerNumber
+            ];
+        }  
+        if ($type['dispatch_type'] === "dt" && $type['pe_request_no'] === $requestNumber) {
+            Log::info("Updating DE proof and signature for request number: {$requestNumber}");
+            $updateField = [
+                "de_proof" => $images,
+                "de_signature" => $signature,
+                "pl_receive_by" => $enteredName,
+                "stage_id" => 7,
+                "pe_completion_time" => $actualTime,
+                // "pe_request_status" => $newStatus,
+                "container_number" => $containerNumber
+            ];
+        }
+        return $updateField;
+    }
+
+
+    private function updateFFContainerNumber($type, $containerNumber, $db, $uid, $odooPassword, $odooUrl)
+    {
+        $bookingRef = $type['booking_reference_no'] ?? null;
+        if ($bookingRef && $containerNumber) {
+            $searchFF = [
+                "jsonrpc" => "2.0",
+                "method" => "call",
+                "params" => [
+                    "service" => "object",
+                    "method" => "execute_kw",
+                    "args" => [
+                        $db,
+                        $uid,
+                        $odooPassword,
+                        "dispatch.manager",
+                        "search",
+                        [[
+                            ["booking_reference_no", '=', $bookingRef],
+                            ["dispatch_type", '=', "ff"]
+                        ]]
+                    ],
+                ],
+                "id" => 101
+            ];
+            $ffRes = jsonRpcRequest($odooUrl, $searchFF);
+            $ffIds = $ffRes['result'] ?? [];
+
+            if (!empty($ffIds)) {
+                // ✅ Update container_number only in ff
+                $updateFFContainer = [
                     "jsonrpc" => "2.0",
                     "method" => "call",
                     "params" => [
@@ -1619,52 +1145,27 @@ class TransactionController extends Controller
                             $uid,
                             $odooPassword,
                             "dispatch.manager",
-                            "search",
-                            [[
-                                ["booking_reference_no", '=', $bookingRef],
-                                ["dispatch_type", '=', "ff"]
-                            ]]
-                        ],
-                    ],
-                    "id" => 109
-                ];
-                $ffRes = jsonRpcRequest($odooUrl, $searchFF);
-                $ffIds = $ffRes['result'] ?? [];
-
-                if (!empty($ffIds)) {
-                    // ✅ Update container_number only in ff
-                    $updateFFContainer = [
-                        "jsonrpc" => "2.0",
-                        "method" => "call",
-                        "params" => [
-                            "service" => "object",
-                            "method" => "execute_kw",
-                            "args" => [
-                                $db,
-                                $uid,
-                                $odooPassword,
-                                "dispatch.manager",
-                                "write",
+                            "write",
+                            [
+                                $ffIds,
                                 [
-                                    $ffIds,
-                                    [
-                                        "container_number" => $containerNumber
-                                    ]
+                                    "container_number" => $containerNumber
                                 ]
                             ]
-                        ],
-                        "id" => 110
-                    ];
-                    $ffUpdateRes = jsonRpcRequest($odooUrl, $updateFFContainer);
-                    Log::info("Updated container_number in FF for bookingRef {$bookingRef}, ffIds: " . json_encode($ffIds));
-                } else {
-                    Log::warning("No FF found for bookingRef {$bookingRef}");
-                }
+                        ]
+                    ],
+                    "id" => 102
+                ];
+                $ffUpdateRes = jsonRpcRequest($odooUrl, $updateFFContainer);
+                Log::info("Updated container_number in FF for bookingRef {$bookingRef}, ffIds: " . json_encode($ffIds));
+            } else {
+                Log::warning("No FF found for bookingRef {$bookingRef}");
             }
         }
-      
-        Log::info("Requested status update: {$newStatus}");
+    }
 
+    private function updateDispatchRecord($transactionId, $updateField, $db, $uid, $odooPassword, $odooUrl)
+    {
         $updatePOD = [
             "jsonrpc" => "2.0",
             "method" => "call",
@@ -1693,302 +1194,21 @@ class TransactionController extends Controller
             "id" => 4
         ];
 
-        $updateResponse = json_decode(file_get_contents($odooUrl,false,stream_context_create([
+        $response = file_get_contents($odooUrl, false, stream_context_create([
             "http" => [
                 "header" => "Content-Type: application/json",
                 "method" => "POST",
                 "content" => json_encode($updatePOD),
             ]
-        ])), true);
+        ]));
 
-
-        if (isset($updateResponse['result']) && $updateResponse['result']) {
-            Log::info("✅ POD uploaded. Proceeding with milestone update. POD JOURNEY");
-
-            $milestoneCodeSearch = [
-                "jsonrpc" => "2.0",
-                "method" => "call",
-                "params" => [
-                    "service" => "object",
-                    "method" => "execute_kw",
-                    "args" => [
-                        $db, 
-                        $uid, 
-                        $odooPassword, 
-                        "dispatch.milestone.history", 
-                        "search_read",
-                        [[["dispatch_id", "=", $transactionId]]],  // Search by Request Number
-                        ["fields" => ["id","dispatch_type","actual_datetime","scheduled_datetime","fcl_code","is_backload"]]
-                    ]
-                ],
-                "id" => 5
-            ];
-        
-            $fcl_code_response = json_decode(file_get_contents($odooUrl, false, stream_context_create([
-                "http" => [
-                    "header" => "Content-Type: application/json",
-                    "method" => "POST",
-                    "content" => json_encode($milestoneCodeSearch),
-                ],
-            ])), true);
-    
-            if (!isset($fcl_code_response['result']) || empty($fcl_code_response['result'])) {
-                Log::error("❌ No data on this ID", ["response" => $fcl_code_response]);
-                return response()->json(['success' => false, 'message' => 'Data not found'], 404);
-            }
-
-            $milestoneResult = $fcl_code_response['result'][0];
-            // Log::info("🎯 Milestone result list", ['result' => $milestoneResult]);
-
-            $serviceType = is_array($type['service_type']) ? $type['service_type'][0] : $type['service_type'];
-
-
-            $milestoneCodeToUpdate = null;
-            $milestoneIdToUpdate = null;
-            
-
-            // Determine milestone code based on dispatch_type, request number, and service_type
-            if ($type['dispatch_type'] == "ot" && $type['de_request_no'] == $requestNumber && $serviceType == 1) {
-                $milestoneCodeToUpdate = "TYOT";
-                Log::info("Milestone to update: {$milestoneCodeToUpdate} with actual time: {$actualTime}");
-            } elseif ($type['dispatch_type'] == "ot" && $type['pl_request_no'] == $requestNumber && $serviceType == 1) {
-                $milestoneCodeToUpdate = "TLOT";
-                Log::info("Milestone to update: {$milestoneCodeToUpdate} with actual time: {$actualTime}");
-            } elseif ($type['dispatch_type'] == "dt" && $type['dl_request_no'] == $requestNumber && $serviceType == 1) {
-                $milestoneCodeToUpdate = "GYDT";
-                Log::info("Milestone to update: {$milestoneCodeToUpdate} with actual time: {$actualTime}");
-            } elseif ($type['dispatch_type'] == "dt" && $type['pe_request_no'] == $requestNumber && $serviceType == 1) {
-                $milestoneCodeToUpdate = "GLDT";
-                Log::info("Milestone to update: {$milestoneCodeToUpdate} with actual time: {$actualTime}");
-            }
-
-            if ($type['dispatch_type'] == "ot" && $type['pl_request_no'] == $requestNumber && $serviceType == 2) {
-                $milestoneCodeToUpdate = "LTEOT";
-                Log::info("Milestone to update: {$milestoneCodeToUpdate} with actual time: {$actualTime}");
-            } elseif ($type['dispatch_type'] == "dt" && $type['dl_request_no'] == $requestNumber && $serviceType == 2) {
-                $milestoneCodeToUpdate = "LGYDT";
-                Log::info("Milestone to update: {$milestoneCodeToUpdate} with actual time: {$actualTime}");
-            }
-
-            $milestoneResultList = $fcl_code_response['result'];
-          
-
-            if ($milestoneCodeToUpdate) {
-               
-                foreach ($milestoneResultList as $milestone) {
-                    if ($milestone['fcl_code'] === $milestoneCodeToUpdate) {
-                        $milestoneIdToUpdate = $milestone['id'];
-                        $fcl_code = $milestone['fcl_code'];
-
-                          Log::info("🆗 Milestone matched and ID found", [
-                            'milestone_id' => $milestoneIdToUpdate,
-                            'fcl_code' => $fcl_code
-                        ]);
-                        break;
-                    }
-                }
-                
-
-                if ($milestoneIdToUpdate) {
-                    // Update actual datetime
-                    
-                    $update_actual_time = [
-                        "jsonrpc" => "2.0",
-                        "method" => "call",
-                        "params" => [
-                            "service" => "object",
-                            "method" => "execute_kw",
-                            "args" => [
-                                $db,
-                                $uid,
-                                $odooPassword,
-                                "dispatch.milestone.history",
-                                "write",
-                                [
-                                    [$milestoneIdToUpdate],
-                                    [
-                                        'actual_datetime' => $actualTime,
-                                        'button_readonly' => true, 
-                                        'button_confirm_semd' => false,
-                                        'clicked_by' => (int) $uid,
-                                    ]
-                                ]
-                            ]
-                        ],
-                        "id" => 6
-                    ];
-
-                    $updateActualResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
-                        "http" => [
-                            "header" => "Content-Type: application/json",
-                            "method" => "POST",
-                            "content" => json_encode($update_actual_time),
-                        ]
-                    ])), true);
-                    Log::debug("📝 Actual time update response", ['response' => $updateActualResponse]);
-
-                    if (isset($updateActualResponse['result']) && $updateActualResponse['result']) {
-                        $fcl_code_email = [
-                            'TYOT' => 'dispatch_manager.a2_email_notification_shipper_template',
-                            'TEOT' => 'dispatch_manager.a7_shipper_arrived_shiplocation_template',
-                            'TLOT' => 'dispatch_manager.a5_email_notification_laden_template',
-                            'CLOT' => 'dispatch_manager.a6_notification_container_outbound_template',
-                            'CYDT' => 'dispatch_manager.b4_container_vendor_yard_template',
-                            'GLDT' => 'dispatch_manager.a5_email_notification_laden_template',
-                            'CLDT' => 'dispatch_manager.c2_consignee_arrived_conslocation_template',
-                            'GYDT' => 'dispatch_manager.a2_email_notification_shipper_template',
-                        ];
-
-                        $template_xml_id = $fcl_code_email[$fcl_code] ?? null;
-
-                        if($template_xml_id) {
-                            Log::info("✅ Actual datetime successfully updated for milestone ID: $milestoneIdToUpdate");
-                            [$module, $xml_id] = explode('.', $template_xml_id, 2);
-                            $get_template_id = [
-                                "jsonrpc" => "2.0",
-                                "method" => "call",
-                                "params" => [
-                                    "service" => "object",
-                                    "method" => "execute_kw",
-                                    "args" => [
-                                        $db,
-                                        $uid,
-                                        $odooPassword,
-                                        "ir.model.data",
-                                        "search_read",
-                                        [
-                                            [["module", "=", $module], ["name", "=", $xml_id]],
-                                            ["res_id"]
-                                        ]
-                                       
-                                    ]
-                                ],
-                                "id" => 7
-                            ];
-                            $templateResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
-                                "http" => [
-                                    "header" => "Content-Type: application/json",
-                                    "method" => "POST",
-                                    "content" => json_encode($get_template_id),
-                                ]
-                            ])), true);
-
-                            Log::debug("🔍 Template response", ['response' => $templateResponse]);
-
-                            $template_id = $templateResponse['result'] ?? [];
-
-                            if (!empty($template_id) && isset($template_id[0]['res_id'])) {
-                                $resolved_id = $template_id[0]['res_id'];
-                                Log::info("📩 Template ID resolved: $resolved_id for $template_xml_id");
-
-                                $send_email = [
-                                    "jsonrpc" => "2.0",
-                                    "method" => "call",
-                                    "params" => [
-                                        "service" => "object",
-                                        "method" => "execute_kw",
-                                        "args" => [
-                                            $db,
-                                            $uid,
-                                            $odooPassword,
-                                            "mail.template",
-                                            "send_mail",
-                                            [
-                                                $resolved_id,
-                                                $milestoneIdToUpdate,
-                                                true
-                                            ]
-                                        ]
-                                    ],
-                                    "id" => 8
-                                ];
-
-                                $sendEmailResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
-                                    "http" => [
-                                        "header" => "Content-Type: application/json",
-                                        "method" => "POST",
-                                        "content" => json_encode($send_email),
-                                    ]
-                                ])), true);
-
-                                if(isset($sendEmailResponse['result']) && $sendEmailResponse['result']) {
-                                    Log::info("Milestone updated and email sent.");
-                                    return response()->json([
-                                        'success' => true,
-                                        'message' => 'Milestone updated and email sent successfully.',
-                                        'milestone_id' => $milestoneIdToUpdate,
-                                        'template_id' =>  $resolved_id,
-
-                                    ], 200);
-                                } else {
-                                    Log::warning("Milestone update, but email is not sent", ['response' => $sendEmailResponse]);
-                                    return response()->json(['success' => true, 'message' => 'Milestsone updated, but email failed'], 200);
-                                }
-                            } else {
-                                Log::error("Failed to resolve template XML ID $template_xml_id");
-                                return response()->json(['success' => false, 'message' => 'Template not found'], 500);
-                            }
-                            Log::info("Milestone updated!");
-                        } else {
-                            Log::warning("No template configured for FCL Code: $fcl_code");
-                            return response()->json(['success' => true, 'message' => 'Milestone updated but no email sent'], 200);
-                        }
-                    } else {
-                        Log::error("⚠️ POD updated but failed to update milestone", ['response' => $updateActualResponse]);
-                        return response()->json(['success' => false, 'message' => 'POD updated but milestone failed'], 500);
-                    }
-                }
-            }
-            return response()->json(['success' => true, 'message' => 'POD uploaded, but no matching milestone found']);
-
-        }else{
-            Log::error("Failed to insert image", ["response" => $updateResponse]);
-            return response()->json(['success' => false,'message'=>'Failed to upload POD'], 500);
-        }
-    
-        return response()->json($statusResponse);
+        return json_decode($response, true);
 
     }
 
-    
-
-    public function uploadPOD_sec(Request $request)
+    private function getMilestoneHistory($transactionId, $db, $uid, $odooPassword, $odooUrl)
     {
-        $url = $this->url;
-        $db = $this->db;
-       
-        $uid = $request->query('uid') ;
-        $odooPassword = $request->header('password');
-        $images = $request->input('images');
-        $signature = $request->input('signature');
-        $transactionId = (int)$request->input('id');
-        $dispatchType = $request->input('dispatch_type');
-        $requestNumber = $request->input('request_number');
-        $actualTime = $request->input('timestamp');
-        $enteredName = $request->input('enteredName');
-        $newStatus = $request->input('newStatus');
-        $containerNumber = $request->input('enteredContainerNumber');
-
-        Log::info('Received file uplodad request', [
-            'uid' => $uid,
-            'id' => $transactionId,
-            'dispatch_type' => $dispatchType,
-            'requestNumber' => $request->requestNumber,
-            'actualTime' => $actualTime,
-            'enteredContainerNumber' => $containerNumber,
-            
-            // 'images' => $request->input('images'),
-            // 'signature' => $request->input('signature'),
-        ]); 
-
-        
-
-        if (!$uid) {
-            return response()->json(['success' => false, 'message' => 'UID is required'], 400);
-        }
-
-        $odooUrl = $this->odoo_url;
-        $proof_attach = [
+        $milestoneCodeSearch = [
             "jsonrpc" => "2.0",
             "method" => "call",
             "params" => [
@@ -1998,10 +1218,260 @@ class TransactionController extends Controller
                     $db, 
                     $uid, 
                     $odooPassword, 
-                    "dispatch.manager", 
+                    "dispatch.milestone.history", 
                     "search_read",
-                    [[["id", "=", $transactionId]]],  // Search by Request Number
-                    ["fields" => ["dispatch_type","de_request_no", "pl_request_no", "dl_request_no", "pe_request_no","service_type", "booking_reference_no" ]]
+                    [[["dispatch_id", "=", $transactionId]]],  // Search by Request Number
+                    ["fields" => ["id","dispatch_type","actual_datetime","scheduled_datetime","fcl_code","is_backload"]]
+                ]
+            ],
+            "id" => 5
+        ];
+    
+        $response = file_get_contents($odooUrl, false, stream_context_create([
+            "http" => [
+                "header" => "Content-Type: application/json",
+                "method" => "POST",
+                "content" => json_encode($milestoneCodeSearch),
+            ],
+        ]));
+
+        $fcl_code_response = json_decode($response, true);
+
+        if (!isset($fcl_code_response['result']) || empty($fcl_code_response['result'])) {
+            Log::error("❌ No data on this ID", ["response" => $fcl_code_response]);
+            return response()->json(['success' => false, 'message' => 'Data not found'], 404);
+        }
+
+        return $fcl_code_response['result'];
+
+    }
+
+    private function updateMilestoneAndSendEmail(array $milestoneResultList, string $milestoneCodeToUpdate, string $actualTime, string $db, int $uid, string $odooPassword, string $odooUrl)
+    {
+        $milestoneIdToUpdate = null;
+        $fcl_code = null;
+
+        foreach ($milestoneResultList as $milestone) {
+            if ($milestone['fcl_code'] === $milestoneCodeToUpdate) {
+                $milestoneIdToUpdate = $milestone['id'];
+                $fcl_code = $milestone['fcl_code'];
+                    Log::info("🆗 Milestone matched and ID found", [
+                    'milestone_id' => $milestoneIdToUpdate,
+                    'fcl_code' => $fcl_code
+                ]);
+                break;
+            }
+        }
+
+        if (!$milestoneIdToUpdate) {
+            return response()->json(['success' => false, 'message' => 'Milestone not found'], 404);
+        }
+
+        $update_actual_time = [
+            "jsonrpc" => "2.0",
+            "method" => "call",
+            "params" => [
+                "service" => "object",
+                "method" => "execute_kw",
+                "args" => [
+                    $db,
+                    $uid,
+                    $odooPassword,
+                    "dispatch.milestone.history",
+                    "write",
+                    [
+                        [$milestoneIdToUpdate],
+                        [
+                            'actual_datetime' => $actualTime,
+                            'button_readonly' => true, 
+                            'button_confirm_semd' => false,
+                            'clicked_by' => (int) $uid,
+                        ]
+                    ]
+                ]
+            ],
+            "id" => 6
+        ];
+
+        $updateActualResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
+            "http" => [
+                "header" => "Content-Type: application/json",
+                "method" => "POST",
+                "content" => json_encode($update_actual_time),
+            ]
+        ])), true);
+        Log::debug("📝 Actual time update response", ['response' => $updateActualResponse]);
+
+        if (!isset($updateActualResponse['result']) || !$updateActualResponse['result']) {
+            Log::error("⚠️ POD updated but failed to update milestone", ['response' => $updateActualResponse]);
+            return response()->json(['success' => false, 'message' => 'POD updated but milestone failed'], 500);
+        }
+                   
+        $fcl_code_email = [
+            'TYOT' => 'dispatch_manager.a2_email_notification_shipper_template',
+            'TEOT' => 'dispatch_manager.a7_shipper_arrived_shiplocation_template',
+            'TLOT' => 'dispatch_manager.a5_email_notification_laden_template',
+            'CLOT' => 'dispatch_manager.a6_notification_container_outbound_template',
+            'CYDT' => 'dispatch_manager.b4_container_vendor_yard_template',
+            'GLDT' => 'dispatch_manager.a5_email_notification_laden_template',
+            'CLDT' => 'dispatch_manager.c2_consignee_arrived_conslocation_template',
+            'GYDT' => 'dispatch_manager.a2_email_notification_shipper_template',
+        ];
+
+        $template_xml_id = $fcl_code_email[$fcl_code] ?? null;
+
+        if($template_xml_id) {
+            Log::info("✅ Actual datetime successfully updated for milestone ID: $milestoneIdToUpdate");
+            [$module, $xml_id] = explode('.', $template_xml_id, 2);
+            $get_template_id = [
+                "jsonrpc" => "2.0",
+                "method" => "call",
+                "params" => [
+                    "service" => "object",
+                    "method" => "execute_kw",
+                    "args" => [
+                        $db,
+                        $uid,
+                        $odooPassword,
+                        "ir.model.data",
+                        "search_read",
+                        [
+                            [["module", "=", $module], ["name", "=", $xml_id]],
+                            ["res_id"]
+                        ]
+                        
+                    ]
+                ],
+                "id" => 7
+            ];
+            $templateResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
+                "http" => [
+                    "header" => "Content-Type: application/json",
+                    "method" => "POST",
+                    "content" => json_encode($get_template_id),
+                ]
+            ])), true);
+
+            Log::debug("🔍 Template response", ['response' => $templateResponse]);
+
+            $template_id = $templateResponse['result'] ?? [];
+
+            if (!empty($template_id) && isset($template_id[0]['res_id'])) {
+                $resolved_id = $template_id[0]['res_id'];
+                Log::info("📩 Template ID resolved: $resolved_id for $template_xml_id");
+
+                $send_email = [
+                    "jsonrpc" => "2.0",
+                    "method" => "call",
+                    "params" => [
+                        "service" => "object",
+                        "method" => "execute_kw",
+                        "args" => [
+                            $db,
+                            $uid,
+                            $odooPassword,
+                            "mail.template",
+                            "send_mail",
+                            [
+                                $resolved_id,
+                                $milestoneIdToUpdate,
+                                true
+                            ]
+                        ]
+                    ],
+                    "id" => 8
+                ];
+
+                $sendEmailResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
+                    "http" => [
+                        "header" => "Content-Type: application/json",
+                        "method" => "POST",
+                        "content" => json_encode($send_email),
+                    ]
+                ])), true);
+
+                if(isset($sendEmailResponse['result']) && $sendEmailResponse['result']) {
+                    Log::info("Milestone updated and email sent.");
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Milestone updated and email sent successfully.',
+                        'milestone_id' => $milestoneIdToUpdate,
+                        'template_id' =>  $resolved_id,
+
+                    ], 200);
+                } else {
+                    Log::warning("Milestone update, but email is not sent", ['response' => $sendEmailResponse]);
+                    return response()->json(['success' => true, 'message' => 'Milestsone updated, but email failed'], 200);
+                }
+            } else {
+                Log::error("Failed to resolve template XML ID $template_xml_id");
+                return response()->json(['success' => false, 'message' => 'Template not found'], 500);
+            }
+            Log::info("Milestone updated!");
+        } else {
+            Log::warning("No template configured for FCL Code: $fcl_code");
+            return response()->json(['success' => true, 'message' => 'Milestone updated but no email sent'], 200);
+        }
+    }
+
+    
+    private function resolveMilestoneCode($type, $requestNumber, $serviceType)
+    {
+        if ($type['dispatch_type'] == "ot" && $type['de_request_no'] == $requestNumber && $serviceType == 1) {
+            return "TYOT";
+        }
+        if ($type['dispatch_type'] == "ot" && $type['pl_request_no'] == $requestNumber && $serviceType == 1) {
+            return "TLOT";
+        }
+        if ($type['dispatch_type'] == "dt" && $type['dl_request_no'] == $requestNumber && $serviceType == 1) {
+            return "GYDT";
+        }
+        if ($type['dispatch_type'] == "dt" && $type['pe_request_no'] == $requestNumber && $serviceType == 1) {
+            return "GLDT";
+        }
+        if ($type['dispatch_type'] == "ot" && $type['pl_request_no'] == $requestNumber && $serviceType == 2) {
+            return "LTEOT";
+        }
+        if ($type['dispatch_type'] == "dt" && $type['dl_request_no'] == $requestNumber && $serviceType == 2) {
+            return "LGYDT";
+        }
+        return null;
+    }
+
+    private function resolveMilestoneCode2($type, $requestNumber, $serviceType)
+    {
+        if ($type['dispatch_type'] == "ot" && $type['de_request_no'] == $requestNumber && $serviceType == 1) {
+            return "TEOT";
+        }
+        if ($type['dispatch_type'] == "ot" && $type['pl_request_no'] == $requestNumber && $serviceType == 1) {
+            return "CLOT";
+        }
+        if ($type['dispatch_type'] == "dt" && $type['dl_request_no'] == $requestNumber && $serviceType == 1) {
+            return "CLDT";
+        }
+        if ($type['dispatch_type'] == "dt" && $type['pe_request_no'] == $requestNumber && $serviceType == 1) {
+            return "CYDT";
+        }
+        if ($type['dispatch_type'] == "ot" && $type['pl_request_no'] == $requestNumber && $serviceType == 2) {
+            return "LCLOT";
+        }
+        if ($type['dispatch_type'] == "dt" && $type['dl_request_no'] == $requestNumber && $serviceType == 2) {
+            return "LCLDT";
+        }
+        return null;
+    }
+
+    private function consolidationMaster($transactionId,$actualTime,$db,$uid,$odooPassword,$odooUrl)
+    {
+        $notebookRes = jsonRpcRequest($odooUrl, [
+            'jsonrpc' => '2.0',
+            'method' => 'call',
+            'params' => [
+                'service' => 'object',
+                'method' => 'execute_kw',
+                'args' => [$db, $uid, $odooPassword, 'consol.type.notebook', 'search_read',
+                    [[['consol_destination', '=', $transactionId]]],
+                    ['fields' => ['id', 'consolidation_id', 'consol_origin']]
                 ]
             ],
             "id" => 1
@@ -2046,61 +1516,6 @@ class TransactionController extends Controller
                 "container_number" => $containerNumber
                 
             ];
-            $bookingRef = $type['booking_reference_no'] ?? null;
-            if ($bookingRef && $containerNumber) {
-                $searchFF = [
-                    "jsonrpc" => "2.0",
-                    "method" => "call",
-                    "params" => [
-                        "service" => "object",
-                        "method" => "execute_kw",
-                        "args" => [
-                            $db,
-                            $uid,
-                            $odooPassword,
-                            "dispatch.manager",
-                            "search",
-                            [[
-                                ["booking_reference_no", '=', $bookingRef],
-                                ["dispatch_type", '=', "ff"]
-                            ]]
-                        ],
-                    ],
-                    "id" => 120
-                ];
-                $ffRes = jsonRpcRequest($odooUrl, $searchFF);
-                $ffIds = $ffRes['result'] ?? [];
-
-                if (!empty($ffIds)) {
-                    // ✅ Update container_number only in ff
-                    $updateFFContainer = [
-                        "jsonrpc" => "2.0",
-                        "method" => "call",
-                        "params" => [
-                            "service" => "object",
-                            "method" => "execute_kw",
-                            "args" => [
-                                $db,
-                                $uid,
-                                $odooPassword,
-                                "dispatch.manager",
-                                "write",
-                                [
-                                    $ffIds,
-                                    [
-                                        "container_number" => $containerNumber
-                                    ]
-                                ]
-                            ]
-                        ],
-                        "id" => 119
-                    ];
-                    $ffUpdateRes = jsonRpcRequest($odooUrl, $updateFFContainer);
-                    Log::info("Updated container_number in FF for bookingRef {$bookingRef}, ffIds: " . json_encode($ffIds));
-                } else {
-                    Log::warning("No FF found for bookingRef {$bookingRef}");
-                }
-            }
         } elseif ($type['dispatch_type'] == "ot" && $type['pl_request_no'] == $requestNumber) {
             Log::info("Updating DL proof and signature for request number: {$requestNumber}");
             $updateField = [
@@ -2112,61 +1527,6 @@ class TransactionController extends Controller
                 // "pl_request_status" => $newStatus,
                 "container_number" => $containerNumber
             ];
-            $bookingRef = $type['booking_reference_no'] ?? null;
-            if ($bookingRef && $containerNumber) {
-                $searchFF = [
-                    "jsonrpc" => "2.0",
-                    "method" => "call",
-                    "params" => [
-                        "service" => "object",
-                        "method" => "execute_kw",
-                        "args" => [
-                            $db,
-                            $uid,
-                            $odooPassword,
-                            "dispatch.manager",
-                            "search",
-                            [[
-                                ["booking_reference_no", '=', $bookingRef],
-                                ["dispatch_type", '=', "ff"]
-                            ]]
-                        ],
-                    ],
-                    "id" => 117
-                ];
-                $ffRes = jsonRpcRequest($odooUrl, $searchFF);
-                $ffIds = $ffRes['result'] ?? [];
-
-                if (!empty($ffIds)) {
-                    // ✅ Update container_number only in ff
-                    $updateFFContainer = [
-                        "jsonrpc" => "2.0",
-                        "method" => "call",
-                        "params" => [
-                            "service" => "object",
-                            "method" => "execute_kw",
-                            "args" => [
-                                $db,
-                                $uid,
-                                $odooPassword,
-                                "dispatch.manager",
-                                "write",
-                                [
-                                    $ffIds,
-                                    [
-                                        "container_number" => $containerNumber
-                                    ]
-                                ]
-                            ]
-                        ],
-                        "id" => 118
-                    ];
-                    $ffUpdateRes = jsonRpcRequest($odooUrl, $updateFFContainer);
-                    Log::info("Updated container_number in FF for bookingRef {$bookingRef}, ffIds: " . json_encode($ffIds));
-                } else {
-                    Log::warning("No FF found for bookingRef {$bookingRef}");
-                }
-            }
         }
 
         if ($type['dispatch_type'] === "dt" && $type['dl_request_no'] === $requestNumber && isset($type['service_type']) && $type['service_type'] == 2) {
@@ -2180,61 +1540,6 @@ class TransactionController extends Controller
                 // "dl_request_status" => $newStatus,
                 "container_number" => $containerNumber
             ];
-            $bookingRef = $type['booking_reference_no'] ?? null;
-            if ($bookingRef && $containerNumber) {
-                $searchFF = [
-                    "jsonrpc" => "2.0",
-                    "method" => "call",
-                    "params" => [
-                        "service" => "object",
-                        "method" => "execute_kw",
-                        "args" => [
-                            $db,
-                            $uid,
-                            $odooPassword,
-                            "dispatch.manager",
-                            "search",
-                            [[
-                                ["booking_reference_no", '=', $bookingRef],
-                                ["dispatch_type", '=', "ff"]
-                            ]]
-                        ],
-                    ],
-                    "id" => 115
-                ];
-                $ffRes = jsonRpcRequest($odooUrl, $searchFF);
-                $ffIds = $ffRes['result'] ?? [];
-
-                if (!empty($ffIds)) {
-                    // ✅ Update container_number only in ff
-                    $updateFFContainer = [
-                        "jsonrpc" => "2.0",
-                        "method" => "call",
-                        "params" => [
-                            "service" => "object",
-                            "method" => "execute_kw",
-                            "args" => [
-                                $db,
-                                $uid,
-                                $odooPassword,
-                                "dispatch.manager",
-                                "write",
-                                [
-                                    $ffIds,
-                                    [
-                                        "container_number" => $containerNumber
-                                    ]
-                                ]
-                            ]
-                        ],
-                        "id" => 116
-                    ];
-                    $ffUpdateRes = jsonRpcRequest($odooUrl, $updateFFContainer);
-                    Log::info("Updated container_number in FF for bookingRef {$bookingRef}, ffIds: " . json_encode($ffIds));
-                } else {
-                    Log::warning("No FF found for bookingRef {$bookingRef}");
-                }
-            }
         } elseif($type['dispatch_type'] === "dt" && $type['dl_request_no'] === $requestNumber) {
              $updateField = [
                 "dl_proof" => $images,
@@ -2244,61 +1549,6 @@ class TransactionController extends Controller
                 // "dl_request_status" => $newStatus,
                 "container_number" => $containerNumber
             ];
-            $bookingRef = $type['booking_reference_no'] ?? null;
-            if ($bookingRef && $containerNumber) {
-                $searchFF = [
-                    "jsonrpc" => "2.0",
-                    "method" => "call",
-                    "params" => [
-                        "service" => "object",
-                        "method" => "execute_kw",
-                        "args" => [
-                            $db,
-                            $uid,
-                            $odooPassword,
-                            "dispatch.manager",
-                            "search",
-                            [[
-                                ["booking_reference_no", '=', $bookingRef],
-                                ["dispatch_type", '=', "ff"]
-                            ]]
-                        ],
-                    ],
-                    "id" => 113
-                ];
-                $ffRes = jsonRpcRequest($odooUrl, $searchFF);
-                $ffIds = $ffRes['result'] ?? [];
-
-                if (!empty($ffIds)) {
-                    // ✅ Update container_number only in ff
-                    $updateFFContainer = [
-                        "jsonrpc" => "2.0",
-                        "method" => "call",
-                        "params" => [
-                            "service" => "object",
-                            "method" => "execute_kw",
-                            "args" => [
-                                $db,
-                                $uid,
-                                $odooPassword,
-                                "dispatch.manager",
-                                "write",
-                                [
-                                    $ffIds,
-                                    [
-                                        "container_number" => $containerNumber
-                                    ]
-                                ]
-                            ]
-                        ],
-                        "id" => 114
-                    ];
-                    $ffUpdateRes = jsonRpcRequest($odooUrl, $updateFFContainer);
-                    Log::info("Updated container_number in FF for bookingRef {$bookingRef}, ffIds: " . json_encode($ffIds));
-                } else {
-                    Log::warning("No FF found for bookingRef {$bookingRef}");
-                }
-            }
         } elseif ($type['dispatch_type'] === "dt" && $type['pe_request_no'] === $requestNumber) {
             Log::info("Updating DE proof and signature for request number: {$requestNumber}");
             $updateField = [
@@ -2310,61 +1560,6 @@ class TransactionController extends Controller
                 // "pe_request_status" => $newStatus,
                 "container_number" => $containerNumber
             ];
-            $bookingRef = $type['booking_reference_no'] ?? null;
-            if ($bookingRef && $containerNumber) {
-                $searchFF = [
-                    "jsonrpc" => "2.0",
-                    "method" => "call",
-                    "params" => [
-                        "service" => "object",
-                        "method" => "execute_kw",
-                        "args" => [
-                            $db,
-                            $uid,
-                            $odooPassword,
-                            "dispatch.manager",
-                            "search",
-                            [[
-                                ["booking_reference_no", '=', $bookingRef],
-                                ["dispatch_type", '=', "ff"]
-                            ]]
-                        ],
-                    ],
-                    "id" => 111
-                ];
-                $ffRes = jsonRpcRequest($odooUrl, $searchFF);
-                $ffIds = $ffRes['result'] ?? [];
-
-                if (!empty($ffIds)) {
-                    // ✅ Update container_number only in ff
-                    $updateFFContainer = [
-                        "jsonrpc" => "2.0",
-                        "method" => "call",
-                        "params" => [
-                            "service" => "object",
-                            "method" => "execute_kw",
-                            "args" => [
-                                $db,
-                                $uid,
-                                $odooPassword,
-                                "dispatch.manager",
-                                "write",
-                                [
-                                    $ffIds,
-                                    [
-                                        "container_number" => $containerNumber
-                                    ]
-                                ]
-                            ]
-                        ],
-                        "id" => 112
-                    ];
-                    $ffUpdateRes = jsonRpcRequest($odooUrl, $updateFFContainer);
-                    Log::info("Updated container_number in FF for bookingRef {$bookingRef}, ffIds: " . json_encode($ffIds));
-                } else {
-                    Log::warning("No FF found for bookingRef {$bookingRef}");
-                }
-            }
         }
 
        
@@ -2376,279 +1571,267 @@ class TransactionController extends Controller
                 "service" => "object",
                 "method" => "execute_kw",
                 "args" => [
-                    $db, 
-                    $uid, 
-                    $odooPassword, 
-                    "dispatch.manager", 
-                    "write",
-                    [
-                        [$transactionId],
-                       
-                        $updateField,
-                        
-                    ]
+                    $db,
+                    $uid,
+                    $odooPassword,
+                    "freight.management",
+                    "search_read",
+                    [[["booking_reference_no", '=', $bookingRef]]],
+                    ["fields" => ["id", "stage_id"]]
                 ],
-                
             ],
-            "id" => 2
+            "id" => rand(1000, 9999)
         ];
-
-        $updateResponse = json_decode(file_get_contents($odooUrl,false,stream_context_create([
+        $searchResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
             "http" => [
                 "header" => "Content-Type: application/json",
                 "method" => "POST",
-                "content" => json_encode($updatePOD),
+                "content" => json_encode($searchBooking),
             ]
         ])), true);
+        
+        $bookingIds = $searchResponse['result'][0]['id'] ?? null;
 
-
-        if (isset($updateResponse['result']) && $updateResponse['result']) {
-            Log::info("✅ POD uploaded. Proceeding with milestone update. POD JOURNEY");
-
-            $milestoneCodeSearch = [
+        if ($bookingIds) {
+            $updateBookingStage = [
                 "jsonrpc" => "2.0",
                 "method" => "call",
                 "params" => [
                     "service" => "object",
                     "method" => "execute_kw",
                     "args" => [
-                        $db, 
-                        $uid, 
-                        $odooPassword, 
-                        "dispatch.milestone.history", 
-                        "search_read",
-                        [[["dispatch_id", "=", $transactionId]]],  // Search by Request Number
-                        ["fields" => ["id","dispatch_type","actual_datetime","scheduled_datetime","fcl_code"]]
+                        $db,
+                        $uid,
+                        $odooPassword,
+                        "freight.management",
+                        "write",
+                        [
+                            [$bookingIds],
+                            [
+                                "stage_id" => 5
+                            ]
+                        ]
                     ]
                 ],
-                "id" => 3
+                "id" => rand(1000, 9999)
             ];
-        
-            $fcl_code_response = json_decode(file_get_contents($odooUrl, false, stream_context_create([
+            $response = json_decode(file_get_contents($odooUrl, false, stream_context_create([
                 "http" => [
                     "header" => "Content-Type: application/json",
                     "method" => "POST",
-                    "content" => json_encode($milestoneCodeSearch),
-                ],
+                    "content" => json_encode($updateBookingStage),
+                ]
             ])), true);
-    
-            if (!isset($fcl_code_response['result']) || empty($fcl_code_response['result'])) {
-                Log::error("❌ No data on this ID", ["response" => $fcl_code_response]);
-                return response()->json(['success' => false, 'message' => 'Data not found'], 404);
-            }
 
-            $milestoneResult = $fcl_code_response['result'][0];
-            // Log::info("🎯 Milestone result list", ['result' => $milestoneResult]);
+            Log::info("Updated booking stage for bookingRef {$bookingRef}, bookingId: {$bookingIds}");
 
-            $serviceType = is_array($type['service_type']) ? $type['service_type'][0] : $type['service_type'];
-
-
-            $milestoneCodeToUpdate = null;
-            $milestoneIdToUpdate = null;
-
+            return $response;
            
-            // Determine milestone code based on dispatch_type, request number, and service_type
-            if ($type['dispatch_type'] == "ot" && $type['de_request_no'] == $requestNumber && $serviceType == 1) {
-                $milestoneCodeToUpdate = "TEOT";
-                Log::info("Milestone to update: {$milestoneCodeToUpdate} with actual time: {$actualTime}");
-            } elseif ($type['dispatch_type'] == "ot" && $type['pl_request_no'] == $requestNumber && $serviceType == 1) {
-                $milestoneCodeToUpdate = "CLOT";
-                Log::info("Milestone to update: {$milestoneCodeToUpdate} with actual time: {$actualTime}");
-            } elseif ($type['dispatch_type'] == "dt" && $type['dl_request_no'] == $requestNumber && $serviceType == 1) {
-                $milestoneCodeToUpdate = "CLDT";
-                Log::info("Milestone to update: {$milestoneCodeToUpdate} with actual time: {$actualTime}");
-            } elseif ($type['dispatch_type'] == "dt" && $type['pe_request_no'] == $requestNumber && $serviceType == 1) {
-                $milestoneCodeToUpdate = "CYDT";
-                Log::info("Milestone to update: {$milestoneCodeToUpdate} with actual time: {$actualTime}");
-            }
-
-            if ($type['dispatch_type'] == "ot" && $type['pl_request_no'] == $requestNumber && $serviceType == 2) {
-                $milestoneCodeToUpdate = "LCLOT";
-                Log::info("Milestone to update: {$milestoneCodeToUpdate} with actual time: {$actualTime}");
-            } elseif ($type['dispatch_type'] == "dt" && $type['dl_request_no'] == $requestNumber && $serviceType == 2) {
-                $milestoneCodeToUpdate = "LCLDT";
-                Log::info("Milestone to update: {$milestoneCodeToUpdate} with actual time: {$actualTime}");
-            }
-
-            $milestoneResultList = $fcl_code_response['result'];
-          
-
-            if ($milestoneCodeToUpdate) {
-               
-                foreach ($milestoneResultList as $milestone) {
-                    if ($milestone['fcl_code'] === $milestoneCodeToUpdate) {
-                        $milestoneIdToUpdate = $milestone['id'];
-                        $fcl_code = $milestone['fcl_code'];
-
-                          Log::info("🆗 Milestone matched and ID found", [
-                            'milestone_id' => $milestoneIdToUpdate,
-                            'fcl_code' => $fcl_code
-                        ]);
-                        break;
-                    }
-                }
-                
-
-                if ($milestoneIdToUpdate) {
-                    // Update actual datetime
-                    
-                    $update_actual_time = [
-                        "jsonrpc" => "2.0",
-                        "method" => "call",
-                        "params" => [
-                            "service" => "object",
-                            "method" => "execute_kw",
-                            "args" => [
-                                $db,
-                                $uid,
-                                $odooPassword,
-                                "dispatch.milestone.history",
-                                "write",
-                                [
-                                    [$milestoneIdToUpdate],
-                                    [
-                                        'actual_datetime' => $actualTime,
-                                        'button_readonly' => true, 
-                                        'button_confirm_semd' => false,
-                                        'clicked_by' => (int) $uid,
-                                    ]
-                                ]
-                            ]
-                        ],
-                        "id" => 4
-                    ];
-
-                    $updateActualResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
-                        "http" => [
-                            "header" => "Content-Type: application/json",
-                            "method" => "POST",
-                            "content" => json_encode($update_actual_time),
-                        ]
-                    ])), true);
-                    Log::debug("📝 Actual time update response", ['response' => $updateActualResponse]);
-
-                    if (isset($updateActualResponse['result']) && $updateActualResponse['result']) {
-                        $fcl_code_email = [
-                            'TYOT' => 'dispatch_manager.a2_email_notification_shipper_template',
-                            'TEOT' => 'dispatch_manager.a7_shipper_arrived_shiplocation_template',
-                            'TLOT' => 'dispatch_manager.a5_email_notification_laden_template',
-                            'CLOT' => 'dispatch_manager.a6_notification_container_outbound_template',
-                            'CYDT' => 'dispatch_manager.b4_container_vendor_yard_template',
-                            'GLDT' => 'dispatch_manager.a5_email_notification_laden_template',
-                            'CLDT' => 'dispatch_manager.c2_consignee_arrived_conslocation_template',
-                            'GYDT' => 'dispatch_manager.a2_email_notification_shipper_template',
-                        ];
-
-                        $template_xml_id = $fcl_code_email[$fcl_code] ?? null;
-
-                        if($template_xml_id) {
-                            Log::info("✅ Actual datetime successfully updated for milestone ID: $milestoneIdToUpdate");
-                            [$module, $xml_id] = explode('.', $template_xml_id, 2);
-                            $get_template_id = [
-                                "jsonrpc" => "2.0",
-                                "method" => "call",
-                                "params" => [
-                                    "service" => "object",
-                                    "method" => "execute_kw",
-                                    "args" => [
-                                        $db,
-                                        $uid,
-                                        $odooPassword,
-                                        "ir.model.data",
-                                        "search_read",
-                                        [
-                                            [["module", "=", $module], ["name", "=", $xml_id]],
-                                            ["res_id"]
-                                        ]
-                                    ]
-                                ],
-                                "id" => 5
-                            ];
-                            $templateResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
-                                "http" => [
-                                    "header" => "Content-Type: application/json",
-                                    "method" => "POST",
-                                    "content" => json_encode($get_template_id),
-                                ]
-                            ])), true);
-
-                            Log::debug("🔍 Template response", ['response' => $templateResponse]);
-
-
-
-                            $template_id = $templateResponse['result'] ?? [];
-
-                            if (!empty($template_id) && isset($template_id[0]['res_id'])) {
-                                $resolved_id = $template_id[0]['res_id'];
-                                Log::info("📩 Template ID resolved: $resolved_id for $template_xml_id");
-
-                                $send_email = [
-                                    "jsonrpc" => "2.0",
-                                    "method" => "call",
-                                    "params" => [
-                                        "service" => "object",
-                                        "method" => "execute_kw",
-                                        "args" => [
-                                            $db,
-                                            $uid,
-                                            $odooPassword,
-                                            "mail.template",
-                                            "send_mail",
-                                            [
-                                                $resolved_id,
-                                                $milestoneIdToUpdate,
-                                                true
-                                            ]
-                                        ]
-                                    ],
-                                    "id" => 6
-                                ];
-
-                                $sendEmailResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
-                                    "http" => [
-                                        "header" => "Content-Type: application/json",
-                                        "method" => "POST",
-                                        "content" => json_encode($send_email),
-                                    ]
-                                ])), true);
-
-                                if(isset($sendEmailResponse['result']) && $sendEmailResponse['result']) {
-                                    Log::info("Milestone updated and email sent.");
-                                    return response()->json([
-                                        'success' => true,
-                                        'message' => 'Milestone updated and email sent successfully.',
-                                        'milestone_id' => $milestoneIdToUpdate,
-                                        'template_id' =>  $resolved_id,
-
-                                    ], 200);
-                                } else {
-                                    Log::warning("Milestone update, but email is not sent", ['response' => $sendEmailResponse]);
-                                    return response()->json(['success' => true, 'message' => 'Milestsone updated, but email failed'], 200);
-                                }
-                            } else {
-                                Log::error("Failed to resolve template XML ID $template_xml_id");
-                                return response()->json(['success' => false, 'message' => 'Template not found'], 500);
-                            }
-                            Log::info("Milestone updated!");
-                        } else {
-                            Log::warning("No template configured for FCL Code: $fcl_code");
-                            return response()->json(['success' => true, 'message' => 'Milestone updated but no email sent'], 200);
-                        }
-                    } else {
-                        Log::error("⚠️ POD updated but failed to update milestone", ['response' => $updateActualResponse]);
-                        return response()->json(['success' => false, 'message' => 'POD updated but milestone failed'], 500);
-                    }
-                }
-            }
-            return response()->json(['success' => true, 'message' => 'POD uploaded, but no matching milestone found']);
-
-        }else{
-            Log::error("Failed to insert image", ["response" => $updateResponse]);
-            return response()->json(['success' => false,'message'=>'Failed to upload POD'], 500);
+        } else {
+            Log::warning("No booking found for bookingRef {$bookingRef}");
         }
-    
-        return response()->json($statusResponse);
+    }
+
+    private function updateBookingStage2($bookingRef, $db, $uid, $odooPassword, $odooUrl)
+    {
+        if (!$bookingRef) return;
+
+        $searchBooking = [
+            "jsonrpc" => "2.0",
+            "method" => "call",
+            "params" => [
+                "service" => "object",
+                "method" => "execute_kw",
+                "args" => [
+                    $db,
+                    $uid,
+                    $odooPassword,
+                    "freight.management",
+                    "search_read",
+                    [[["booking_reference_no", '=', $bookingRef]]],
+                    ["fields" => ["id", "stage_id"]]
+                ],
+            ],
+            "id" => rand(1000, 9999)
+        ];
+        $searchResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
+            "http" => [
+                "header" => "Content-Type: application/json",
+                "method" => "POST",
+                "content" => json_encode($searchBooking),
+            ]
+        ])), true);
+        
+        $bookingIds = $searchResponse['result'][0]['id'] ?? null;
+
+        if ($bookingIds) {
+            $updateBookingStage = [
+                "jsonrpc" => "2.0",
+                "method" => "call",
+                "params" => [
+                    "service" => "object",
+                    "method" => "execute_kw",
+                    "args" => [
+                        $db,
+                        $uid,
+                        $odooPassword,
+                        "freight.management",
+                        "write",
+                        [
+                            [$bookingIds],
+                            [
+                                "stage_id" => 6
+                            ]
+                        ]
+                    ]
+                ],
+                "id" => rand(1000, 9999)
+            ];
+            $response = json_decode(file_get_contents($odooUrl, false, stream_context_create([
+                "http" => [
+                    "header" => "Content-Type: application/json",
+                    "method" => "POST",
+                    "content" => json_encode($updateBookingStage),
+                ]
+            ])), true);
+
+            Log::info("Updated booking stage for bookingRef {$bookingRef}, bookingId: {$bookingIds}");
+
+            return $response;
+           
+        } else {
+            Log::warning("No booking found for bookingRef {$bookingRef}");
+        }
+    }
+
+
+    public function uploadPOD(Request $request)
+    {
+        $url = $this->url;
+        $db = $this->db;
+        $uid = $request->query('uid') ;
+        $odooPassword = $request->header('password');
+        $images = $request->input('images');
+        $signature = $request->input('signature');
+        $transactionId = (int)$request->input('id');
+        $dispatchType = $request->input('dispatch_type');
+        $requestNumber = $request->input('request_number');
+        $actualTime = $request->input('timestamp');
+        $enteredName = $request->input('enteredName');
+        $newStatus = $request->input('newStatus');
+        $containerNumber = $request->input('enteredContainerNumber');
+        $odooUrl = $this->odoo_url;
+
+        $type = $this->handleDispatchRequest($request);
+        if ($type instanceof \Illuminate\Http\JsonResponse) return $type;
+
+        $serviceType = is_array($type['service_type']) ? $type['service_type'][0] : $type['service_type'];
+        $updateField = $this->buildUpdateField1($type, $requestNumber, $images, $signature, $enteredName, $actualTime, $containerNumber, $newStatus, $serviceType);
+
+        if (empty($updateField)) {
+            return response()->json(['success' => false, 'message' => 'No matching update rules found'], 400);
+        }
+        
+        $updateResponse = $this->updateDispatchRecord($transactionId, $updateField, $db, $uid, $odooPassword, $odooUrl);
+
+        if (!($updateResponse['result'] ?? false)) {
+            Log::error("Failed to insert image", ["response" => $updateResponse]);
+            return response()->json(['success' => false, 'message' => 'Failed to upload POD'], 500);
+        }
+
+        $this->updateFFContainerNumber($type, $containerNumber, $db, $uid, $odooPassword, $odooUrl);
 
        
+        $milestoneResult = $this->getMilestoneHistory($transactionId, $db, $uid, $odooPassword, $odooUrl);
+        if ($milestoneResult instanceof \Illuminate\Http\JsonResponse) return $milestoneResult;
+
+        $milestoneCodeToUpdate = $this->resolveMilestoneCode($type, $requestNumber, $serviceType);  
+
+        if(in_array($milestoneCodeToUpdate, ['TYOT', 'LCLOT'])) {
+            $bookingRef = $type['booking_reference_no'] ?? null;
+            if($bookingRef) {
+                $this->updateBookingStage1($bookingRef, $db, $uid, $odooPassword, $odooUrl);
+            }
+        }
+
+        if ($milestoneCodeToUpdate) {
+            return $this->updateMilestoneAndSendEmail(
+                $milestoneResult,   // ✅ use the same variable
+                $milestoneCodeToUpdate,
+                $actualTime,
+                $db,
+                $uid,
+                $odooPassword,
+                $odooUrl
+            );
+        }
+        return response()->json(['success' => true, 'message' => 'POD uploaded, but no matching milestone found']);
+
     }
+
+
+
+    public function uploadPOD_sec(Request $request)
+    {
+        $url = $this->url;
+        $db = $this->db;
+        $uid = $request->query('uid') ;
+        $odooPassword = $request->header('password');
+        $images = $request->input('images');
+        $signature = $request->input('signature');
+        $transactionId = (int)$request->input('id');
+        $dispatchType = $request->input('dispatch_type');
+        $requestNumber = $request->input('request_number');
+        $actualTime = $request->input('timestamp');
+        $enteredName = $request->input('enteredName');
+        $newStatus = $request->input('newStatus');
+        $containerNumber = $request->input('enteredContainerNumber');
+        $odooUrl = $this->odoo_url;
+
+        $type = $this->handleDispatchRequest($request);
+        if ($type instanceof \Illuminate\Http\JsonResponse) return $type;
+
+        $serviceType = is_array($type['service_type']) ? $type['service_type'][0] : $type['service_type'];
+        $updateField = $this->buildUpdateField2($type, $requestNumber, $images, $signature, $enteredName, $actualTime, $containerNumber, $newStatus, $serviceType);
+
+        if (empty($updateField)) {
+            return response()->json(['success' => false, 'message' => 'No matching update rules found'], 400);
+        }
+        
+        $updateResponse = $this->updateDispatchRecord($transactionId, $updateField, $db, $uid, $odooPassword, $odooUrl);
+
+        if (!($updateResponse['result'] ?? false)) {
+            Log::error("Failed to insert image", ["response" => $updateResponse]);
+            return response()->json(['success' => false, 'message' => 'Failed to upload POD'], 500);
+        }
+
+        $this->updateFFContainerNumber($type, $containerNumber, $db, $uid, $odooPassword, $odooUrl);
+
+        $this->consolidationMaster($transactionId,$actualTime,$db,$uid,$odooPassword,$odooUrl);
+       
+        $milestoneResult = $this->getMilestoneHistory($transactionId, $db, $uid, $odooPassword, $odooUrl);
+        if ($milestoneResult instanceof \Illuminate\Http\JsonResponse) return $milestoneResult;
+
+        $milestoneCodeToUpdate = $this->resolveMilestoneCode2($type, $requestNumber, $serviceType);  
+        if(in_array($milestoneCodeToUpdate, ['CYDT', 'LCLDT'])) {
+            $bookingRef = $type['booking_reference_no'] ?? null;
+            if($bookingRef) {
+                $this->updateBookingStage1($bookingRef, $db, $uid, $odooPassword, $odooUrl);
+            }
+        }
+
+        if ($milestoneCodeToUpdate) {
+            return $this->updateMilestoneAndSendEmail(
+                $milestoneResult,   // ✅ use the same variable
+                $milestoneCodeToUpdate,
+                $actualTime,
+                $db,
+                $uid,
+                $odooPassword,
+                $odooUrl
+            );
+        }
+        return response()->json(['success' => true, 'message' => 'POD uploaded, but no matching milestone found']);
+    }
+
 }
