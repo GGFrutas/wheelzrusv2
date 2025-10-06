@@ -54,10 +54,6 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
 late String _originalContainerNumber;
 
 
- late TextEditingController _containerController;
-late String _originalContainerNumber;
-
-
   
 
   Future<void> _printFilenames() async {
@@ -197,21 +193,6 @@ void initState() {
   _containerController = TextEditingController(text: _originalContainerNumber);
 }
 
- @override
-void initState() {
-  super.initState();
-  uid = ref.read(authNotifierProvider).uid ?? '';
-
-  _controller.addListener(() {
-    if (mounted) {
-      setState(() {});
-    }
-  });
-
-  _originalContainerNumber = widget.transaction?.containerNumber ?? '';
-  _containerController = TextEditingController(text: _originalContainerNumber);
-}
-
 
   @override
   void dispose() {
@@ -292,32 +273,6 @@ void initState() {
                 enabled: !(widget.transaction?.deRequestStatus == "Ongoing" && (widget.transaction!.containerNumber?.isNotEmpty ?? false)) ,
                 controller: _containerController,
                 decoration: InputDecoration(
-                border: const OutlineInputBorder(),
-                label: (widget.transaction?.containerNumber ?? '').isEmpty
-                  ? RichText(
-                      text: TextSpan(
-                        children: [
-                          TextSpan(
-                            text: 'Enter container number ',
-                            style: AppTextStyles.body,
-                          ),
-                          TextSpan(
-                            text: '(optional)',
-                            style: AppTextStyles.caption.copyWith(
-                              fontStyle: FontStyle.italic,
-                              color: Colors.red,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : Text(
-                      '',
-                      style: AppTextStyles.body,
-                    ),
-
-              ),
-
                 border: const OutlineInputBorder(),
                 label: (widget.transaction?.containerNumber ?? '').isEmpty
                   ? RichText(
@@ -489,7 +444,6 @@ void initState() {
                           print("Request Number: ${widget.transaction?.requestNumber}");
                           print("Request Number: ${widget.transaction?.requestStatus}");
                           print("Entered Name: $_enteredName");
-                          print("Entered Container: $_enteredName");
                           print("Entered Container: $_enteredName");
                             _printFilenames();
                         } catch (e) {
