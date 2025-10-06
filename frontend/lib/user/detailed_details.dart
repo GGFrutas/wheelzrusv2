@@ -75,7 +75,7 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
 
 
       if (requestNumber == transaction.plRequestNumber &&
-          transaction.deRequestStatus != "Completed") {
+          transaction.deRequestStatus != "Completed" &&  transaction.deRequestStatus != "Backload") {
         return "Delivery Empty should be completed first.";
       }
 

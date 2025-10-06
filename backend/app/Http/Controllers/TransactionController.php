@@ -218,7 +218,7 @@ class TransactionController extends Controller
             "origin_container_location", "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
             "freight_forwarder_name", "shipper_phone", "consignee_phone", "dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", "pl_truck_plate_no",
             "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
-            "pickup_date", "departure_date","origin", "destination", "de_completion_time", 
+            "pickup_date", "departure_date","origin", "destination", "de_completion_time", "booking_status",
             "pl_completion_time", "dl_completion_time", "pe_completion_time", "shipper_province","shipper_city","shipper_barangay","shipper_street", 
             "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime", "service_type", "booking_service",
             "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time", "name", "stage_id", "pe_release_by", "de_release_by","pl_receive_by","dl_receive_by"
@@ -232,7 +232,7 @@ class TransactionController extends Controller
             "origin_container_location", "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
             "freight_forwarder_name", "shipper_phone", "consignee_phone", "dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", "pl_truck_plate_no",
             "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
-            "pickup_date", "departure_date","origin", "destination", "de_completion_time", 
+            "pickup_date", "departure_date","origin", "destination", "de_completion_time", "booking_status",
             "pl_completion_time", "dl_completion_time", "pe_completion_time","shipper_province","shipper_city","shipper_barangay","shipper_street",
             "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime",  "service_type","booking_service",
             "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time","stage_id", "pe_release_by", "de_release_by","pl_receive_by","dl_receive_by"
@@ -362,7 +362,7 @@ class TransactionController extends Controller
                     'method' => 'execute_kw',
                     'args' => [$db, $uid, $password, 'consol.type.notebook', 'search_read',
                         [['|', ['consol_origin', '=', $manager['id']], ['consol_destination', '=', $manager['id']]]],
-                        ['fields' => ['id', 'consolidation_id']]
+                        ['fields' => ['id', 'consolidation_id','consol_origin', 'consol_destination']]
                     ]
                 ],
                 'id' => rand(1000, 9999)
@@ -373,6 +373,8 @@ class TransactionController extends Controller
                 $raw = $nb['consolidation_id'] ?? null;
                 if (is_array($raw) && isset($raw[0])) {
                     $conslMasterId = $raw[0];
+                    $consolOriginId = $nb['consol_origin'] ?? null;
+                    $consolDestinationId = $nb['consol_destination'] ?? null;
                     break; // take the first valid consolidation
                 }
             }
@@ -386,7 +388,7 @@ class TransactionController extends Controller
                         'method' => 'execute_kw',
                         'args' => [$db, $uid, $password, 'pd.consol.master', 'search_read',
                             [[['id', '=', $conslMasterId]]],
-                            ['fields' => ['id', 'name', 'consolidated_date']]
+                            ['fields' => ['id', 'name', 'consolidated_date', 'is_backload', 'is_diverted']]
                         ]
                     ],
                     'id' => rand(1000, 9999)
@@ -395,6 +397,8 @@ class TransactionController extends Controller
                 $consolidationData = $masterRes['result'][0] ?? null;
                 if ($consolidationData) {
                     $consolidationData['consolidated_date'] = is_string($consolidationData['consolidated_date']) ? $consolidationData['consolidated_date'] : '';
+                    $consolidationData['consol_origin'] = $consolOriginId;
+                    $consolidationData['consol_destination'] = $consolDestinationId;
                     $manager['backload_consolidation'] = $consolidationData;
                 }
             }
@@ -1468,12 +1472,13 @@ class TransactionController extends Controller
                 'method' => 'execute_kw',
                 'args' => [$db, $uid, $odooPassword, 'consol.type.notebook', 'search_read',
                     [[['consol_destination', '=', $transactionId]]],
-                    ['fields' => ['id', 'consolidation_id', 'consol_origin']]
+                    ['fields' => ['id', 'consolidation_id', 'consol_origin','consol_destination']]
                 ]
             ],
             'id' => rand(1000, 9999)
         ]);
 
+        
         if (empty($notebookRes['result'])) {
             return; // no consolidation notebook found
         }
@@ -1488,6 +1493,34 @@ class TransactionController extends Controller
             }
             $consolMasterId = $raw[0];
             $consolOriginId = $nb['consol_origin'][0] ?? null;
+            $consolDestinationId = $nb['consol_destination'][0] ?? null;
+
+            if(!$consolMasterId) continue;
+
+            if ($consolDestinationId) {
+                $updateDestinationStage = jsonRpcRequest($odooUrl, [
+                    'jsonrpc' => '2.0',
+                    'method' => 'call',
+                    'params' => [
+                        'service' => 'object',
+                        'method' => 'execute_kw',
+                        'args' => [
+                            $db, $uid, $odooPassword,
+                            'dispatch.manager', 'write',
+                            [[$consolDestinationId], ['stage_id' => 7, 'de_completion_time' => $actualTime]]
+                        ]
+                    ],
+                    'id' => rand(1000, 9999)
+                ]);
+
+                Log::info("Backloaded destination forced to stage 7", [
+                    'consolDestinationId' => $consolDestinationId,
+                    'response' => $updateDestinationStage
+                ]);
+
+                // Continue with normal master/origin updates even if destination updated
+            }
+           
            
             $updateConsolMaster = jsonRpcRequest($odooUrl, [
                 'jsonrpc' => '2.0',
@@ -1610,6 +1643,154 @@ class TransactionController extends Controller
                     $resultSummary['milestone'][] = $updateMilestone;
                 }
             }
+        }
+
+        
+        return $resultSummary;
+    }
+
+    private function divertedConsol($transactionId,$actualTime,$db,$uid,$odooPassword,$odooUrl,$bookingRef)
+    {
+        $notebookRes = jsonRpcRequest($odooUrl, [
+            'jsonrpc' => '2.0',
+            'method' => 'call',
+            'params' => [
+                'service' => 'object',
+                'method' => 'execute_kw',
+                'args' => [$db, $uid, $odooPassword, 'consol.type.notebook', 'search_read',
+                    [[['consol_destination', '=', $transactionId]]],
+                    ['fields' => ['id', 'consolidation_id', 'consol_origin','consol_destination','type_consol']]
+                ]
+            ],
+            'id' => rand(1000, 9999)
+        ]);
+
+        
+        if (empty($notebookRes['result'])) {
+            return; // no consolidation notebook found
+        }
+
+        $resultSummary = [];
+
+        
+
+        foreach ($notebookRes['result'] as $nb) {
+            $consolMasterId = $nb['consolidation_id'][0] ?? null;
+            $consolOriginId = $nb['consol_origin'][0] ?? null;
+            $consolDestinationId = $nb['consol_destination'][0] ?? null;
+            $consolType = $nb['type_consol'][0] ?? null;
+
+            if (!$consolMasterId) continue;
+
+            Log::info("Backloaded destination", [
+                'consolDestinationId' => $consolDestinationId,
+            ]);
+
+            // Origin milestone update (CLDT/TEOT)
+            if ($consolDestinationId && $consolType == 2) {
+                $fclToUpdate = ['GLDT'];
+                $milestones = jsonRpcRequest($odooUrl, [
+                    'jsonrpc' => '2.0',
+                    'method' => 'call',
+                    'params' => [
+                        'service' => 'object',
+                        'method' => 'execute_kw',
+                        'args' => [$db, $uid, $odooPassword, 'dispatch.milestone.history', 'search_read',
+                            [[['dispatch_id', '=', $consolDestinationId], ['fcl_code', 'in', $fclToUpdate]]],
+                            ['fields' => ['id','fcl_code']]
+                        ]
+                    ],
+                    'id' => rand(1000, 9999)
+                ]);
+
+                foreach ($milestones['result'] as $ms) {
+                    $updateMilestone = jsonRpcRequest($odooUrl, [
+                        'jsonrpc' => '2.0',
+                        'method' => 'call',
+                        'params' => [
+                            'service' => 'object',
+                            'method' => 'execute_kw',
+                            'args' => [$db, $uid, $odooPassword, 'dispatch.milestone.history', 'write',
+                                [[$ms['id']], [
+                                    'actual_datetime' => $actualTime,
+                                    'button_readonly' => true,
+                                    'button_confirm_semd' => false,
+                                    'clicked_by' => (int) $uid
+                                ]]
+                            ]
+                        ],
+                        'id' => rand(1000, 9999)
+                    ]);
+                    Log::info("📝 Consolidation origin milestone updated", [
+                        'consolOriginId' => $consolOriginId,
+                        'milestoneId' => $ms['id'],
+                        'fcl_code' => $ms['fcl_code'],
+                        'response' => $updateMilestone
+                    ]);
+
+                    if ($ms['fcl_code'] === 'GLDT') {
+                        $updateOrigin = jsonRpcRequest($odooUrl, [
+                            'jsonrpc' => '2.0',
+                            'method' => 'call',
+                            'params' => [
+                                'service' => 'object',
+                                'method' => 'execute_kw',
+                                'args' => [$db, $uid, $odooPassword, 'dispatch.manager', 'write',
+                                    [[$consolOriginId], ['de_request_status' => 'Ongoing']] 
+                                ]
+                            ],
+                            'id' => rand(1000, 9999)
+                        ]);
+                        Log::info("🔄 Consol origin set to ongoing due to GLDT milestone", [
+                            'consolOriginId' => $consolOriginId,
+                            'response' => $updateOrigin
+                        ]);
+                    }
+                }
+
+                 $searchDispatch = jsonRpcRequest($odooUrl, [
+                    "jsonrpc" => "2.0",
+                    "method" => "call",
+                    "params" => [
+                        "service" => "object",
+                        "method" => "execute_kw",
+                        "args" => [
+                            $db,
+                            $uid,
+                            $odooPassword,
+                            "dispatch.manager",
+                            "search_read",
+                            [[["id", '=', $transactionId]]],
+                            ["fields" => ["id", "stage_id", "pe_completion_time","pe_request_status"]]
+                        ]
+                    ],
+                    "id" => rand(1000, 9999)
+                ]);
+
+                $bookingId = $searchDispatch['result'][0]['id'] ?? null;
+                if ($bookingId) {
+                    $updateBookingStage = jsonRpcRequest($odooUrl, [
+                        "jsonrpc" => "2.0",
+                        "method" => "call",
+                        "params" => [
+                            "service" => "object",
+                            "method" => "execute_kw",
+                            "args" => [
+                                $db,
+                                $uid,
+                                $odooPassword,
+                                "dispatch.manager",
+                                "write",
+                                [[$bookingId], ["stage_id" => 7, "pe_completion_time" => $actualTime,"pe_request_status" => 'Completed']]
+                            ]
+                        ],
+                        "id" => rand(1000, 9999)
+                    ]);
+                    Log::info("✅ Booking stage updated", ['bookingRef' => $bookingRef, 'bookingId' => $bookingId, 'response' => $updateBookingStage]);
+                }
+            }
+
+         
         }
         return $resultSummary;
     }
@@ -1800,6 +1981,12 @@ class TransactionController extends Controller
 
         $this->updateFFContainerNumber($type, $containerNumber, $db, $uid, $odooPassword, $odooUrl);
 
+        $bookingRef = $type['booking_reference_no'] ?? null; // needed by divertedConsol
+
+        if($type['pe_request_no'] == $requestNumber) {
+            $this->divertedConsol($transactionId, $actualTime, $db, $uid, $odooPassword, $odooUrl, $bookingRef);
+        }
+        
        
         $milestoneResult = $this->getMilestoneHistory($transactionId, $db, $uid, $odooPassword, $odooUrl);
         if ($milestoneResult instanceof \Illuminate\Http\JsonResponse) return $milestoneResult;
@@ -1909,6 +2096,8 @@ class TransactionController extends Controller
             Log::error("Failed to insert image", ["response" => $updateResponse]);
             return response()->json(['success' => false, 'message' => 'Failed to upload POD'], 500);
         }
+
+        $bookingRef = $type['booking_reference_no'] ?? null;
 
         $this->updateFFContainerNumber($type, $containerNumber, $db, $uid, $odooPassword, $odooUrl);
 
