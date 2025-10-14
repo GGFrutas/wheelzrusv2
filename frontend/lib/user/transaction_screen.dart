@@ -261,6 +261,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                       
                     }
                     return ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
                       itemCount: ongoingTransactions.length,
                       itemBuilder: (context, index) {
                         final item = ongoingTransactions[index];

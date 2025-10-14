@@ -175,7 +175,7 @@ void initState() {
                     
 
                     final ongoingTransactions = expandedTransactions
-                      .where((tx) =>  ['Cancelled', 'Completed'].contains(tx.stageId) || ['Backload', 'Completed'].contains(tx.requestStatus))
+                      .where((tx) =>  ['Cancelled', 'Completed'].contains(tx.stageId) || ['Backload', 'Completed', 'Reassigned'].contains(tx.requestStatus))
                       .toList()
                       ..sort((a,b){
                       DateTime getRecentDate(Transaction t) {

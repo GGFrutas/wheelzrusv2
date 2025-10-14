@@ -5,6 +5,7 @@ import 'package:flutter_custom_clippers/flutter_custom_clippers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/models/consolidation_model.dart';
 import 'package:frontend/models/consolidation_extension.dart';
+import 'package:frontend/models/driver_reassignment_model.dart';
 import 'package:frontend/models/transaction_model.dart';
 import 'package:frontend/notifiers/auth_notifier.dart';
 import 'package:frontend/provider/accepted_transaction.dart' as accepted_transaction;
@@ -191,14 +192,16 @@ void initState() {
                    
                     final authPartnerId = ref.watch(authNotifierProvider).partnerId;
                     final driverId = authPartnerId?.toString();
-
+                 
                    
                     final expandedTransactions = TransactionUtils.expandTransactions(
                       transaction,
                       driverId ?? '',
                     );
+
+                 
                     final ongoingTransactions = expandedTransactions
-                      .where((tx) =>  ['Cancelled', 'Completed'].contains(tx.stageId) || ['Backload', 'Completed'].contains(tx.requestStatus))
+                      .where((tx) =>  ['Cancelled', 'Completed'].contains(tx.stageId) || ['Backload', 'Completed'].contains(tx.requestStatus) || tx.reassignment.any((e) => e.driverId.toString() == driverId)) // include removed
                       .take(5)
                       .toList()
                       ..sort((a,b){
@@ -216,12 +219,14 @@ void initState() {
                     String getStatusLabel(Transaction item) {
                       final status = item.requestStatus?.trim();
                       final stage = item.stageId?.trim();
+                    
 
                       if (status == 'Completed' || status == 'Backload') return status!;
                       if (stage == 'Completed' || stage == 'Cancelled') return stage!;
                       return '—';
                     }
-                  
+
+             
                     if (ongoingTransactions.isEmpty) {
                       return LayoutBuilder(
                         builder: (context,constraints){
@@ -251,11 +256,6 @@ void initState() {
                       itemBuilder: (context, index) {
                         final item = ongoingTransactions[index];
                         final statusLabel = getStatusLabel(item);
-                      //  print('Raw backload_consolidation: ${json['backload_consolidation']}');
-
-
-                     print('Raw: ${item.backloadConsolidation?.consolidatedDatetime}');
-print('Formatted: ${item.backloadConsolidation?.formattedConsolidatedDate}');
 
                         return Container(
                           margin: const EdgeInsets.only(bottom: 20),
@@ -336,8 +336,6 @@ print('Formatted: ${item.backloadConsolidation?.formattedConsolidatedDate}');
                                   ),
                                   Row(
                                     children: [
-                                     
-
                                       Text(
                                         "Request ID: ",
                                         style: AppTextStyles.caption.copyWith(

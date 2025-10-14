@@ -28,9 +28,9 @@ import 'package:signature/signature.dart';
 class ProofOfDeliveryScreen extends ConsumerStatefulWidget{
   final String uid;
   final Transaction? transaction; 
-  final List<String> base64Images;
+  final Map<String, dynamic> base64ImagesWithLabels;
   
-  const ProofOfDeliveryScreen({super.key, required this.uid, required this.transaction,required this.base64Images});
+  const ProofOfDeliveryScreen({super.key, required this.uid, required this.transaction,required this.base64ImagesWithLabels});
 
   @override
 
@@ -66,7 +66,7 @@ late String _originalContainerNumber;
 
     String? enteredName = _enteredName;
     // String? enteredContainerNumber = _enteredContainerNumber;
-final enteredContainerNumber = (_enteredContainerNumber == null || 
+    final enteredContainerNumber = (_enteredContainerNumber == null || 
                                  _enteredContainerNumber!.trim().isEmpty || 
                                  _enteredContainerNumber == _originalContainerNumber)
       ? _originalContainerNumber
@@ -79,12 +79,18 @@ final enteredContainerNumber = (_enteredContainerNumber == null ||
       }
     } 
 
-    String imageToUpload = widget.base64Images[0];
+ 
 
-    print("Received Image ${widget.base64Images.length} from the previous screen");
-    for (int i = 0; i < widget.base64Images.length; i++) {
-      print("Images ${i + 1} (base64, truncated): ${widget.base64Images[i].substring(1, 100)}");
-    }
+    print("Received ${widget.base64ImagesWithLabels.length} POD entries from previous screen");
+
+    widget.base64ImagesWithLabels.forEach((label, data) {
+      if (data != null) {
+        final truncated = (data['content'] as String).substring(0, 80);
+        print("Label: $label ✅ filename: ${data['filename']} | base64 (truncated): $truncated...");
+      } else {
+        print("Label: $label ⚠ No image uploaded (value is null)");
+      }
+    });
 
     final currentStatus = widget.transaction!.requestStatus;
     final baseUrl = ref.watch(baseUrlProvider);
@@ -110,6 +116,7 @@ final enteredContainerNumber = (_enteredContainerNumber == null ||
       return;
     }
 
+
     var response = await http.post(url,
       headers: {
         'Content-Type': 'application/json',
@@ -121,7 +128,7 @@ final enteredContainerNumber = (_enteredContainerNumber == null ||
         'id': widget.transaction?.id,
         'newStatus': nextStatus,
         'signature': base64Signature,
-        'images': imageToUpload,
+        'images': widget.base64ImagesWithLabels,
         'dispatch_type': widget.transaction?.dispatchType,
         'request_number': widget.transaction?.requestNumber,
         'timestamp': timestamp,

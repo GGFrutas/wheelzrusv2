@@ -3,7 +3,7 @@ import 'package:frontend/models/consolidation_extension.dart';
 class ConsolidationModel {
   final int id;
   final String name;
-  // final String status;
+  final String status;
   final String consolidatedDatetime;
   final String? isBackload;
   final String? isDiverted;
@@ -13,7 +13,7 @@ class ConsolidationModel {
   const ConsolidationModel({
     required this.id,
     required this.name,
-    // required this.status,
+    required this.status,
     required this.consolidatedDatetime,
     required this.isBackload,
     required this.isDiverted,
@@ -26,7 +26,7 @@ class ConsolidationModel {
     return ConsolidationModel(
       id: json['id'] ?? 0,
       name: json['name'] ?? 'Unknown Name',
-      // status: json['status'] ?? 'Unknown Status',
+      status: json['status'] ?? 'Unknown Status',
       consolidatedDatetime:  json['consolidated_date'] ?? 'Unknown Date',
 
       consolOrigin: json['consol_origin'],
@@ -44,7 +44,7 @@ class ConsolidationModel {
     return ConsolidationModel(
       id: id,
       name: name ?? this.name,
-      // status: status,
+      status: status,
       consolidatedDatetime: consolidatedDatetime,
       
       isBackload: isBackload,

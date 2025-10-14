@@ -205,9 +205,9 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
     final allTransactions = ref.watch(transactionListProvider);
     print("Schedule All Transaction: $allTransactions");
 
-    for (var tx in allTransactions) {
-      print("🔍 TX → bookingRefNumber: '${tx.bookingRefNumber}', dispatchType: '${tx.dispatchType}'");
-    }
+    // for (var tx in allTransactions) {
+    //   print("🔍 TX → bookingRefNumber: '${tx.bookingRefNumber}', dispatchType: '${tx.dispatchType}'");
+    // }
 
     final relatedFF = allTransactions.cast<Transaction?>().firstWhere(
         (tx) {

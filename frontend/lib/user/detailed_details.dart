@@ -62,9 +62,9 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
     final allTransactions = ref.watch(transactionListProvider);
     print("All Transaction: $allTransactions");
 
-    for (var tx in allTransactions) {
-      print("🔍 TX → bookingRefNumber: '${tx.bookingRefNumber}', dispatchType: '${tx.dispatchType}'");
-    }
+    // for (var tx in allTransactions) {
+    //   print("🔍 TX → bookingRefNumber: '${tx.bookingRefNumber}', dispatchType: '${tx.dispatchType}'");
+    // }
 
     final relatedFF = ref.watch(relatedFFProvider(bookingNumber ?? ''));
    
@@ -79,11 +79,11 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
         return "Delivery Empty should be completed first.";
       }
 
-      if (requestNumber == transaction.dlRequestNumber) {
-        if (relatedFF == null || relatedFF.stageId != "Completed") {
-          return "Associated Freight Forwarding should be completed first.";
-        }
-      }
+      // if (requestNumber == transaction.dlRequestNumber) {
+      //   if (relatedFF == null || relatedFF.stageId != "Completed") {
+      //     return "Associated Freight Forwarding should be completed first.";
+      //   }
+      // }
 
       if(transaction.freightForwarderName!.isEmpty) {
         return "Associated Freight Forwarding Vendor has not yet been assigned.";
