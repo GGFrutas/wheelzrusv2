@@ -3,16 +3,22 @@ import 'package:frontend/models/consolidation_extension.dart';
 class ConsolidationModel {
   final int id;
   final String name;
-  // final String status;
+  final String status;
   final String consolidatedDatetime;
-  // final String? isBackload;
+  final String? isBackload;
+  final String? isDiverted;
+  final List<dynamic>? consolOrigin;
+  final List<dynamic>? consolDestination;
 
   const ConsolidationModel({
     required this.id,
     required this.name,
-    // required this.status,
+    required this.status,
     required this.consolidatedDatetime,
-    // required this.isBackload,
+    required this.isBackload,
+    required this.isDiverted,
+    this.consolDestination,
+    this.consolOrigin
   });
 
   factory ConsolidationModel.fromJson(Map<String, dynamic> json) {
@@ -20,12 +26,14 @@ class ConsolidationModel {
     return ConsolidationModel(
       id: json['id'] ?? 0,
       name: json['name'] ?? 'Unknown Name',
-      // status: json['status'] ?? 'Unknown Status',
+      status: json['status'] ?? 'Unknown Status',
       consolidatedDatetime:  json['consolidated_date'] ?? 'Unknown Date',
 
-
+      consolOrigin: json['consol_origin'],
+      consolDestination: json['consol_destination'],
       
-      // isBackload: json['is_backload']?.toString(),
+      isBackload: json['is_backload']?.toString(),
+      isDiverted: json['is_diverted']?.toString()
 
     );
   }
@@ -36,10 +44,14 @@ class ConsolidationModel {
     return ConsolidationModel(
       id: id,
       name: name ?? this.name,
-      // status: status,
+      status: status,
       consolidatedDatetime: consolidatedDatetime,
       
-      // isBackload: isBackload
+      isBackload: isBackload,
+      isDiverted: isDiverted,
+
+      consolOrigin: consolOrigin ?? this.consolOrigin,
+      consolDestination: consolDestination ?? this.consolDestination,
 
     );
   }
@@ -50,5 +62,7 @@ class ConsolidationModel {
     }
     return '—';
   }
+   String get originName => consolOrigin != null && consolOrigin!.length > 1 ? consolOrigin![1] : '—';
+  String get destinationName => consolDestination != null && consolDestination!.length > 1 ? consolDestination![1] : '—';
 
 }

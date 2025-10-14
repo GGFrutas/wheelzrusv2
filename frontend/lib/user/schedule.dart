@@ -205,9 +205,9 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
     final allTransactions = ref.watch(transactionListProvider);
     print("Schedule All Transaction: $allTransactions");
 
-    for (var tx in allTransactions) {
-      print("🔍 TX → bookingRefNumber: '${tx.bookingRefNumber}', dispatchType: '${tx.dispatchType}'");
-    }
+    // for (var tx in allTransactions) {
+    //   print("🔍 TX → bookingRefNumber: '${tx.bookingRefNumber}', dispatchType: '${tx.dispatchType}'");
+    // }
 
     final relatedFF = allTransactions.cast<Transaction?>().firstWhere(
         (tx) {
@@ -395,7 +395,7 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
                 
               ),
               const SizedBox(height: 20),
-              if(widget.transaction?.deRequestStatus == "Ongooing" || widget.transaction?.dlRequestStatus == "Ongoing")
+              if(widget.transaction?.plRequestNumber == widget.transaction?.requestNumber || widget.transaction?.peRequestStatus == widget.transaction?.requestNumber)
 
               Text (
                 "Optional",
@@ -404,7 +404,7 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
                   color: darkerBgColor,
                 ),
               ),
-              if(widget.transaction?.plRequestStatus == "Assigned" || widget.transaction?.peRequestStatus == "Assigned")
+              if(widget.transaction?.plRequestStatus == widget.transaction?.requestNumber|| widget.transaction?.peRequestStatus == widget.transaction?.requestNumber)
               Column (
                 mainAxisSize: MainAxisSize.min,
                 children: [

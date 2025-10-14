@@ -19,6 +19,7 @@ import 'package:frontend/theme/colors.dart';
 import 'package:frontend/theme/text_styles.dart';
 import 'package:frontend/user/history_details.dart';
 import 'package:frontend/user/transaction_details.dart';
+import 'package:frontend/util/transaction_utils.dart';
 import 'package:intl/intl.dart';
 
 class AllHistoryScreen extends ConsumerStatefulWidget{
@@ -167,146 +168,14 @@ void initState() {
                     final driverId = authPartnerId?.toString();
 
                    
-
-
-
-                   final expandedTransactions = transaction.expand((item) {
-
-
-                        String removeBrackets(String input) {
-                          return input.replaceAll(RegExp(r'\s*\[.*?\]'), '')
-                                      .replaceAll(RegExp(r'\s*\(.*?\)'), '')
-                                      .trim();
-                        }
-                        String cleanAddress(List<String?> parts) {
-                          return parts
-                            .where((e) => e != null && e.trim().isNotEmpty && e.trim().toLowerCase() != 'ph')
-                            .map((e) => removeBrackets(e!)) // now safe because nulls are filtered above
-                            .join(', ');
-                        }
-
-                        String buildConsigneeAddress(Transaction item, {bool cityLevel = false}) {
-                          return cleanAddress(cityLevel ? [item.consigneeCity,item.consigneeProvince]
-                          : [item.consigneeStreet,item.consigneeBarangay,item.consigneeCity,item.consigneeProvince]
-                          );
-                        }
-
-                        String buildShipperAddress(Transaction item, {bool cityLevel = false}) {
-                          return cleanAddress(cityLevel ? [item.shipperCity,item.shipperProvince]
-                          : [item.shipperStreet,item.shipperBarangay,item.shipperCity,item.shipperProvince]
-                          );
-                        }
-                        String descriptionMsg(Transaction item) {
-                          if (item.landTransport == 'transport'){
-                            return 'Deliver Laden Container to Consignee';
-                          } else {
-                            return 'Pickup Laden Container from Shipper';
-                          }
-                        }
-                        String newName(Transaction item) {
-                          if (item.landTransport == 'transport'){
-                            return 'Deliver to Consignee';
-                          } else {
-                            return 'Pickup from Shipper';
-                          }
-                        }
-      
-                        if (item.dispatchType == "ot") {
-                          final shipperOrigin = buildShipperAddress(item);
-                          final shipperDestination = cleanAddress([item.destination]);
-                
-                        return[
-
-                        
-                          // First instance: Deliver to Shipper
-                          if (item.deTruckDriverName == driverId)
-                            // Check if the truck driver is the same as the authPartnerId
-                            // return [ 
-                              item.copyWith(
-                                name: "Deliver to Shipper",
-                                origin:shipperDestination,
-                                destination: shipperOrigin,
-                                requestNumber: item.deRequestNumber,
-                                requestStatus: item.deRequestStatus,
-                                assignedDate:item.deAssignedDate,
-                                originAddress: "Deliver Empty Container to Shipper",
-                                freightBookingNumber:item.freightBookingNumber,
-                                completedTime: item.deCompletedTime,
-                                // completeAddress: shipperOrigin,
-                                // truckPlateNumber: item.deTruckPlateNumber,
-                              ),
-                          //   ];
-                          // }
-                            // Second instance: Pickup from Shipper
-                          if ( item.plTruckDriverName == driverId)
-                            // return [
-                              item.copyWith(
-                                name: newName(item),
-                                origin:shipperOrigin,
-                                destination:shipperDestination,
-                                requestNumber: item.plRequestNumber,
-                                requestStatus: item.plRequestStatus,
-                                assignedDate:item.plAssignedDate,
-                                originAddress: descriptionMsg(item),
-                                freightBookingNumber:item.freightBookingNumber,
-                                completedTime: item.plCompletedTime,
-                                // completeAddress: shipperDestination,
-                                // truckPlateNumber: item.plTruckPlateNumber,
-                              ),
-                            ];
-                          // }
-                          // return [];
-                    
-                        } else if (item.dispatchType == "dt") {
-                          final consigneeOrigin = buildConsigneeAddress(item);
-                          final consigneeDestination = cleanAddress([item.origin]);
-                        return [
-                            // First instance: Deliver to Consignee
-                          if (item.dlTruckDriverName == driverId)
-                            // return [
-                              item.copyWith(
-                                name: "Deliver to Consignee",
-                                origin:  consigneeDestination,
-                                destination: consigneeOrigin,
-                                requestNumber: item.dlRequestNumber,
-                                requestStatus: item.dlRequestStatus,
-                                assignedDate:item.dlAssignedDate,
-                                originAddress: "Deliver Laden Container to Consignee",
-                                freightBookingNumber:item.freightBookingNumber,
-                                completedTime: item.dlCompletedTime,
-                                // completeAddress: consigneeOrigin,
-                                // truckPlateNumber: item.dlTruckPlateNumber,
-                              ),
-                          //   ];
-                          // }
-                          // Second instance: Pickup from Consignee
-                          if (item.peTruckDriverName == driverId)
-                            // return [
-                              item.copyWith(
-                                name: "Pickup from Consignee",
-                                origin: consigneeOrigin,
-                                destination: consigneeDestination,
-                                requestNumber: item.peRequestNumber,
-                                requestStatus: item.peRequestStatus,
-                                assignedDate:item.peAssignedDate,
-                                originAddress: "Pickup Empty Container from Consignee",
-                                freightBookingNumber:item.freightBookingNumber,
-                                completedTime: item.peCompletedTime,
-                                // completeAddress: consigneeDestination,
-                                // truckPlateNumber: item.peTruckPlateNumber,
-                              ),
-                            ];  
-                          // }
-                          // return [];
-                        }
-                        // Return as-is if no match
-                        return [item];
-                      }).toList();
-
+                    final expandedTransactions = TransactionUtils.expandTransactions(
+                      transaction,
+                      driverId ?? '',
+                    );
                     
 
                     final ongoingTransactions = expandedTransactions
-                      .where((tx) =>  ['Cancelled', 'Completed'].contains(tx.stageId) || ['Backload', 'Completed'].contains(tx.requestStatus))
+                      .where((tx) =>  ['Cancelled', 'Completed'].contains(tx.stageId) || ['Backload', 'Completed', 'Reassigned'].contains(tx.requestStatus))
                       .toList()
                       ..sort((a,b){
                       DateTime getRecentDate(Transaction t) {
@@ -354,6 +223,8 @@ void initState() {
                       );
                       
                     }
+
+                    
                     return ListView.builder(
                       itemCount: ongoingTransactions.length,
                       itemBuilder: (context, index) {

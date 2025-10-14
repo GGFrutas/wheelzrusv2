@@ -250,7 +250,7 @@ final relatedFFProvider = Provider.family<Transaction?, String>((ref, bookingNum
   return allTransactions.cast<Transaction?>().firstWhere(
     (tx) =>
       tx?.bookingRefNumber?.trim() == bookingNumber.trim() &&
-      tx?.dispatchType?.toLowerCase().trim() == 'ff',
+      tx?.dispatchType.toLowerCase().trim() == 'ff',
     orElse: () => null,
   );
 });

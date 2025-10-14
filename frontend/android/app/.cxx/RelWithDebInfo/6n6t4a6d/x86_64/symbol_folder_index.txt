@@ -1,0 +1,1 @@
+C:\Projects\wheelzrusv2\frontend\build\app\intermediates\cxx\RelWithDebInfo\6n6t4a6d\obj\x86_64
