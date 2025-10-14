@@ -78,7 +78,7 @@ function jsonRpcRequest($url, $payload){
 class TransactionController extends Controller
 {   
     protected $url = "https://jralejandria-beta-dev-yxe.odoo.com";
-    protected $db = 'jralejandria-beta-dev-yxe-beta-production-24066960';
+    protected $db = 'jralejandria-alpha-dev-yxe-production-alpha-24065126';
     // protected $odoo_url = "http://192.168.76.45:8080/odoo/jsonrpc";
     protected $odoo_url = "https://jralejandria-beta-dev-yxe.odoo.com/jsonrpc";
 
