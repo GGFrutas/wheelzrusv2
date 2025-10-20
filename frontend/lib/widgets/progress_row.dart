@@ -215,7 +215,7 @@ class ProgressRow extends StatelessWidget {
 
 
       if (requestNumber == transaction.plRequestNumber &&
-          transaction.deRequestStatus != "Completed" &&  transaction.deRequestStatus != "Backload") {
+          transaction.deRequestStatus != "Completed" && transaction.deRequestStatus != "Backload") {
         return "Delivery Empty should be completed first.";
       }
 

@@ -299,6 +299,8 @@ class TransactionController extends Controller
             }
             
             
+            
+            
         }
 
         if ($type['dispatch_type'] == "dt" && $type['dl_request_no'] == $requestNumber) {
@@ -320,6 +322,8 @@ class TransactionController extends Controller
             if($serviceType == 2){
                 $updateField["stage_id"] = 5;
             }
+            
+            
             
             
         } elseif ($type['dispatch_type'] == "dt" && $type['pe_request_no'] == $requestNumber) {
