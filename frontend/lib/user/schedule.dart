@@ -11,6 +11,7 @@ import 'package:frontend/models/milestone_history_model.dart';
 import 'package:frontend/models/transaction_model.dart';
 import 'package:frontend/notifiers/auth_notifier.dart';
 import 'package:frontend/provider/accepted_transaction.dart' as accepted_transaction;
+import 'package:frontend/provider/base_url_provider.dart';
 import 'package:frontend/provider/theme_provider.dart';
 import 'package:frontend/provider/transaction_list_notifier.dart';
 import 'package:frontend/provider/transaction_provider.dart';
@@ -169,9 +170,49 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
       'pickup': null,
       'delivery': null,
     };
+  }
 
+  Future<void> _sendEmail() async {
+    final now = DateTime.now();
+    final adjustedTime = now.subtract(const Duration(hours: 8));
+    final timestamp = DateFormat("yyyy-MM-dd HH:mm:ss").format(adjustedTime);
 
-   }
+    final baseUrl = ref.watch(baseUrlProvider);
+    var uid = ref.read(authNotifierProvider).uid; // 👈 Grab UID from login response
+  
+    Uri url;
+ 
+    url = Uri.parse('$baseUrl/api/odoo/notify?uid=$uid');
+
+    var response = await http.post(url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'password': ref.read(authNotifierProvider).password ?? '',
+        'login':ref.watch(authNotifierProvider).login ?? ''
+      },
+      body: jsonEncode({
+        'id': widget.transaction?.id,
+        'uid': uid,
+        'dispatch_type': widget.transaction?.dispatchType,
+        'request_number': widget.transaction?.requestNumber,
+        'timestamp': timestamp,
+      }),
+    );
+    print("Response status code: ${response.statusCode}");
+    
+  
+    if (!mounted) return;
+    if (response.statusCode == 200) {
+      showSuccessDialog(context, "Email Sent!");
+    } else {
+      showSuccessDialog(context, "Failed to upload files!");
+      print("Failed to upload files: ${response.statusCode}");
+     
+    }
+
+    
+  }
 
   
 
@@ -404,7 +445,7 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
                   color: darkerBgColor,
                 ),
               ),
-              if(widget.transaction?.plRequestStatus == widget.transaction?.requestNumber|| widget.transaction?.peRequestStatus == widget.transaction?.requestNumber)
+              if(widget.transaction?.plRequestNumber == widget.transaction?.requestNumber|| widget.transaction?.peRequestNumber == widget.transaction?.requestNumber)
               Column (
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -412,7 +453,7 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () {
-                        
+                         _sendEmail();
                         
                       },
                       style: ElevatedButton.styleFrom(
@@ -517,7 +558,63 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
     );
   }
 
-  
+  void showSuccessDialog(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Consumer(
+        builder: (context, ref, _) {
+          return Dialog(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  backgroundColor: Colors.white,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 70,
+                          height: 70,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: mainColor,
+                          ),
+                          child: const Icon(
+                            Icons.check,
+                            color: Colors.white,
+                            size: 40,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          message,
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.body.copyWith(
+                              color: Colors.black87
+                            ),
+                        ),
+                        const SizedBox(height: 20),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: mainColor,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                          child: Text("OK", style: AppTextStyles.body.copyWith(color: Colors.white)),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+            )
+          );
+     
+  }
 
         
 
