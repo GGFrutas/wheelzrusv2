@@ -74,6 +74,7 @@ class TransactionUtils {
             originAddress: "Deliver Empty Container to Shipper",
             freightBookingNumber: item.freightBookingNumber,
             completedTime: item.deCompletedTime,
+            truckPlateNumber: item.deTruckPlateNumber,
           ),
         if (item.plTruckDriverName == driverId)
           item.copyWith(
@@ -86,6 +87,7 @@ class TransactionUtils {
             originAddress: descriptionMsg(item),
             freightBookingNumber: item.freightBookingNumber,
              completedTime: item.plCompletedTime,
+             truckPlateNumber: item.plTruckPlateNumber,
           ),
       ];
     } else if (item.dispatchType == "dt") {
@@ -104,6 +106,7 @@ class TransactionUtils {
             originAddress: "Deliver Laden Container to Consignee",
             freightBookingNumber: item.freightBookingNumber,
              completedTime: item.dlCompletedTime,
+             truckPlateNumber: item.dlTruckPlateNumber,
           ),
         if (item.peTruckDriverName == driverId)
           item.copyWith(
@@ -116,6 +119,7 @@ class TransactionUtils {
             originAddress: "Pickup Empty Container from Consignee",
             freightBookingNumber: item.freightBookingNumber,
               completedTime: item.peCompletedTime,
+              truckPlateNumber: item.peTruckPlateNumber,
           ),
       ];
     }

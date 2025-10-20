@@ -520,16 +520,6 @@ final backloadedMessage = 'This booking has been backloaded: $backloadedName';
         String tempTitle = "Consignee";
         
 
-        if (isDiverted && consolStatus != 'consolidated') {
-          yardSignBase64 = tempSign;
-          signBase64 = tempYardSign;
-          yardName = tempName;
-          name = tempYardName;
-          yardactualdate = tempActualDate;
-          actualdate = tempYardActualDate;
-          yardtitle = tempTitle;
-          title = tempYardTitle;
-        } else {
           yardSignBase64 = tempYardSign;
           signBase64 = tempSign;
           yardName = tempYardName;
@@ -538,7 +528,7 @@ final backloadedMessage = 'This booking has been backloaded: $backloadedName';
           actualdate = tempActualDate;
           yardtitle = tempYardTitle;
           title = tempTitle;
-        }
+        
       } else if (widget.transaction?.requestNumber == widget.transaction?.peRequestNumber) {
         String tempYardSign = widget.transaction?.deSign ?? '';
         String tempSign = widget.transaction?.peSign ?? '';
@@ -549,7 +539,7 @@ final backloadedMessage = 'This booking has been backloaded: $backloadedName';
         String tempYardTitle = "Consignee";
         String tempTitle = "Yard/Port";
 
-        if (isDiverted && consolStatus != 'consolidated') {
+        if (isDiverted && consolStatus == 'draft') {
           yardSignBase64 = tempSign;
           signBase64 = tempYardSign;
           yardName = tempName;
@@ -559,17 +549,17 @@ final backloadedMessage = 'This booking has been backloaded: $backloadedName';
           yardtitle = tempYardTitle;
           title = tempTitle;
         } else {
-          yardSignBase64 = tempYardSign;
-          signBase64 = tempSign;
-          yardName = tempYardName;
-          name = tempName;
+          yardSignBase64 = tempSign;
+          signBase64 = tempYardSign;
+          yardName = tempName;
+          name = tempYardName;
           yardactualdate = tempYardActualDate;
           actualdate = tempActualDate;
           yardtitle = tempYardTitle;
           title = tempTitle;
         }
       } else {
-        if (widget.transaction?.requestNumber == widget.transaction?.deRequestNumber) {
+        if (widget.transaction?.requestNumber == widget.transaction?.dlRequestNumber) {
           yardSignBase64 = widget.transaction?.peSign;
           signBase64 = widget.transaction?.deSign;
           yardName = widget.transaction?.peReleasedBy;
@@ -603,7 +593,7 @@ final backloadedMessage = 'This booking has been backloaded: $backloadedName';
         String tempYardTitle = "Yard/Port";
         String tempTitle = "Shipper";
 
-        if (isDiverted && consolStatus != 'consolidated') {
+        if (isDiverted && consolStatus == 'draft') {
           yardSignBase64 = tempSign;
           signBase64 = tempYardSign;
           yardName = tempName;
@@ -632,7 +622,7 @@ final backloadedMessage = 'This booking has been backloaded: $backloadedName';
         String tempYardTitle = "Shipper";
         String tempTitle = "Yard/Port";
 
-        if (isDiverted && consolStatus != 'consolidated') {
+       
           yardSignBase64 = tempSign;
           signBase64 = tempYardSign;
           yardName = tempName;
@@ -641,16 +631,7 @@ final backloadedMessage = 'This booking has been backloaded: $backloadedName';
           actualdate = tempActualDate;
           yardtitle = tempYardTitle;
           title = tempTitle;
-        } else {
-          yardSignBase64 = tempYardSign;
-          signBase64 = tempSign;
-          yardName = tempYardName;
-          name = tempName;
-          yardactualdate = tempYardActualDate;
-          actualdate = tempActualDate;
-          yardtitle = tempYardTitle;
-          title = tempTitle;
-        }
+        
       } else {
         // fallback — if no specific requestNumber matches
         yardSignBase64 = widget.transaction?.plSign;
@@ -684,7 +665,12 @@ final backloadedMessage = 'This booking has been backloaded: $backloadedName';
     addFile(shipperConsigneeFiles, widget.transaction?.deliveryNote, widget.transaction?.deliveryNoteFilename);
     addFile(shipperConsigneeFiles, widget.transaction?.stockDelivery, widget.transaction?.stockDeliveryFilename);
     addFile(shipperConsigneeFiles, widget.transaction?.salesInvoice, widget.transaction?.salesInvoiceFilename);
-  } else if (!isDT && reqNo == widget.transaction?.plRequestNumber) {
+  }else  if (isDT && reqNo == widget.transaction?.peRequestNumber) {
+    // DT + dlRequestNumber:
+    // Yard: only plProof
+    addFile(yardFiles, widget.transaction?.plProof, widget.transaction?.peProofFilename ?? "POD");
+  } 
+  else if (!isDT && reqNo == widget.transaction?.plRequestNumber) {
     // OT + plRequestNumber:
     addFile(shipperConsigneeFiles, widget.transaction?.dlProof, widget.transaction?.dlProofFilename); // yard has dlProof
     addFile(yardFiles, widget.transaction?.plProof, widget.transaction?.plProofFilename); // shipper has plProof
@@ -711,17 +697,39 @@ final backloadedMessage = 'This booking has been backloaded: $backloadedName';
           )
         ),
         const SizedBox(height: 20),
-        Text(
+        if(isDiverted && widget.transaction?.deRequestNumber == reqNo  && consolStatus == 'consolidated') ... [
+          Text(
+            "Remarks: Diverted",
+            style: AppTextStyles.body.copyWith(
+              color: mainColor,
+              fontWeight: FontWeight.bold, 
+            )
+          ),
+          const SizedBox(height: 20),
+          Text(
+            divertedBookingNo!,
+            style: AppTextStyles.body.copyWith(
+              color: mainColor,
+            )
+          ),
+        ] else ... [
+          Text(
         'Proof of Delivery',
           style: AppTextStyles.body.copyWith(
             color: mainColor,
           )
         ),
         const SizedBox(height: 20),
-         if (yardFiles.isNotEmpty)
-        Column(
+        if (yardFiles.isNotEmpty)
+        Wrap(
+          alignment: WrapAlignment.start,
+          spacing: 8, // horizontal gap
+          runSpacing: 8, // vertical gap
           children: yardFiles.map((file) {
-            return _buildDownloadButton(file["filename"] as String, file["bytes"] as Uint8List);
+            return _buildDownloadButton(
+              file["filename"] as String,
+              file["bytes"] as Uint8List,
+            );
           }).toList(),
         ),
         Text(
@@ -758,6 +766,8 @@ final backloadedMessage = 'This booking has been backloaded: $backloadedName';
               color: mainColor,
             )
           ),
+        ],
+        
         const SizedBox(height: 20),
         const Divider(
           color: Colors.grey,
@@ -765,7 +775,7 @@ final backloadedMessage = 'This booking has been backloaded: $backloadedName';
         ),
 
         // SHIPPER CONSIGNEE
-        if(isDiverted && consolStatus == 'consolidated') ... [
+        if(isDiverted && (widget.transaction?.peRequestNumber == reqNo || widget.transaction?.deRequestNumber == reqNo)  && consolStatus != 'draft') ... [
           Text(
             "Remarks: Diverted",
             style: AppTextStyles.body.copyWith(
@@ -798,7 +808,10 @@ final backloadedMessage = 'This booking has been backloaded: $backloadedName';
           ),
         const SizedBox(height: 20),
         if (shipperConsigneeFiles.isNotEmpty)
-          Column(
+          Wrap(
+          alignment: WrapAlignment.start,
+          spacing: 8, // horizontal gap
+          runSpacing: 8, // vertical gap
             children: shipperConsigneeFiles.map((file) {
               return _buildDownloadButton(file["filename"] as String, file["bytes"] as Uint8List);
             }).toList(),
@@ -849,44 +862,53 @@ final backloadedMessage = 'This booking has been backloaded: $backloadedName';
     }
 
   Widget _buildDownloadButton(String fileName, Uint8List bytes) {
-    return Padding(
+    return SizedBox(
+      child: Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: TextButton.icon(
-        onPressed: () async {
-          try {
-    if (Platform.isAndroid) {
-      int sdk = (await DeviceInfoPlugin().androidInfo).version.sdkInt;
+            onPressed: () async {
+              try {
+                if (Platform.isAndroid) {
+                  int sdk = (await DeviceInfoPlugin().androidInfo).version.sdkInt;
 
-      if (sdk <= 29) {
-        // ✅ Android 9 & 10
-        await Permission.storage.request();
-      } else {
-        // ✅ Android 11+
-        if (await Permission.manageExternalStorage.isDenied) {
-          await Permission.manageExternalStorage.request();
-        }
-      }
-    }
+                  if (sdk <= 29) {
+                    // ✅ Android 9 & 10
+                    await Permission.storage.request();
+                  } else {
+                    // ✅ Android 11+
+                    if (await Permission.manageExternalStorage.isDenied) {
+                      await Permission.manageExternalStorage.request();
+                    }
+                  }
+                }
 
-    Directory dir = Platform.isAndroid
-        ? Directory('/storage/emulated/0/Download')
-        : await getApplicationDocumentsDirectory();
+                Directory dir = Platform.isAndroid
+                    ? Directory('/storage/emulated/0/Download')
+                    : await getApplicationDocumentsDirectory();
 
-    if (!await dir.exists()) {
-      dir = await getExternalStorageDirectory() ?? dir;
-    }
+                if (!await dir.exists()) {
+                  dir = await getExternalStorageDirectory() ?? dir;
+                }
 
-    final file = File('${dir.path}/$fileName');
-    await file.writeAsBytes(bytes);
+            final file = File('${dir.path}/$fileName');
+            await file.writeAsBytes(bytes);
 
-    print('✅ File saved: ${file.path}');
-  } catch (e) {
-    print('❌ Save failed: $e');
-  }
-        },
-        icon: const Icon(Icons.download),
-        label: Text('Download $fileName', style: AppTextStyles.caption),
-      ),
+            print('✅ File saved: ${file.path}');
+          } catch (e) {
+            print('❌ Save failed: $e');
+          }
+                },
+            icon: const Icon(Icons.download),
+            label:Text(
+              'Download $fileName',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              softWrap: false, // ✅ Force no wrapping!
+              style: AppTextStyles.caption,
+            )
+          ),
+        )
+     
     );
   }
 

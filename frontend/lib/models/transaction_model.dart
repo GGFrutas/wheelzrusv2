@@ -410,7 +410,7 @@ class Transaction {
       stockDelivery: json['dl_stock_delivery_receipt'].toString(),
       stockDeliveryFilename: json['dl_stock_delivery_receipt_filename'].toString(),
       salesInvoice: json['dl_sales_invoice'].toString(),
-      salesInvoiceFilename: json['dl_sales_invoice'].toString(),
+      salesInvoiceFilename: json['dl_sales_invoice_filename'].toString(),
 
 
       
