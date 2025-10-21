@@ -37,6 +37,11 @@ import 'package:location/location.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart'; // For getApplicationDocumentsDirectory / getExternalStorageDirectory
 import 'package:permission_handler/permission_handler.dart' as perm;
+import 'package:permission_handler/permission_handler.dart' as locperm;
+import 'package:permission_handler/permission_handler.dart';
+import 'package:signature/signature.dart';
+import 'package:device_info_plus/device_info_plus.dart';
+
 
 
 
@@ -70,7 +75,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
  
   Location location = Location();
   // bool _isMapReady = false;
-  PermissionStatus? _permissionGranted;
+  locperm.PermissionStatus? _permissionGranted;
   bool _serviceEnabled = false;
   // LocationData? _locationData;
   static const gmaps.LatLng _pointA = gmaps.LatLng(10.300233284867856, 123.91189477293283);
@@ -235,16 +240,18 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
       if (!_serviceEnabled) return;
     }
 
-    _permissionGranted = await location.hasPermission();
-    if (_permissionGranted == PermissionStatus.denied) {
-      _permissionGranted = await location.requestPermission();
-      if (_permissionGranted != PermissionStatus.granted) return;
+    _permissionGranted = (await location.hasPermission()) as perm.PermissionStatus?;
+    if (_permissionGranted == locperm.PermissionStatus.denied) {
+      _permissionGranted = (await location.requestPermission()) as perm.PermissionStatus?;
+      if (_permissionGranted != locperm.PermissionStatus.granted) return;
     }
 
     // _locationData = await location.getLocation();
 
     
   }
+
+
 
   String getNullableValue(String? value, {String fallback = ''}) {
     return value ?? fallback;
@@ -915,6 +922,8 @@ final delivery = scheduleMap['delivery'];
   Widget _buildFreightTab (){
 
     final isDT = widget.transaction?.dispatchType == 'dt';
+
+      
    
 
     Uint8List? decodeBase64(String? data) {
@@ -954,6 +963,7 @@ final delivery = scheduleMap['delivery'];
         signBase64 = widget.transaction?.dlSign;
         proofBase64 = widget.transaction?.dlProof;
         filename = widget.transaction?.dlProofFilename;
+       
       }
     }
 
@@ -972,43 +982,7 @@ final delivery = scheduleMap['delivery'];
         ),
         const SizedBox(height: 10),
         if (proofBytes != null)
-        TextButton.icon(
-          onPressed: () async {
-            try {
-              // Request permission safely
-              final status = await perm.Permission.storage.request();
-              if (!status.isGranted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Storage permission denied')),
-                );
-                return;
-              }
-
-              // ✅ FIX: Android 10+ requires Downloads directory instead of getExternalStorageDirectory()
-              Directory dir;
-              if (Platform.isAndroid) {
-                dir = Directory('/storage/emulated/0/Download'); // Public Downloads folder
-              } else {
-                dir = await getApplicationDocumentsDirectory(); // iOS-safe fallback
-              }
-
-              final file = File('${dir.path}/$filename');
-              await file.writeAsBytes(proofBytes);
-
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Saved $filename at ${dir.path}')),
-              );
-            } catch (e) {
-              print('Error saving proof: $e');
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Failed to save file')),
-              );
-            }
-          },
-          icon: const Icon(Icons.download),
-          // ✅ FIX: Interpolate properly
-          label: Text('Download $filename', style: AppTextStyles.caption),
-        ),
+        _buildDownloadButton("POD", proofBytes),
 
         const SizedBox(height: 10),
 
@@ -1045,6 +1019,24 @@ final delivery = scheduleMap['delivery'];
       }
     }
 
+     List<Map<String, dynamic>> shipperConsigneeFiles = [];
+    
+    void addFile(List<Map<String, dynamic>> targetList, String? base64, String? filename) {
+      if (base64 != null && base64.trim().isNotEmpty) {
+        final decoded = decodeBase64(base64);
+        if (decoded != null) {
+          final safeName = (filename == null || filename.trim().isEmpty)
+              ? 'file_${targetList.length + 1}.png'
+              : filename;
+          targetList.add({
+            "bytes": decoded,
+            "filename": safeName,
+          });
+        }
+      }
+    }
+
+
     String? signBase64;
     String? proofBase64;
     String? filename;
@@ -1069,6 +1061,8 @@ final delivery = scheduleMap['delivery'];
         signBase64 = widget.transaction?.plSign;
         proofBase64 = widget.transaction?.plProof;
         filename = widget.transaction?.dlProofFilename;
+        addFile(shipperConsigneeFiles, widget.transaction?.plProof, widget.transaction?.plProofFilename); // shipper has plProof
+        addFile(shipperConsigneeFiles, widget.transaction?.proofStock, widget.transaction?.proofStockFilename); // shipper has stock transfer
       }
     }
 
@@ -1085,19 +1079,18 @@ final delivery = scheduleMap['delivery'];
           )
         ),
          const SizedBox(height: 10),
-        if(proofBytes != null)
-          GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => FullScreenImage(imageBytes: proofBytes),
-                ),
-              );
-            },
-            child: Image.memory(proofBytes, height: 100),
-          ),
-
+         if (shipperConsigneeFiles.isNotEmpty)
+        Wrap(
+          alignment: WrapAlignment.start,
+          spacing: 8, // horizontal gap
+          runSpacing: 8, // vertical gap
+          children: shipperConsigneeFiles.map((file) {
+            return _buildDownloadButton(
+              file["filename"] as String,
+              file["bytes"] as Uint8List,
+            );
+          }).toList(),
+        ),
         const SizedBox(height: 10),
 
         if(signBytes != null)
@@ -1118,7 +1111,106 @@ final delivery = scheduleMap['delivery'];
     );
   }
 
+   Widget _buildDownloadButton(String fileName, Uint8List bytes) {
+      return SizedBox(
+        child: Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: TextButton.icon(
+              onPressed: () async {
+                try {
+                  if (Platform.isAndroid) {
+                    int sdk = (await DeviceInfoPlugin().androidInfo).version.sdkInt;
+
+                    if (sdk <= 29) {
+                      // ✅ Android 9 & 10
+                      await Permission.storage.request();
+                    } else {
+                      // ✅ Android 11+
+                      if (await Permission.manageExternalStorage.isDenied) {
+                        await Permission.manageExternalStorage.request();
+                      }
+                    }
+                  }
+
+                  Directory dir = Platform.isAndroid
+                      ? Directory('/storage/emulated/0/Download')
+                      : await getApplicationDocumentsDirectory();
+
+                  if (!await dir.exists()) {
+                    dir = await getExternalStorageDirectory() ?? dir;
+                  }
+
+              final file = File('${dir.path}/$fileName');
+              await file.writeAsBytes(bytes);
+
+              if(context.mounted){
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      '✅ Downloaded: $fileName',
+                      style: AppTextStyles.caption.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    duration: const Duration(seconds: 2),
+                    behavior: SnackBarBehavior.floating, // ✅ Makes it float with margin
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    shape: RoundedRectangleBorder( // ✅ Rounded corners
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    backgroundColor: mainColor, // ✅ Soft black, not pure #000
+                    elevation: 6, // ✅ Soft shadow for depth
+                  ),
+                );
+              }
+
+              print('✅ File saved: ${file.path}');
+            } catch (e) {
+              print('❌ Save failed: $e');
+              if(context.mounted){
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      '❌ Download failed: $fileName',
+                      style: AppTextStyles.caption.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    duration: const Duration(seconds: 2),
+                    behavior: SnackBarBehavior.floating, // ✅ Makes it float with margin
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    shape: RoundedRectangleBorder( // ✅ Rounded corners
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    backgroundColor: Colors.red, // ✅ Soft black, not pure #000
+                    elevation: 6, // ✅ Soft shadow for depth
+                  ),
+                );
+              }
+            }
+                  },
+              icon: const Icon(Icons.download),
+              label:Text(
+                'Download $fileName',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                softWrap: false, // ✅ Force no wrapping!
+                style: AppTextStyles.caption,
+              )
+            ),
+          )
+      
+      );
+    }
+
+
 }
+
+  
+
+
 
 // Move FullScreenImage to the top-level (outside of any class)
 class FullScreenImage extends StatelessWidget{
