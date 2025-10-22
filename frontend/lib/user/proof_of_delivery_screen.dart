@@ -112,7 +112,7 @@ late String _originalContainerNumber;
      url = Uri.parse('$baseUrl/api/odoo/pod-ongoing-to-complete?uid=$uid');
     } else {
       if (!mounted) return;
-      showSuccessDialog(context, "Invalid transaction!");
+      showSuccessDialog(context, "Invalid transaction!",  icon: Icons.cancel_outlined, iconColor: Colors.red);
       return;
     }
 
@@ -175,10 +175,10 @@ late String _originalContainerNumber;
       print('Updated to Ongoing: ${updatedTransaction.requestStatus}');
       if (!mounted) return;
       Navigator.of(context).pop(); // Close the loading dialog
-      showSuccessDialog(context, "Success!");
+      showSuccessDialog(context, "Success!", icon: Icons.check_rounded, iconColor: mainColor);
       
     } else {
-      showSuccessDialog(context, "Failed to upload files!");
+      showSuccessDialog(context, "Failed to upload files!", icon: Icons.cancel_outlined, iconColor: Colors.red);
       print("Failed to upload files: ${response.statusCode}");
     }
 
@@ -456,7 +456,7 @@ void initState() {
                         } catch (e) {
                           print("Error: $e");
                           Navigator.of(context).pop(); // Close the loading dialog
-                          showSuccessDialog(context, "An error occurred while uploading the files.");
+                          showSuccessDialog(context, "An error occurred while uploading the files.", icon: Icons.cancel_outlined, iconColor: Colors.red);
                         }
                       }
                     },
@@ -491,9 +491,10 @@ void initState() {
       
     );
   }  
-  void showSuccessDialog(BuildContext context, String message) {
+  void showSuccessDialog(BuildContext context, String message, { IconData icon = Icons.check_circle, Color? iconColor}) {
+    
     showDialog(
-      context: context,
+      context: context, 
       barrierDismissible: false,
       builder: (_) => Consumer(
         builder: (context, ref, _) {
@@ -525,12 +526,12 @@ void initState() {
                         Container(
                           width: 70,
                           height: 70,
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: mainColor,
+                            color: iconColor ?? mainColor,
                           ),
-                          child: const Icon(
-                            Icons.check,
+                          child: Icon(
+                            icon,
                             color: Colors.white,
                             size: 40,
                           ),

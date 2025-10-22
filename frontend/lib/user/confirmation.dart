@@ -98,18 +98,50 @@ List<String> getUploadLimit(){
                   final navigator = Navigator.of(context);
                   final List<XFile> pickedFile = await picker.pickMultiImage();
                   if (mounted && pickedFile.isNotEmpty) {
-                    setState(() {
-                      // _images.addAll(pickedFile.map((pickedFile) => File(pickedFile.path))); // Add image to the list
-                      _imageLists[index].addAll(
-                        pickedFile.map(
-                          (xfile) => UploadImage(
-                            file: File(xfile.path),
-                            label: limit[index],
+                  final validFiles = <UploadImage>[];
+
+                  for (final xfile in pickedFile) {
+                    final file = File(xfile.path);
+                    final sizeInMB = (await file.length()) / (1024 * 1024);
+
+                    if (sizeInMB > 10) {
+                      // ❌ Too large — show message
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              "❌ ${xfile.name} is too large (${sizeInMB.toStringAsFixed(2)} MB). Max allowed: 10 MB.",
+                              style: AppTextStyles.caption.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
+                        duration: const Duration(seconds: 3),
+                        behavior: SnackBarBehavior.floating, // ✅ Makes it float with margin
+                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        shape: RoundedRectangleBorder( // ✅ Rounded corners
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        backgroundColor: Colors.red, // ✅ Soft black, not pure #000
+                        elevation: 6,
+                          ),
+                        );
+                      }
+                    } else {
+                      // ✅ Valid file
+                      validFiles.add(
+                        UploadImage(file: file, label: limit[index]),
                       );
+                    }
+                  }
+
+                  // ✅ Only add valid files
+                  if (validFiles.isNotEmpty) {
+                    setState(() {
+                      _imageLists[index].addAll(validFiles);
                     });
                   }
+                }
                   navigator.pop();
                 },
               ),
@@ -120,13 +152,38 @@ List<String> getUploadLimit(){
                   final navigator = Navigator.of(context);
                   final XFile? pickedFile =
                       await picker.pickImage(source: ImageSource.camera);
-                  if (pickedFile != null &&  mounted) {
+                  if (pickedFile != null && mounted) {
+                  final file = File(pickedFile.path);
+                  final sizeInMB = (await file.length()) / (1024 * 1024);
+
+                  if (sizeInMB > 10) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          "❌ ${pickedFile.name} is too large (${sizeInMB.toStringAsFixed(2)} MB). Max allowed: 10 MB.",
+                          style: AppTextStyles.caption.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        duration: const Duration(seconds: 3),
+                        behavior: SnackBarBehavior.floating, // ✅ Makes it float with margin
+                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        shape: RoundedRectangleBorder( // ✅ Rounded corners
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        backgroundColor: Colors.red, // ✅ Soft black, not pure #000
+                        elevation: 6,
+                      ),
+                    );
+                  } else {
                     setState(() {
-                      // _images
-                      //     .add(File(pickedFile.path)); // Add image to the list
-                      _imageLists[index].add(UploadImage(file: File(pickedFile.path), label: limit[index]));
+                      _imageLists[index].add(
+                        UploadImage(file: file, label: limit[index]),
+                      );
                     });
                   }
+                }
                   navigator.pop();
                 },
               ),

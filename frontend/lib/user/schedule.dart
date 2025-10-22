@@ -67,7 +67,8 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
           },
           'pl': {
             'delivery': 'CLOT',
-            'pickup': 'TLOT'
+            'pickup': 'TLOT',
+            'email': 'ELOT'
           },
         },
         'Less-Than-Container Load': {
@@ -85,7 +86,8 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
           },
           'pe': {
             'delivery': 'CYDT',
-            'pickup': 'GLDT'
+            'pickup': 'GLDT',
+            'email': 'EEDT'
           },
         },
         'Less-Than-Container Load': {
@@ -118,9 +120,11 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
       final fclMap = fclPrefixes[dispatchType]?[serviceType]?[matchingLegs];
       final pickupFcl = fclMap?['pickup'];
       final deliveryFcl = fclMap?['delivery'];
+      final emailFcl = fclMap?['email'];
 
       MilestoneHistoryModel? pickupSchedule;
       MilestoneHistoryModel? deliverySchedule;
+      MilestoneHistoryModel? emailSchedule;
 
       if(pickupFcl != null) {
         pickupSchedule = history.firstWhere(
@@ -161,18 +165,45 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
         );
         if(deliverySchedule.id == -1) deliverySchedule  = null;
       }
+
+      if(emailFcl != null) {
+        emailSchedule = history.firstWhere(
+          (h) => 
+            h.fclCode.trim().toUpperCase() == emailFcl.toUpperCase() &&
+            h.dispatchId == dispatchId.toString() &&
+            h.serviceType == serviceType,
+          orElse: () => const MilestoneHistoryModel(
+            id: -1,
+            dispatchId: '',
+            dispatchType: '',
+            fclCode: '',
+            scheduledDatetime: '',
+            actualDatetime: '',
+            serviceType: '', isBackload: '',
+           
+          ),
+        );
+        if(emailSchedule.id == -1) emailSchedule  = null;
+      }
       return {
         'pickup': pickupSchedule,
         'delivery': deliverySchedule,
+        'email' : emailSchedule
       };
     }
     return {
       'pickup': null,
       'delivery': null,
+      'email': null
     };
   }
 
+  bool _isLoading = false;
+
+
   Future<void> _sendEmail() async {
+
+     setState(() => _isLoading = true);
     final now = DateTime.now();
     final adjustedTime = now.subtract(const Duration(hours: 8));
     final timestamp = DateFormat("yyyy-MM-dd HH:mm:ss").format(adjustedTime);
@@ -204,9 +235,11 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
   
     if (!mounted) return;
     if (response.statusCode == 200) {
+      setState(() => _isLoading = false);
       showSuccessDialog(context, "Email Sent!");
     } else {
-      showSuccessDialog(context, "Failed to upload files!");
+       setState(() => _isLoading = false);
+      showSuccessDialog(context, "Failed send email!");
       print("Failed to upload files: ${response.statusCode}");
      
     }
@@ -240,6 +273,11 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
    final scheduleMap = getPickupAndDeliverySchedule(widget.transaction!);
   final pickup = scheduleMap['pickup'];
   final delivery = scheduleMap['delivery'];
+  final email = scheduleMap['email'];
+
+  
+  bool isAlreadyNotified = email?.actualDatetime != null ;
+
   int currentStep = 2; // Assuming Schedule is step 2 (0-based index)
   final bookingNumber = widget.transaction?.bookingRefNumber;
 
@@ -445,26 +483,37 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
                   color: darkerBgColor,
                 ),
               ),
-              if(widget.transaction?.plRequestNumber == widget.transaction?.requestNumber|| widget.transaction?.peRequestNumber == widget.transaction?.requestNumber)
+              
+              if(widget.transaction?.plRequestNumber == widget.transaction?.requestNumber|| widget.transaction?.peRequestNumber == widget.transaction?.requestNumber)...[
               Column (
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () {
-                         _sendEmail();
-                        
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: mainColor,
+                      onPressed: (!isAlreadyNotified || _isLoading)
+                        ? null
+                        : _sendEmail, 
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: (!isAlreadyNotified || _isLoading)
+                          ? Colors.grey
+                          : mainColor,
                         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30.0),
                         ),
                       ),
                       
-                      child: Row (
+                      child:  _isLoading
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                      : Row (
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           const Icon(
@@ -490,6 +539,7 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
                   )
                 ],
               ), 
+              ],
               const SizedBox(height: 10),
 
               // Text (
@@ -615,7 +665,4 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
           );
      
   }
-
-        
-
 }

@@ -1222,7 +1222,7 @@ class TransactionController extends Controller
                                 'args'    => [
                                     $db, $uid, $odooPassword,
                                     'dispatch.manager', 'write',
-                                    [[$consolDestinationId], ['stage_id' => 7, 'de_completion_time' => $actualTime, 'pe_request_status' => 'Completed']]
+                                    [[$consolDestinationId], ['stage_id' => 7, 'pe_completion_time' => $actualTime, 'pe_request_status' => 'Completed']]
                                 ]
                             ],
                             'id' => rand(1000, 9999)
@@ -1581,6 +1581,7 @@ class TransactionController extends Controller
 
     public function uploadPOD(Request $request)
     {
+        dd("AYEEEN");
         $url = $this->url;
         $db = $this->db;
         $uid = $request->query('uid') ;
@@ -1739,6 +1740,7 @@ class TransactionController extends Controller
         $dispatchType = $request->input('dispatch_type');
         $requestNumber = $request->input('request_number');
         $actualTime = $request->input('timestamp');
+
         $enteredName = $request->input('enteredName');
         $newStatus = $request->input('newStatus');
         $containerNumber = $request->input('enteredContainerNumber');
@@ -1771,7 +1773,7 @@ class TransactionController extends Controller
         if ($milestoneResult instanceof \Illuminate\Http\JsonResponse) return $milestoneResult;
 
         $milestoneCodeToUpdate = $this->resolveMilestoneCode2($type, $requestNumber, $serviceType);  
-        if(in_array($milestoneCodeToUpdate, ['CYDT', 'LCLDT'])) {
+        if(in_array($milestoneCodeToUpdate, ['CLDT', 'LCLDT'])) {
             $bookingRef = $type['booking_reference_no'] ?? null;
             if($bookingRef) {
                 $this->updateBookingStage2($bookingRef, $db, $uid, $odooPassword, $odooUrl);

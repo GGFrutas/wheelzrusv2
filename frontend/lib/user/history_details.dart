@@ -202,10 +202,15 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
   @override
   Widget build(BuildContext context) {
     // 1️⃣ Backloaded message
-final backloadedName = (widget.transaction?.backloadConsolidation?.name?.trim().isNotEmpty ?? false)
-    ? widget.transaction?.backloadConsolidation?.name
-    : 'N/A';
-final backloadedMessage = 'This booking has been backloaded: $backloadedName';
+    final backloadedName = (widget.transaction?.backloadConsolidation?.name.trim().isNotEmpty ?? false)
+        ? widget.transaction?.backloadConsolidation?.name
+        : 'N/A';
+    final backloadedMessage = 'This booking has been backloaded: $backloadedName';
+    final transaction = widget.transaction;
+
+    final scheduleMap = getPickupAndDeliverySchedule(transaction);
+
+     final delivery = scheduleMap['delivery'];
 
 
 
@@ -312,7 +317,7 @@ final backloadedMessage = 'This booking has been backloaded: $backloadedName';
                               // Space between label and value
                               Text(
                                 (widget.transaction?.requestStatus == 'Completed' || widget.transaction?.stageId == 'Completed')
-                                  ? formatDateTime(widget.transaction?.completedTime)
+                                  ? formatDateTime(delivery?.actualDatetime)
                                   : widget.transaction?.stageId == 'Cancelled'
                                     ? formatDateTime(widget.transaction?.writeDate)
                                     : widget.transaction?.requestStatus == 'Backload' ? formatDateTime( widget.transaction?.backloadConsolidation?.consolidatedDatetime)
@@ -668,19 +673,19 @@ final backloadedMessage = 'This booking has been backloaded: $backloadedName';
   }else  if (isDT && reqNo == widget.transaction?.peRequestNumber) {
     // DT + dlRequestNumber:
     // Yard: only plProof
-    addFile(yardFiles, widget.transaction?.plProof, widget.transaction?.peProofFilename ?? "POD");
+    addFile(yardFiles, widget.transaction?.peProof, widget.transaction?.peProofFilename ?? "POD");
+    addFile(shipperConsigneeFiles, widget.transaction?.deProof, widget.transaction?.deProofFilename ?? "POD");
   } 
   else if (!isDT && reqNo == widget.transaction?.plRequestNumber) {
     // OT + plRequestNumber:
     addFile(shipperConsigneeFiles, widget.transaction?.dlProof, widget.transaction?.dlProofFilename); // yard has dlProof
     addFile(yardFiles, widget.transaction?.plProof, widget.transaction?.plProofFilename); // shipper has plProof
     addFile(yardFiles, widget.transaction?.proofStock, widget.transaction?.proofStockFilename); // shipper has stock transfer
-  } else {
+  } else if (!isDT && reqNo == widget.transaction?.deRequestNumber) {
     // Fallback: if nothing matches, attempt to add any non-null generic files so user can still download what's available
-    addFile(yardFiles, widget.transaction?.plProof, widget.transaction?.plProofFilename);
-    addFile(yardFiles, widget.transaction?.dlProof, widget.transaction?.dlProofFilename);
+   
     addFile(yardFiles, widget.transaction?.peProof, widget.transaction?.peProofFilename);
-    addFile(yardFiles, widget.transaction?.deProof, widget.transaction?.deProofFilename);
+    addFile(shipperConsigneeFiles, widget.transaction?.deProof, widget.transaction?.deProofFilename);
 
   }
 
@@ -697,7 +702,7 @@ final backloadedMessage = 'This booking has been backloaded: $backloadedName';
           )
         ),
         const SizedBox(height: 20),
-        if(isDiverted && widget.transaction?.deRequestNumber == reqNo  && consolStatus == 'consolidated') ... [
+        if(isDiverted && widget.transaction?.deRequestNumber == reqNo  && consolStatus != 'draft') ... [
           Text(
             "Remarks: Diverted",
             style: AppTextStyles.body.copyWith(
@@ -775,7 +780,7 @@ final backloadedMessage = 'This booking has been backloaded: $backloadedName';
         ),
 
         // SHIPPER CONSIGNEE
-        if(isDiverted && (widget.transaction?.peRequestNumber == reqNo || widget.transaction?.deRequestNumber == reqNo)  && consolStatus != 'draft') ... [
+        if(isDiverted && widget.transaction?.peRequestNumber == reqNo   && consolStatus != 'draft') ... [
           Text(
             "Remarks: Diverted",
             style: AppTextStyles.body.copyWith(
@@ -861,56 +866,99 @@ final backloadedMessage = 'This booking has been backloaded: $backloadedName';
       );
     }
 
-  Widget _buildDownloadButton(String fileName, Uint8List bytes) {
-    return SizedBox(
-      child: Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: TextButton.icon(
-            onPressed: () async {
-              try {
-                if (Platform.isAndroid) {
-                  int sdk = (await DeviceInfoPlugin().androidInfo).version.sdkInt;
+    Widget _buildDownloadButton(String fileName, Uint8List bytes) {
+      return SizedBox(
+        child: Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: TextButton.icon(
+              onPressed: () async {
+                try {
+                  if (Platform.isAndroid) {
+                    int sdk = (await DeviceInfoPlugin().androidInfo).version.sdkInt;
 
-                  if (sdk <= 29) {
-                    // ✅ Android 9 & 10
-                    await Permission.storage.request();
-                  } else {
-                    // ✅ Android 11+
-                    if (await Permission.manageExternalStorage.isDenied) {
-                      await Permission.manageExternalStorage.request();
+                    if (sdk <= 29) {
+                      // ✅ Android 9 & 10
+                      await Permission.storage.request();
+                    } else {
+                      // ✅ Android 11+
+                      if (await Permission.manageExternalStorage.isDenied) {
+                        await Permission.manageExternalStorage.request();
+                      }
                     }
                   }
-                }
 
-                Directory dir = Platform.isAndroid
-                    ? Directory('/storage/emulated/0/Download')
-                    : await getApplicationDocumentsDirectory();
+                  Directory dir = Platform.isAndroid
+                      ? Directory('/storage/emulated/0/Download')
+                      : await getApplicationDocumentsDirectory();
 
-                if (!await dir.exists()) {
-                  dir = await getExternalStorageDirectory() ?? dir;
-                }
+                  if (!await dir.exists()) {
+                    dir = await getExternalStorageDirectory() ?? dir;
+                  }
 
-            final file = File('${dir.path}/$fileName');
-            await file.writeAsBytes(bytes);
+              final file = File('${dir.path}/$fileName');
+              await file.writeAsBytes(bytes);
 
-            print('✅ File saved: ${file.path}');
-          } catch (e) {
-            print('❌ Save failed: $e');
-          }
-                },
-            icon: const Icon(Icons.download),
-            label:Text(
-              'Download $fileName',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              softWrap: false, // ✅ Force no wrapping!
-              style: AppTextStyles.caption,
-            )
-          ),
-        )
-     
-    );
-  }
+              if(context.mounted){
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      '✅ Downloaded: $fileName',
+                      style: AppTextStyles.caption.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    duration: const Duration(seconds: 2),
+                    behavior: SnackBarBehavior.floating, // ✅ Makes it float with margin
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    shape: RoundedRectangleBorder( // ✅ Rounded corners
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    backgroundColor: mainColor, // ✅ Soft black, not pure #000
+                    elevation: 6, // ✅ Soft shadow for depth
+                  ),
+                );
+              }
+
+              print('✅ File saved: ${file.path}');
+            } catch (e) {
+              print('❌ Save failed: $e');
+              if(context.mounted){
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      '❌ Download failed: $fileName',
+                      style: AppTextStyles.caption.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    duration: const Duration(seconds: 2),
+                    behavior: SnackBarBehavior.floating, // ✅ Makes it float with margin
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    shape: RoundedRectangleBorder( // ✅ Rounded corners
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    backgroundColor: Colors.red, // ✅ Soft black, not pure #000
+                    elevation: 6, // ✅ Soft shadow for depth
+                  ),
+                );
+              }
+            }
+                  },
+              icon: const Icon(Icons.download),
+              label:Text(
+                'Download $fileName',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                softWrap: false, // ✅ Force no wrapping!
+                style: AppTextStyles.caption,
+              )
+            ),
+          )
+      
+      );
+    }
 
 
   Widget  _buildFreightTab(){
