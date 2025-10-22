@@ -62,9 +62,9 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
     final allTransactions = ref.watch(transactionListProvider);
     print("All Transaction: $allTransactions");
 
-    for (var tx in allTransactions) {
-      print("🔍 TX → bookingRefNumber: '${tx.bookingRefNumber}', dispatchType: '${tx.dispatchType}'");
-    }
+    // for (var tx in allTransactions) {
+    //   print("🔍 TX → bookingRefNumber: '${tx.bookingRefNumber}', dispatchType: '${tx.dispatchType}'");
+    // }
 
     final relatedFF = ref.watch(relatedFFProvider(bookingNumber ?? ''));
    
@@ -75,7 +75,7 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
 
 
       if (requestNumber == transaction.plRequestNumber &&
-          transaction.deRequestStatus != "Completed") {
+          transaction.deRequestStatus != "Completed" && transaction.deRequestStatus != "Backload") {
         return "Delivery Empty should be completed first.";
       }
 

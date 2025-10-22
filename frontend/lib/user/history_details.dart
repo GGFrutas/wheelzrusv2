@@ -22,7 +22,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:signature/signature.dart';
+import 'package:device_info_plus/device_info_plus.dart';
+
 
 class HistoryDetailScreen extends ConsumerStatefulWidget {
   final String uid;
@@ -197,6 +201,15 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
   
   @override
   Widget build(BuildContext context) {
+    // 1️⃣ Backloaded message
+    final backloadedName = (widget.transaction?.backloadConsolidation?.name.trim().isNotEmpty ?? false)
+        ? widget.transaction?.backloadConsolidation?.name
+        : 'N/A';
+    final backloadedMessage = 'This booking has been backloaded: $backloadedName';
+
+
+
+
     return Scaffold(
       appBar: AppBar(
         iconTheme: const IconThemeData(color: mainColor),
@@ -345,7 +358,7 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
                 child: Padding(
                   padding: const EdgeInsets.all(20.0),
                     child: Text(
-                      'This booking has been backloaded: ${widget.transaction?.backloadConsolidation?.name.trim().isNotEmpty == true ? widget.transaction?.backloadConsolidation!.name : 'N/A'}',
+                      backloadedMessage,
                       style: AppTextStyles.subtitle,
                       textAlign: TextAlign.center,
                     ),
@@ -424,13 +437,35 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
 
   Widget _buildShipConsTab (){
 
+    final transaction = widget.transaction;
+
+    // 🔒 Add this guard — it prevents null crashes during screen transition
+    if (transaction == null) {
+      return const Scaffold(
+        body: Center(child: Text('No transaction data available')),
+      );
+    }
+
     final isDT = widget.transaction?.dispatchType == 'dt';
-    final scheduleMap = getPickupAndDeliverySchedule(widget.transaction!);
+    final scheduleMap = getPickupAndDeliverySchedule(transaction);
     final pickup = scheduleMap['pickup'];
     final delivery = scheduleMap['delivery'];
+    final isDiverted = widget.transaction?.backloadConsolidation?.isDiverted == "true";
+    final divertedBookingNo = isDiverted 
+    ? 'Diverted Booking No: ${widget.transaction?.backloadConsolidation?.name ?? '—'}'
+    : null;
+    final consolStatus = widget.transaction?.backloadConsolidation?.status;
 
- print('pickup actual datetime: ${pickup?.actualDatetime}');
 
+    print('pickup actual datetime: ${pickup?.actualDatetime}');
+    print('Dispatch Typr: ${widget.transaction?.dispatchType}');
+    print("request Number: ${widget.transaction?.requestNumber}");
+    print("Seal Number: ${widget.transaction?.sealNumber}");
+    print("Is Diverted: $isDiverted");
+    print("'Diverted Booking No: ${widget.transaction?.backloadConsolidation?.name ?? '—'}'");
+    print("Consol Status $consolStatus");
+
+    
    
 
     Uint8List? decodeBase64(String? data) {
@@ -444,74 +479,212 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
       }
     }
 
+    List<Map<String, dynamic>> yardFiles = [];
+    List<Map<String, dynamic>> shipperConsigneeFiles = [];
+
+    void addFile(List<Map<String, dynamic>> targetList, String? base64, String? filename) {
+      if (base64 != null && base64.trim().isNotEmpty) {
+        final decoded = decodeBase64(base64);
+        if (decoded != null) {
+          final safeName = (filename == null || filename.trim().isEmpty)
+              ? 'file_${targetList.length + 1}.png'
+              : filename;
+          targetList.add({
+            "bytes": decoded,
+            "filename": safeName,
+          });
+        }
+      }
+    }
+
     String? yardSignBase64;
-    String? yardProofBase64;
     String? signBase64;
-    String? proofBase64;
     String? name;
     String? yardName;
     String? yardactualdate;
     String? actualdate;
     String? yardtitle;
     String? title;
-  
+
 
     if (isDT) {
+      // === DT LOGIC (existing) ===
       if (widget.transaction?.requestNumber == widget.transaction?.dlRequestNumber) {
-        yardSignBase64 = widget.transaction?.plSign;
-        yardProofBase64 = widget.transaction?.plProof;
-        signBase64 = widget.transaction?.dlSign;
-        proofBase64 = widget.transaction?.dlProof;
-        yardName =  widget.transaction?.peReleasedBy;
-        name = widget.transaction?.deReleasedBy;
-        yardactualdate = formatDateTime(pickup?.actualDatetime);
-        actualdate = formatDateTime(delivery?.actualDatetime);
-        yardtitle = "Yard/Port";
-        title = "Consignee";
+        String tempYardSign = widget.transaction?.plSign ?? '';
+        String tempSign = widget.transaction?.dlSign ?? '';
+        String tempYardName = widget.transaction?.peReleasedBy ?? '';
+        String tempName = widget.transaction?.deReleasedBy ?? '';
+        String tempYardActualDate = formatDateTime(pickup?.actualDatetime);
+        String tempActualDate = formatDateTime(delivery?.actualDatetime);
+        String tempYardTitle = "Yard/Port";
+        String tempTitle = "Consignee";
+        
+
+          yardSignBase64 = tempYardSign;
+          signBase64 = tempSign;
+          yardName = tempYardName;
+          name = tempName;
+          yardactualdate = tempYardActualDate;
+          actualdate = tempActualDate;
+          yardtitle = tempYardTitle;
+          title = tempTitle;
+        
       } else if (widget.transaction?.requestNumber == widget.transaction?.peRequestNumber) {
-        yardSignBase64 = widget.transaction?.deSign;
-        yardProofBase64 = widget.transaction?.deProof;
-        signBase64 = widget.transaction?.peSign;
-        proofBase64 = widget.transaction?.peProof;
-        yardName =  widget.transaction?.plReceivedBy;
-        name = widget.transaction?.dlReceivedBy;
-        yardactualdate = formatDateTime(pickup?.actualDatetime);
-        actualdate = formatDateTime(delivery?.actualDatetime);
-        yardtitle = "Consignee";
-        title = "Yard/Port";
+        String tempYardSign = widget.transaction?.deSign ?? '';
+        String tempSign = widget.transaction?.peSign ?? '';
+        String tempYardName = widget.transaction?.plReceivedBy ?? '';
+        String tempName = widget.transaction?.dlReceivedBy ?? '';
+        String tempYardActualDate = formatDateTime(pickup?.actualDatetime);
+        String tempActualDate = formatDateTime(delivery?.actualDatetime);
+        String tempYardTitle = "Consignee";
+        String tempTitle = "Yard/Port";
+
+        if (isDiverted && consolStatus == 'draft') {
+          yardSignBase64 = tempSign;
+          signBase64 = tempYardSign;
+          yardName = tempName;
+          name = tempYardName;
+          yardactualdate = tempYardActualDate;
+          actualdate = tempActualDate;
+          yardtitle = tempYardTitle;
+          title = tempTitle;
+        } else {
+          yardSignBase64 = tempSign;
+          signBase64 = tempYardSign;
+          yardName = tempName;
+          name = tempYardName;
+          yardactualdate = tempYardActualDate;
+          actualdate = tempActualDate;
+          yardtitle = tempYardTitle;
+          title = tempTitle;
+        }
+      } else {
+        if (widget.transaction?.requestNumber == widget.transaction?.dlRequestNumber) {
+          yardSignBase64 = widget.transaction?.peSign;
+          signBase64 = widget.transaction?.deSign;
+          yardName = widget.transaction?.peReleasedBy;
+          name = widget.transaction?.deReleasedBy;
+          yardactualdate = formatDateTime(pickup?.actualDatetime);
+          actualdate = formatDateTime(delivery?.actualDatetime);
+          yardtitle = "Yard/Port";
+          title = "Shipper";
+
+        } else if (widget.transaction?.requestNumber == widget.transaction?.plRequestNumber) {
+          yardSignBase64 = widget.transaction?.dlSign;
+          signBase64 = widget.transaction?.plSign;
+          yardName = widget.transaction?.plReceivedBy;
+          name = widget.transaction?.dlReceivedBy;
+          yardactualdate = formatDateTime(pickup?.actualDatetime);
+          actualdate = formatDateTime(delivery?.actualDatetime);
+          yardtitle = "Shipper";
+          title = "Yard/Port";
+        }
       }
+
     } else {
+      // === OT / NON-DT LOGIC (mirrored) ===
       if (widget.transaction?.requestNumber == widget.transaction?.deRequestNumber) {
-        yardSignBase64 = widget.transaction?.peSign;
-        yardProofBase64 = widget.transaction?.peProof;
-        signBase64 = widget.transaction?.deSign;
-        proofBase64 = widget.transaction?.deProof;
-        yardName =  widget.transaction?.peReleasedBy;
-        name = widget.transaction?.deReleasedBy;
-        yardactualdate = formatDateTime(pickup?.actualDatetime);
-        actualdate = formatDateTime(delivery?.actualDatetime);
-        yardtitle = "Yard/Port";
-        title = "Shipper";
+        String tempYardSign = widget.transaction?.peSign ?? '';
+        String tempSign = widget.transaction?.deSign ?? '';
+        String tempYardName = widget.transaction?.peReleasedBy ?? '';
+        String tempName = widget.transaction?.deReleasedBy ?? '';
+        String tempYardActualDate = formatDateTime(pickup?.actualDatetime);
+        String tempActualDate = formatDateTime(delivery?.actualDatetime);
+        String tempYardTitle = "Yard/Port";
+        String tempTitle = "Shipper";
+
+        if (isDiverted && consolStatus == 'draft') {
+          yardSignBase64 = tempSign;
+          signBase64 = tempYardSign;
+          yardName = tempName;
+          name = tempYardName;
+          yardactualdate = tempActualDate;
+          actualdate = tempYardActualDate;
+          yardtitle = tempTitle;
+          title = tempYardTitle;
+        } else {
+          yardSignBase64 = tempYardSign;
+          signBase64 = tempSign;
+          yardName = tempYardName;
+          name = tempName;
+          yardactualdate = tempYardActualDate;
+          actualdate = tempActualDate;
+          yardtitle = tempYardTitle;
+          title = tempTitle;
+        }
       } else if (widget.transaction?.requestNumber == widget.transaction?.plRequestNumber) {
-        yardSignBase64 = widget.transaction?.dlSign;
-        yardProofBase64 = widget.transaction?.dlProof;
-        signBase64 = widget.transaction?.plSign;
-        proofBase64 = widget.transaction?.plProof;
-        yardName =  widget.transaction?.plReceivedBy;
+        String tempYardSign = widget.transaction?.dlSign ?? '';
+        String tempSign = widget.transaction?.plSign ?? '';
+        String tempYardName = widget.transaction?.plReceivedBy ?? '';
+        String tempName = widget.transaction?.dlReceivedBy ?? '';
+        String tempYardActualDate = formatDateTime(pickup?.actualDatetime);
+        String tempActualDate = formatDateTime(delivery?.actualDatetime);
+        String tempYardTitle = "Shipper";
+        String tempTitle = "Yard/Port";
+
+       
+          yardSignBase64 = tempSign;
+          signBase64 = tempYardSign;
+          yardName = tempName;
+          name = tempYardName;
+          yardactualdate = tempYardActualDate;
+          actualdate = tempActualDate;
+          yardtitle = tempYardTitle;
+          title = tempTitle;
+        
+      } else {
+        // fallback — if no specific requestNumber matches
+        yardSignBase64 = widget.transaction?.plSign;
+        signBase64 = widget.transaction?.dlSign;
+        yardName = widget.transaction?.plReceivedBy;
         name = widget.transaction?.dlReceivedBy;
         yardactualdate = formatDateTime(pickup?.actualDatetime);
         actualdate = formatDateTime(delivery?.actualDatetime);
         yardtitle = "Shipper";
-        title = "Yard/Port";
+        title = "Consignee";
       }
     }
-
     final yardSignBytes = decodeBase64(yardSignBase64);
-    final yardProofBytes = decodeBase64(yardProofBase64);
+    // final yardProofBytes = decodeBase64(yardProofBase64);
 
     final signBytes = decodeBase64(signBase64);
-    final proofBytes = decodeBase64(proofBase64);
+    // final proofBytes = decodeBase64(proofBase64);
 
+    final reqNo = widget.transaction?.requestNumber;
+
+  if (isDT && reqNo == widget.transaction?.dlRequestNumber) {
+    // DT + dlRequestNumber:
+    // Yard: only plProof
+    addFile(yardFiles, widget.transaction?.plProof, widget.transaction?.plProofFilename ?? "POD");
+
+    // Consignee (full pack): plProof + shared( hwbSigned, dlProof, deliveryReceipt, packingList, deliveryNote, stockDelivery, salesInvoice )
+    addFile(shipperConsigneeFiles, widget.transaction?.dlProof, widget.transaction?.dlProofFilename);
+    addFile(shipperConsigneeFiles, widget.transaction?.hwbSigned, widget.transaction?.hwbSignedFilename);
+    addFile(shipperConsigneeFiles, widget.transaction?.deliveryReceipt, widget.transaction?.deliveryReceiptFilename);
+    addFile(shipperConsigneeFiles, widget.transaction?.packingList, widget.transaction?.packingListFilename);
+    addFile(shipperConsigneeFiles, widget.transaction?.deliveryNote, widget.transaction?.deliveryNoteFilename);
+    addFile(shipperConsigneeFiles, widget.transaction?.stockDelivery, widget.transaction?.stockDeliveryFilename);
+    addFile(shipperConsigneeFiles, widget.transaction?.salesInvoice, widget.transaction?.salesInvoiceFilename);
+  }else  if (isDT && reqNo == widget.transaction?.peRequestNumber) {
+    // DT + dlRequestNumber:
+    // Yard: only plProof
+    addFile(yardFiles, widget.transaction?.peProof, widget.transaction?.peProofFilename ?? "POD");
+    addFile(shipperConsigneeFiles, widget.transaction?.deProof, widget.transaction?.deProofFilename ?? "POD");
+  } 
+  else if (!isDT && reqNo == widget.transaction?.plRequestNumber) {
+    // OT + plRequestNumber:
+    addFile(shipperConsigneeFiles, widget.transaction?.dlProof, widget.transaction?.dlProofFilename); // yard has dlProof
+    addFile(yardFiles, widget.transaction?.plProof, widget.transaction?.plProofFilename); // shipper has plProof
+    addFile(yardFiles, widget.transaction?.proofStock, widget.transaction?.proofStockFilename); // shipper has stock transfer
+  } else if (!isDT && reqNo == widget.transaction?.deRequestNumber) {
+    // Fallback: if nothing matches, attempt to add any non-null generic files so user can still download what's available
+   
+    addFile(yardFiles, widget.transaction?.peProof, widget.transaction?.peProofFilename);
+    addFile(shipperConsigneeFiles, widget.transaction?.deProof, widget.transaction?.deProofFilename);
+
+  }
+
+    
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -524,38 +697,47 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
           )
         ),
         const SizedBox(height: 20),
-        Text(
+        if(isDiverted && widget.transaction?.deRequestNumber == reqNo  && consolStatus != 'draft') ... [
+          Text(
+            "Remarks: Diverted",
+            style: AppTextStyles.body.copyWith(
+              color: mainColor,
+              fontWeight: FontWeight.bold, 
+            )
+          ),
+          const SizedBox(height: 20),
+          Text(
+            divertedBookingNo!,
+            style: AppTextStyles.body.copyWith(
+              color: mainColor,
+            )
+          ),
+        ] else ... [
+          Text(
         'Proof of Delivery',
           style: AppTextStyles.body.copyWith(
             color: mainColor,
           )
         ),
         const SizedBox(height: 20),
-        if(yardProofBytes != null)
-          GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => FullScreenImage(imageBytes: yardProofBytes),
-                ),
-              );
-            },
-            child: Column (
-              children: [
-                Image.memory(yardProofBytes, height:200),
-                const SizedBox(height: 20),
-                Text(
-                  'Released by:  ${yardName ?? '—'}',
-                  style: AppTextStyles.body.copyWith(
-                    color: mainColor,
-                  )
-                ),
-              ],
-            ),
-            
-          ),
-
+        if (yardFiles.isNotEmpty)
+        Wrap(
+          alignment: WrapAlignment.start,
+          spacing: 8, // horizontal gap
+          runSpacing: 8, // vertical gap
+          children: yardFiles.map((file) {
+            return _buildDownloadButton(
+              file["filename"] as String,
+              file["bytes"] as Uint8List,
+            );
+          }).toList(),
+        ),
+        Text(
+          'Released by:  ${yardName ?? '—'}',
+          style: AppTextStyles.body.copyWith(
+            color: mainColor,
+          )
+        ),
         const SizedBox(height: 20),
         Text(
         'Signature',
@@ -584,6 +766,8 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
               color: mainColor,
             )
           ),
+        ],
+        
         const SizedBox(height: 20),
         const Divider(
           color: Colors.grey,
@@ -591,47 +775,54 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
         ),
 
         // SHIPPER CONSIGNEE
+        if(isDiverted && widget.transaction?.peRequestNumber == reqNo   && consolStatus != 'draft') ... [
           Text(
-        //  isDT ? 'Consignee' : 'Shipper',
-        title!,
-          style: AppTextStyles.body.copyWith(
-            color: mainColor,
-            fontWeight: FontWeight.bold, 
-          )
-        ),
-        const SizedBox(height: 20),
-        Text(
-          
-        'Proof of Delivery',
-          style: AppTextStyles.body.copyWith(
-            color: mainColor,
-          )
-        ),
-        const SizedBox(height: 20),
-        if(proofBytes != null)
-          GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => FullScreenImage(imageBytes: proofBytes),
-                ),
-              );
-            },
-            child: Column (
-              children: [
-                Image.memory(proofBytes, height:200),
-                const SizedBox(height: 20),
-                Text(
-                  'Received by: ${name ?? '—'} ',
-                  style: AppTextStyles.body.copyWith(
-                    color: mainColor,
-                  )
-                ),
-              ],
-            ),
-            
+            "Remarks: Diverted",
+            style: AppTextStyles.body.copyWith(
+              color: mainColor,
+              fontWeight: FontWeight.bold, 
+            )
           ),
+          const SizedBox(height: 20),
+          Text(
+            divertedBookingNo!,
+            style: AppTextStyles.body.copyWith(
+              color: mainColor,
+            )
+          ),
+        ] else ...[
+          Text(
+            //  isDT ? 'Consignee' : 'Shipper',
+            title!,
+            style: AppTextStyles.body.copyWith(
+              color: mainColor,
+              fontWeight: FontWeight.bold, 
+            )
+          ),
+          const SizedBox(height: 20),
+          Text(
+          'Proof of Delivery',
+            style: AppTextStyles.body.copyWith(
+              color: mainColor,
+            )
+          ),
+        const SizedBox(height: 20),
+        if (shipperConsigneeFiles.isNotEmpty)
+          Wrap(
+          alignment: WrapAlignment.start,
+          spacing: 8, // horizontal gap
+          runSpacing: 8, // vertical gap
+            children: shipperConsigneeFiles.map((file) {
+              return _buildDownloadButton(file["filename"] as String, file["bytes"] as Uint8List);
+            }).toList(),
+          ),
+
+        Text(
+          'Released by:  ${name ?? '—'}',
+          style: AppTextStyles.body.copyWith(
+            color: mainColor,
+          )
+        ),
 
         const SizedBox(height: 20),
         Text(
@@ -662,16 +853,159 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
             )
           ),
        
-      ],
+        ],
 
+        ]
+          
+        
+      );
+    }
+
+    Widget _buildDownloadButton(String fileName, Uint8List bytes) {
+      return SizedBox(
+        child: Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: TextButton.icon(
+          onPressed: null,
+            //   () async {
+            //     try {
+            //       if (Platform.isAndroid) {
+            //         int sdk = (await DeviceInfoPlugin().androidInfo).version.sdkInt;
+
+            //         if (sdk <= 29) {
+            //           // ✅ Android 9 & 10
+            //           await Permission.storage.request();
+            //         } else {
+            //           // ✅ Android 11+
+            //           if (await Permission.manageExternalStorage.isDenied) {
+            //             await Permission.manageExternalStorage.request();
+            //           }
+            //         }
+            //       }
+
+            //       Directory dir = Platform.isAndroid
+            //           ? Directory('/storage/emulated/0/Download')
+            //           : await getApplicationDocumentsDirectory();
+
+            //       if (!await dir.exists()) {
+            //         dir = await getExternalStorageDirectory() ?? dir;
+            //       }
+
+            //   final file = File('${dir.path}/$fileName');
+            //   await file.writeAsBytes(bytes);
+
+            //   if(context.mounted){
+            //     ScaffoldMessenger.of(context).showSnackBar(
+            //       SnackBar(
+            //         content: Text(
+            //           '✅ Downloaded: $fileName',
+            //           style: AppTextStyles.caption.copyWith(
+            //             color: Colors.white,
+            //             fontWeight: FontWeight.w500,
+            //           ),
+            //         ),
+            //         duration: const Duration(seconds: 2),
+            //         behavior: SnackBarBehavior.floating, // ✅ Makes it float with margin
+            //         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            //         shape: RoundedRectangleBorder( // ✅ Rounded corners
+            //           borderRadius: BorderRadius.circular(12),
+            //         ),
+            //         backgroundColor: mainColor, // ✅ Soft black, not pure #000
+            //         elevation: 6, // ✅ Soft shadow for depth
+            //       ),
+            //     );
+            //   }
+
+            //   print('✅ File saved: ${file.path}');
+            // } catch (e) {
+            //   print('❌ Save failed: $e');
+            //   if(context.mounted){
+            //     ScaffoldMessenger.of(context).showSnackBar(
+            //       SnackBar(
+            //         content: Text(
+            //           '❌ Download failed: $fileName',
+            //           style: AppTextStyles.caption.copyWith(
+            //             color: Colors.white,
+            //             fontWeight: FontWeight.w500,
+            //           ),
+            //         ),
+            //         duration: const Duration(seconds: 2),
+            //         behavior: SnackBarBehavior.floating, // ✅ Makes it float with margin
+            //         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            //         shape: RoundedRectangleBorder( // ✅ Rounded corners
+            //           borderRadius: BorderRadius.circular(12),
+            //         ),
+            //         backgroundColor: Colors.red, // ✅ Soft black, not pure #000
+            //         elevation: 6, // ✅ Soft shadow for depth
+            //       ),
+            //     );
+            //   }
+            // }
+            //       },
+              icon: const Icon(Icons.download),
+              label:Text(
+                'Download $fileName',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                softWrap: false, // ✅ Force no wrapping!
+                style: AppTextStyles.caption,
+              )
+            ),
+          )
       
-    );
-  }
+      );
+    }
+
 
   Widget  _buildFreightTab(){
+    final isDiverted = widget.transaction?.backloadConsolidation?.isDiverted == "true";
+    final consolStatus = widget.transaction?.backloadConsolidation?.status;
+
+
+  
+
+    final divertedPortName = (widget.transaction?.dispatchType == 'dt')
+    ? (widget.transaction?.backloadConsolidation?.originName ?? '—')
+    : (widget.transaction?.backloadConsolidation?.destinationName ?? '—');
+
     return  Column( // Use a Column to arrange the widgets vertically
       crossAxisAlignment: CrossAxisAlignment.start, // Align text to the left
       children: [
+        if(isDiverted && consolStatus == 'consolidated') ... [
+      
+        Row(
+          children: [
+            const SizedBox(width: 30), // Space between icon and text
+            Expanded
+            (
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Diverted Request",
+                    style: AppTextStyles.subtitle.copyWith(
+                      color: Colors.black,
+                      fontWeight: FontWeight.bold
+                    ),
+                  ),
+                  Text(
+                  divertedPortName,
+                    // Use the originPort variable here
+                    style: AppTextStyles.body.copyWith(
+                      color: Colors.black,
+                    ),
+                  ),
+                  
+                ],
+              ),
+
+            )
+            
+          ],
+        
+        ),
+       
+        const SizedBox(height: 20),
         Row(
           children: [
             const SizedBox(width: 30), // Space between icon and text
@@ -697,7 +1031,9 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
             ),
           ],
         ),
+         ],
         const SizedBox(height: 20),
+        
         Row(
           children: [
             const SizedBox(width: 30), // Space between icon and text
@@ -771,6 +1107,7 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
                   ),
                 ),
                 Text(
+                  
                 (widget.transaction?.containerNumber?.isNotEmpty ?? false)
                   ? widget.transaction!.containerNumber!
                   : '—',

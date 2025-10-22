@@ -1,4 +1,5 @@
 import 'package:frontend/models/consolidation_model.dart';
+import 'package:frontend/models/driver_reassignment_model.dart';
 import 'package:frontend/models/milestone_history_model.dart';
 
 class Transaction {
@@ -50,7 +51,8 @@ class Transaction {
   final String? peTruckType;
   final String? contactPerson;
   final String? vehicleName;
-  
+  final bool isReassigned;
+
 
   final String? contactNumber;
 
@@ -58,6 +60,11 @@ class Transaction {
   final String? plProof;
   final String? dlProof;
   final String? peProof;
+
+  final String? deProofFilename;
+  final String? plProofFilename;
+  final String? dlProofFilename;
+  final String? peProofFilename;
 
   final String? deSign;
   final String? plSign;
@@ -105,6 +112,22 @@ class Transaction {
 
   final List<MilestoneHistoryModel> history;
   final ConsolidationModel? backloadConsolidation;
+  final List<DriverReassignment> reassignment;
+
+  final String? proofStock;
+  final String? proofStockFilename;
+  final String? hwbSigned;
+  final String? hwbSignedFilename;
+  final String? deliveryReceipt;
+  final String? deliveryReceiptFilename;
+  final String? packingList;
+  final String? packingListFilename;
+  final String? deliveryNote;
+  final String? deliveryNoteFilename;
+  final String? stockDelivery;
+  final String? stockDeliveryFilename;
+  final String? salesInvoice;
+  final String? salesInvoiceFilename;
 
   // final String? completeAddress ;
 
@@ -159,6 +182,10 @@ class Transaction {
     required this.plProof,
     required this.dlProof,
     required this.peProof,
+     required this.deProofFilename,
+    required this.plProofFilename,
+    required this.dlProofFilename,
+    required this.peProofFilename,
     required this.deSign,  
     required this.plSign,   
     required this.dlSign,   
@@ -201,12 +228,29 @@ class Transaction {
     required this.plReceivedBy,
     required this.backloadConsolidation,
     required this.bookingRefNumber,
+    required this.reassignment,
     // required this.completeAddress,
+    required this.proofStock,
+    required this.proofStockFilename,
+    required this.hwbSigned,
+    required this.hwbSignedFilename,
+    required this.deliveryReceipt,
+    required this.deliveryReceiptFilename,
+    required this.packingList,
+    required this.packingListFilename,
+    required this.deliveryNote,
+    required this.deliveryNoteFilename,
+    required this.stockDelivery,
+    required this.stockDeliveryFilename,
+    required this.salesInvoice,
+    required this.salesInvoiceFilename,
+    this.isReassigned = false,
   });
 
   factory Transaction.fromJson(Map<String, dynamic> json) {
     // print('knii Raw transaction JSON: $json');
     final rawConsolidation = json['backload_consolidation'];
+    
 
     return Transaction(
       id: json['id'] ?? 0,
@@ -279,6 +323,11 @@ class Transaction {
       dlProof: json['dl_proof'].toString(),
       peProof: json['pe_proof'].toString(),
 
+      deProofFilename: json['de_proof_filename'].toString(),
+      plProofFilename: json['pl_proof_filename'].toString(),
+      dlProofFilename: json['dl_proof_filename'].toString(),
+      peProofFilename: json['pe_proof_filename'].toString(),
+
       deSign: json['de_signature'].toString(),
       plSign: json['pl_signature'].toString(),
       dlSign: json['dl_signature'].toString(),
@@ -333,11 +382,35 @@ class Transaction {
 
       isAccepted: false,  // set default or map from API
 
-    backloadConsolidation: rawConsolidation != null && rawConsolidation is Map
-        ? ConsolidationModel.fromJson(Map<String, dynamic>.from(rawConsolidation))
-        : null,
+      isReassigned: false,
+
+      backloadConsolidation: rawConsolidation != null && rawConsolidation is Map
+          ? ConsolidationModel.fromJson(Map<String, dynamic>.from(rawConsolidation))
+          : null,
+
+       reassignment: (json['extra_history'] is List)
+        ? (json['extra_history'] as List)
+            .map((e) => DriverReassignment.fromJson(e))
+            .toList()
+        : [],
+
 
       // completeAddress: json['origin']?.toString() ?? 'N/A',
+
+      proofStock: json['pl_proof_stock'].toString(),
+      proofStockFilename: json['pl_proof_filename_stock'].toString(),
+      hwbSigned: json['dl_hwb_signed'].toString(),
+      hwbSignedFilename: json['dl_hwb_signed_filename'].toString(),
+      deliveryReceipt: json['dl_delivery_receipt'].toString(),
+      deliveryReceiptFilename: json['dl_delivery_receipt_filename'].toString(),
+      packingList: json['dl_packing_list'].toString(),
+      packingListFilename: json['dl_packing_list_filename'].toString(),
+      deliveryNote: json['dl_delivery_note'].toString(),
+      deliveryNoteFilename: json['dl_delivery_note_filename'].toString(),
+      stockDelivery: json['dl_stock_delivery_receipt'].toString(),
+      stockDeliveryFilename: json['dl_stock_delivery_receipt_filename'].toString(),
+      salesInvoice: json['dl_sales_invoice'].toString(),
+      salesInvoiceFilename: json['dl_sales_invoice_filename'].toString(),
 
 
       
@@ -418,6 +491,11 @@ class Transaction {
       dlProof: dlProof,
       peProof: peProof,
 
+      deProofFilename: deProofFilename,
+      plProofFilename: plProofFilename,
+      dlProofFilename: dlProofFilename,
+      peProofFilename: peProofFilename,
+
       deSign: deSign,
       plSign: plSign,
       dlSign: dlSign, 
@@ -467,9 +545,27 @@ class Transaction {
       login: login,
        history: history,
        backloadConsolidation: backloadConsolidation,
+       reassignment: reassignment,
 
         // completeAddress: completeAddress, 
 
+      proofStock: proofStock,
+      proofStockFilename: proofStockFilename,
+      hwbSigned: hwbSigned,
+      hwbSignedFilename: hwbSignedFilename,
+      deliveryReceipt: deliveryReceipt,
+      deliveryReceiptFilename: deliveryReceiptFilename,
+      packingList: packingList,
+      packingListFilename: packingListFilename,
+      deliveryNote: deliveryNote,
+      deliveryNoteFilename: deliveryNoteFilename,
+      stockDelivery: stockDelivery,
+      stockDeliveryFilename: stockDeliveryFilename,
+      salesInvoice: salesInvoice,
+      salesInvoiceFilename: salesInvoiceFilename,
+
+      isReassigned: isReassigned
+      
     );
   }
   @override

@@ -5,6 +5,7 @@ import 'package:flutter_custom_clippers/flutter_custom_clippers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/models/consolidation_model.dart';
 import 'package:frontend/models/consolidation_extension.dart';
+import 'package:frontend/models/driver_reassignment_model.dart';
 import 'package:frontend/models/transaction_model.dart';
 import 'package:frontend/notifiers/auth_notifier.dart';
 import 'package:frontend/provider/accepted_transaction.dart' as accepted_transaction;
@@ -16,6 +17,7 @@ import 'package:frontend/user/history_details.dart';
 import 'package:frontend/user/rejection_details.dart';
 import 'package:frontend/user/show_all_history.dart';
 import 'package:frontend/user/transaction_details.dart';
+import 'package:frontend/util/transaction_utils.dart';
 import 'package:frontend/views/transaction_view.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -190,142 +192,16 @@ void initState() {
                    
                     final authPartnerId = ref.watch(authNotifierProvider).partnerId;
                     final driverId = authPartnerId?.toString();
-
+                 
                    
+                    final expandedTransactions = TransactionUtils.expandTransactions(
+                      transaction,
+                      driverId ?? '',
+                    );
 
-
-
-                    final expandedTransactions = transaction.expand((item) {
-
-
-                        String removeBrackets(String input) {
-                          return input.replaceAll(RegExp(r'\s*\[.*?\]'), '')
-                                      .replaceAll(RegExp(r'\s*\(.*?\)'), '')
-                                      .trim();
-                        }
-                        String cleanAddress(List<String?> parts) {
-                          return parts
-                            .where((e) => e != null && e.trim().isNotEmpty && e.trim().toLowerCase() != 'ph')
-                            .map((e) => removeBrackets(e!)) // now safe because nulls are filtered above
-                            .join(', ');
-                        }
-
-                        String buildConsigneeAddress(Transaction item, {bool cityLevel = false}) {
-                          return cleanAddress(cityLevel ? [item.consigneeCity,item.consigneeProvince]
-                          : [item.consigneeStreet,item.consigneeBarangay,item.consigneeCity,item.consigneeProvince]
-                          );
-                        }
-
-                        String buildShipperAddress(Transaction item, {bool cityLevel = false}) {
-                          return cleanAddress(cityLevel ? [item.shipperCity,item.shipperProvince]
-                          : [item.shipperStreet,item.shipperBarangay,item.shipperCity,item.shipperProvince]
-                          );
-                        }
-                        String descriptionMsg(Transaction item) {
-                          if (item.landTransport == 'transport'){
-                            return 'Deliver Laden Container to Consignee';
-                          } else {
-                            return 'Pickup Laden Container from Shipper';
-                          }
-                        }
-                        String newName(Transaction item) {
-                          if (item.landTransport == 'transport'){
-                            return 'Deliver to Consignee';
-                          } else {
-                            return 'Pickup from Shipper';
-                          }
-                        }
-      
-                        if (item.dispatchType == "ot") {
-                          final shipperOrigin = buildShipperAddress(item);
-                          final shipperDestination = cleanAddress([item.destination]);
-                
-                        return[
-
-                        
-                          // First instance: Deliver to Shipper
-                          if (item.deTruckDriverName == driverId)
-                            // Check if the truck driver is the same as the authPartnerId
-                            // return [ 
-                              item.copyWith(
-                                name: "Deliver to Shipper",
-                                origin:shipperDestination,
-                                destination: shipperOrigin,
-                                requestNumber: item.deRequestNumber,
-                                requestStatus: item.deRequestStatus,
-                                assignedDate:item.deAssignedDate,
-                                originAddress: "Deliver Empty Container to Shipper",
-                                freightBookingNumber:item.freightBookingNumber,
-                                completedTime: item.deCompletedTime,
-                                // // completeAddress: shipperOrigin,
-                                // truckPlateNumber: item.deTruckPlateNumber,
-                              ),
-                          //   ];
-                          // }
-                            // Second instance: Pickup from Shipper
-                          if ( item.plTruckDriverName == driverId)
-                            // return [
-                              item.copyWith(
-                                name: newName(item),
-                                origin:shipperOrigin,
-                                destination:shipperDestination,
-                                requestNumber: item.plRequestNumber,
-                                requestStatus: item.plRequestStatus,
-                                assignedDate:item.plAssignedDate,
-                                originAddress: descriptionMsg(item),
-                                freightBookingNumber:item.freightBookingNumber,
-                                completedTime: item.plCompletedTime,
-                                // // completeAddress: shipperDestination,
-                                // truckPlateNumber: item.plTruckPlateNumber,
-                              ),
-                            ];
-                          // }
-                          // return [];
-                    
-                        } else if (item.dispatchType == "dt") {
-                          final consigneeOrigin = buildConsigneeAddress(item);
-                          final consigneeDestination = cleanAddress([item.origin]);
-                        return [
-                            // First instance: Deliver to Consignee
-                          if (item.dlTruckDriverName == driverId)
-                            // return [
-                              item.copyWith(
-                                name: "Deliver to Consignee",
-                                origin:  consigneeDestination,
-                                destination: consigneeOrigin,
-                                requestNumber: item.dlRequestNumber,
-                                requestStatus: item.dlRequestStatus,
-                                assignedDate:item.dlAssignedDate,
-                                originAddress: "Deliver Laden Container to Consignee",
-                                freightBookingNumber:item.freightBookingNumber,
-                                completedTime: item.dlCompletedTime,
-                                // // completeAddress: consigneeOrigin,
-                                // truckPlateNumber: item.dlTruckPlateNumber,
-                              ),
-                          //   ];
-                          // }
-                          // Second instance: Pickup from Consignee
-                          if (item.peTruckDriverName == driverId) // Filter out if accepted
-                            item.copyWith(
-                              name: "Pickup from Consignee",
-                              origin: consigneeOrigin,
-                                destination: consigneeDestination,
-                              requestNumber: item.peRequestNumber,
-                              requestStatus: item.peRequestStatus,
-                              rejectedTime: item.peRejectedTime,
-                              completedTime: item.peCompletedTime,
-                              originAddress: "Pickup Empty Container from Consignee",
-                              // truckPlateNumber: item.peTruckPlateNumber,
-                            ),
-                        ]; 
-                      }
-                      // Return as-is if no match
-                      return [item];
-                    }).toList();
-
-
+                 
                     final ongoingTransactions = expandedTransactions
-                      .where((tx) =>  ['Cancelled', 'Completed'].contains(tx.stageId) || ['Backload', 'Completed'].contains(tx.requestStatus))
+                      .where((tx) =>  ['Cancelled', 'Completed'].contains(tx.stageId) || ['Backload', 'Completed'].contains(tx.requestStatus) || tx.reassignment.any((e) => e.driverId.toString() == driverId)) // include removed
                       .take(5)
                       .toList()
                       ..sort((a,b){
@@ -343,12 +219,14 @@ void initState() {
                     String getStatusLabel(Transaction item) {
                       final status = item.requestStatus?.trim();
                       final stage = item.stageId?.trim();
+                    
 
                       if (status == 'Completed' || status == 'Backload') return status!;
                       if (stage == 'Completed' || stage == 'Cancelled') return stage!;
                       return '—';
                     }
-                  
+
+             
                     if (ongoingTransactions.isEmpty) {
                       return LayoutBuilder(
                         builder: (context,constraints){
@@ -378,11 +256,6 @@ void initState() {
                       itemBuilder: (context, index) {
                         final item = ongoingTransactions[index];
                         final statusLabel = getStatusLabel(item);
-                      //  print('Raw backload_consolidation: ${json['backload_consolidation']}');
-
-
-                     print('Raw: ${item.backloadConsolidation?.consolidatedDatetime}');
-print('Formatted: ${item.backloadConsolidation?.formattedConsolidatedDate}');
 
                         return Container(
                           margin: const EdgeInsets.only(bottom: 20),
@@ -463,8 +336,6 @@ print('Formatted: ${item.backloadConsolidation?.formattedConsolidatedDate}');
                                   ),
                                   Row(
                                     children: [
-                                     
-
                                       Text(
                                         "Request ID: ",
                                         style: AppTextStyles.caption.copyWith(
