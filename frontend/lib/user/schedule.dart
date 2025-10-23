@@ -198,7 +198,12 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
     };
   }
 
+  bool _isLoading = false;
+
+
   Future<void> _sendEmail() async {
+
+     setState(() => _isLoading = true);
     final now = DateTime.now();
     final adjustedTime = now.subtract(const Duration(hours: 8));
     final timestamp = DateFormat("yyyy-MM-dd HH:mm:ss").format(adjustedTime);
@@ -230,8 +235,10 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
   
     if (!mounted) return;
     if (response.statusCode == 200) {
+      setState(() => _isLoading = false);
       showSuccessDialog(context, "Email Sent!");
     } else {
+       setState(() => _isLoading = false);
       showSuccessDialog(context, "Failed send email!");
       print("Failed to upload files: ${response.statusCode}");
      
@@ -268,8 +275,8 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
   final delivery = scheduleMap['delivery'];
   final email = scheduleMap['email'];
 
-  bool isAlreadyNotified = email?.actualDatetime != null 
-    || email?.actualDatetime != null;
+  
+  bool isAlreadyNotified = email?.actualDatetime != null ;
 
   int currentStep = 2; // Assuming Schedule is step 2 (0-based index)
   final bookingNumber = widget.transaction?.bookingRefNumber;
@@ -477,23 +484,36 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
                 ),
               ),
               
-              if(widget.transaction?.plRequestNumber == widget.transaction?.requestNumber|| widget.transaction?.peRequestNumber == widget.transaction?.requestNumber)
+              if(widget.transaction?.plRequestNumber == widget.transaction?.requestNumber|| widget.transaction?.peRequestNumber == widget.transaction?.requestNumber)...[
               Column (
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: !isAlreadyNotified ? null : () { _sendEmail(); },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: !isAlreadyNotified ? Colors.grey : mainColor,
+                      onPressed: (!isAlreadyNotified || _isLoading)
+                        ? null
+                        : _sendEmail, 
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: (!isAlreadyNotified || _isLoading)
+                          ? Colors.grey
+                          : mainColor,
                         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30.0),
                         ),
                       ),
                       
-                      child: Row (
+                      child:  _isLoading
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                      : Row (
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           const Icon(
@@ -519,6 +539,7 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
                   )
                 ],
               ), 
+              ],
               const SizedBox(height: 10),
 
               // Text (

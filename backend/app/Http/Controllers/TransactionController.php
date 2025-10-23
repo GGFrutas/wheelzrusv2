@@ -394,7 +394,7 @@ class TransactionController extends Controller
                 "stage_id" => 7,
                 // "dl_request_status" => $newStatus,
                 "container_number" => $containerNumber,
-                "booking_status" => 1
+                
             ];
         }   
         if($type['dispatch_type'] === "dt" && $type['dl_request_no'] === $requestNumber) {
@@ -448,6 +448,7 @@ class TransactionController extends Controller
                 "dl_completion_time" => $actualTime,
                 // "dl_request_status" => $newStatus,
                 "container_number" => $containerNumber,
+                "booking_status" => 1,
                 "dl_hwb_signed" => $hwb_signed,
                 "dl_hwb_signed_filename" => $hwb_signed_filename,
                 "dl_delivery_receipt" => $delivery_receipt,
@@ -1774,7 +1775,7 @@ class TransactionController extends Controller
         if ($milestoneResult instanceof \Illuminate\Http\JsonResponse) return $milestoneResult;
 
         $milestoneCodeToUpdate = $this->resolveMilestoneCode2($type, $requestNumber, $serviceType);  
-        if(in_array($milestoneCodeToUpdate, ['CLDT', 'LCLDT'])) {
+        if(in_array($milestoneCodeToUpdate, ['CYDT', 'LCLDT'])) {
             $bookingRef = $type['booking_reference_no'] ?? null;
             if($bookingRef) {
                 $this->updateBookingStage2($bookingRef, $db, $uid, $odooPassword, $odooUrl);
