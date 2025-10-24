@@ -322,7 +322,7 @@ class HomePage extends ConsumerWidget {
             case 1:
               return HomepageScreen(user: user);
             case 2:
-              return HistoryScreen(user: user);
+              return HistoryScreen(user: user, transaction: null,);
             default:
               return const SizedBox.shrink();
           }

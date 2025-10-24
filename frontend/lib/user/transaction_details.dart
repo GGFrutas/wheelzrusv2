@@ -1047,16 +1047,19 @@ final delivery = scheduleMap['delivery'];
         signBase64 = widget.transaction?.dlSign;
         proofBase64 = widget.transaction?.dlProof;
         filename = widget.transaction?.dlProofFilename;
+        addFile(shipperConsigneeFiles, widget.transaction?.dlProof, widget.transaction?.dlProofFilename);
       } else if (widget.transaction?.requestNumber == widget.transaction?.peRequestNumber) {
         signBase64 = widget.transaction?.peSign;
         proofBase64 = widget.transaction?.peProof;
         filename = widget.transaction?.peProofFilename;
+        addFile(shipperConsigneeFiles, widget.transaction?.peProof, widget.transaction?.peProofFilename); 
       }
     } else {
       if (widget.transaction?.requestNumber == widget.transaction?.deRequestNumber) {
         signBase64 = widget.transaction?.deSign;
         proofBase64 = widget.transaction?.deProof;
         filename = widget.transaction?.deProofFilename;
+        addFile(shipperConsigneeFiles, widget.transaction?.deProof, widget.transaction?.deProofFilename);
       } else if (widget.transaction?.requestNumber == widget.transaction?.plRequestNumber) {
         signBase64 = widget.transaction?.plSign;
         proofBase64 = widget.transaction?.plProof;
@@ -1191,7 +1194,7 @@ final delivery = scheduleMap['delivery'];
             //     );
             //   }
             // }
-            //       },
+                  // },
               icon: const Icon(Icons.download),
               label:Text(
                 'Download $fileName',

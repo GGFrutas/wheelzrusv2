@@ -24,6 +24,8 @@ class _SettingPageState extends ConsumerState<SettingScreen>{
   @override
   Widget build(BuildContext context) {
     final isLightTheme = ref.watch(themeProvider);
+    final dataSaverProvider = StateProvider<bool>((ref) => true);
+
     return Scaffold(
       appBar: AppBar(
         iconTheme: const IconThemeData(color: mainColor),
@@ -130,13 +132,72 @@ class _SettingPageState extends ConsumerState<SettingScreen>{
               ],
             ),
           ),
+          // const SizedBox(height: 20),
+          //  _buildSectionHeader("Mode"),
+          // Padding(
+          //   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          //   child: Row(
+          //     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          //     children: [
+          //       Row(
+          //         children: [
+          //           const Icon(Icons.data_saver_off_outlined, color: mainColor),
+          //           const SizedBox(width:10),
+          //           Text(
+          //             "Data Saver",
+          //             style: AppTextStyles.body,
+          //           ),
+          //         ],
+          //       ),
+          //       SizedBox(
+          //         width: 55,
+          //         height: 30,
+          //         child: AnimatedToggleSwitch<bool>.dual(
+          //           current: ref.watch(dataSaverProvider),
+          //           first:false,
+          //           second:true,
+          //           spacing:1,
+          //           style: const ToggleStyle(
+                     
+          //             borderColor: Colors.transparent,
+          //             boxShadow: [
+          //               const BoxShadow(
+          //                 color:Colors.black26,
+          //                 spreadRadius: 1,
+          //                 blurRadius: 2,
+          //                 offset: Offset(0, 1.5),
+          //               ),
+          //             ],
+          //           ),
+          //           borderWidth: 4,
+          //           height: 50,
+          //           onChanged: (value) {
+          //             ref.read(dataSaverProvider.notifier).state = value;
+          //           },
+          //           styleBuilder:(b) => ToggleStyle(
+          //             indicatorColor: !b ? Colors.blue: mainColor,
+          //           ),
+          //           iconBuilder:(value) => value
+          //             ? const FittedBox(
+          //               fit: BoxFit.contain,
+          //               child: Icon(Icons.data_saver_on_outlined, color: Colors.white, size: 18),
+          //             )
+          //             : const FittedBox(
+          //               fit: BoxFit.contain,
+          //               child:Icon(Icons.data_saver_off_outlined,size: 18),
+          //             ),
+          //         ),
+          //       ),
+          //     ],
+          //   ),
+          // ),
         ],
       ),
       bottomNavigationBar: SizedBox(
         height:40,
         child: Center(
           child: Text(
-            'DA.17.00.5.004',
+            'DA.17.00.A.009',
             style: AppTextStyles.caption.copyWith(
               color: Colors.black87,
             ),

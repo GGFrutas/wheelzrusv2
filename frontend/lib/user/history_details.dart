@@ -206,6 +206,11 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
         ? widget.transaction?.backloadConsolidation?.name
         : 'N/A';
     final backloadedMessage = 'This booking has been backloaded: $backloadedName';
+    final transaction = widget.transaction;
+
+    final scheduleMap = getPickupAndDeliverySchedule(transaction);
+
+     final delivery = scheduleMap['delivery'];
 
 
 
@@ -312,7 +317,7 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
                               // Space between label and value
                               Text(
                                 (widget.transaction?.requestStatus == 'Completed' || widget.transaction?.stageId == 'Completed')
-                                  ? formatDateTime(widget.transaction?.completedTime)
+                                  ? formatDateTime(delivery?.actualDatetime)
                                   : widget.transaction?.stageId == 'Cancelled'
                                     ? formatDateTime(widget.transaction?.writeDate)
                                     : widget.transaction?.requestStatus == 'Backload' ? formatDateTime( widget.transaction?.backloadConsolidation?.consolidatedDatetime)

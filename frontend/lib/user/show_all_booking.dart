@@ -103,9 +103,8 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
    bool sameWeekRange(DateTime? target, DateTime weekStart) {
     // Get the start of the week for both dates
     if (target == null) return false; // Handle null target date
-    final weekEnd = weekStart.add(const Duration(days: 5));
-    return target.isAfter(weekStart.subtract(const Duration(days: 1))) &&
-        target.isBefore(weekEnd.add(const Duration(days: 1)));
+    final weekEnd = weekStart.add(const Duration(days: 6));
+    return !target.isBefore(weekStart) && !target.isAfter(weekEnd);
    }
 
 
@@ -185,7 +184,7 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
     final allTransaction = ref.watch(allTransactionFilteredProvider);
     final acceptedTransaction = ref.watch(accepted_transaction.acceptedTransactionProvider);
  
-print("Tab index: $_expandedTabIndex, isDelayed: $isDelayed, date: $date");
+    print("Tab index: $_expandedTabIndex, isDelayed: $isDelayed, date: $date");
     return Expanded(
       child: RefreshIndicator(
         onRefresh: _refreshTransaction,
@@ -253,14 +252,19 @@ print("Tab index: $_expandedTabIndex, isDelayed: $isDelayed, date: $date");
 
               // Safely parse the string to DateTime
               try{
-                final dateToCheck = tx.dispatchType == "ot"
-                ? DateTime.parse(tx.pickupDate)
-                : DateTime.parse(tx.deliveryDate); // Handle null dates
+                final rawDate = tx.dispatchType == "ot" ? tx.pickupDate : tx.deliveryDate;
+                if (rawDate.isEmpty) return false;
 
-                if(isDelayed) {
-                  return dateToCheck.isBefore(weekStartDates.first);
-                }else{
-                  return sameWeekRange(dateToCheck, date!);
+                // Parse and handle UTC safely
+                final parsedUtc = DateTime.parse(rawDate).toUtc();
+                final localDate = parsedUtc.toLocal();
+
+                print('pickupDate: ${tx.pickupDate}, deliveryDate: ${tx.deliveryDate}, localDate: $localDate');
+
+                if (isDelayed) {
+                  return localDate.isBefore(weekStartDates.first.toLocal());
+                } else {
+                  return sameWeekRange(localDate, date!);
                 }
               }catch(_) {
                 return false; // If parsing fails, exclude this transaction

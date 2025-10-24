@@ -3,6 +3,7 @@
 import 'dart:io';
 import 'dart:math';
 import 'package:carousel_slider/carousel_slider.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:frontend/models/transaction_model.dart';
 import 'package:frontend/notifiers/auth_notifier.dart';
 import 'package:frontend/notifiers/transaction_notifier.dart';
@@ -20,6 +21,7 @@ import 'package:frontend/provider/accepted_transaction.dart';
 import 'package:intl/intl.dart';
 // import 'package:latlong2/latlong.dart';
 import 'package:location/location.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:signature/signature.dart'; // Import signature package
 import 'package:path_provider/path_provider.dart';
@@ -422,6 +424,57 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
       ) 
     );
     
+  }
+
+  Widget _buildDownloadButton(String fileName, Uint8List bytes) {
+    return SizedBox(
+      child: Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: TextButton.icon(
+            onPressed: () async {
+              try {
+                if (Platform.isAndroid) {
+                  int sdk = (await DeviceInfoPlugin().androidInfo).version.sdkInt;
+
+                  if (sdk <= 29) {
+                    // ✅ Android 9 & 10
+                    await Permission.storage.request();
+                  } else {
+                    // ✅ Android 11+
+                    if (await Permission.manageExternalStorage.isDenied) {
+                      await Permission.manageExternalStorage.request();
+                    }
+                  }
+                }
+
+                Directory dir = Platform.isAndroid
+                    ? Directory('/storage/emulated/0/Download')
+                    : await getApplicationDocumentsDirectory();
+
+                if (!await dir.exists()) {
+                  dir = await getExternalStorageDirectory() ?? dir;
+                }
+
+            final file = File('${dir.path}/$fileName');
+            await file.writeAsBytes(bytes);
+
+            print('✅ File saved: ${file.path}');
+          } catch (e) {
+            print('❌ Save failed: $e');
+          }
+                },
+            icon: const Icon(Icons.download),
+            label:Text(
+              'Download $fileName',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              softWrap: false, // ✅ Force no wrapping!
+              style: AppTextStyles.caption,
+            )
+          ),
+        )
+     
+    );
   }
 
  
