@@ -10,7 +10,7 @@ final authServiceProvider = Provider<AuthService>((ref) => AuthService());
 class AuthService {
   final _dio = Dio(
     BaseOptions(
-      baseUrl: 'https://yxe-driverapp-beta.gothong.com/api',
+      baseUrl: '192.168.76.205:8080/api',
       headers: {
         'Accept': 'application/json',
       },
