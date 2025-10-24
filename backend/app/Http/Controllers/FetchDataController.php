@@ -19,10 +19,10 @@ use Carbon\Carbon;
 
 class FetchDataController extends Controller
 {
-    protected $url = "http://gsq-ibx-rda:8068";
-    protected $db = 'rda_beta_new';
-    // protected $odoo_url = "http://192.168.118.102:8000/odoo/jsonrpc";
-    protected $odoo_url = "http://gsq-ibx-rda:8068/jsonrpc";
+    protected $url = "https://jralejandria-alpha-dev-yxe.odoo.com";
+    protected $db = 'jralejandria-alpha-dev-yxe-production-alpha-24065126';
+    // protected $odoo_url = "http://192.168.76.205:8080/odoo/jsonrpc";
+    protected $odoo_url = "https://jralejandria-alpha-dev-yxe.odoo.com/jsonrpc";
 
     private function authenticateDriver(Request $request)
     {
