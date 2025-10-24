@@ -1047,16 +1047,19 @@ final delivery = scheduleMap['delivery'];
         signBase64 = widget.transaction?.dlSign;
         proofBase64 = widget.transaction?.dlProof;
         filename = widget.transaction?.dlProofFilename;
+        addFile(shipperConsigneeFiles, widget.transaction?.dlProof, widget.transaction?.dlProofFilename);
       } else if (widget.transaction?.requestNumber == widget.transaction?.peRequestNumber) {
         signBase64 = widget.transaction?.peSign;
         proofBase64 = widget.transaction?.peProof;
         filename = widget.transaction?.peProofFilename;
+        addFile(shipperConsigneeFiles, widget.transaction?.peProof, widget.transaction?.peProofFilename); 
       }
     } else {
       if (widget.transaction?.requestNumber == widget.transaction?.deRequestNumber) {
         signBase64 = widget.transaction?.deSign;
         proofBase64 = widget.transaction?.deProof;
         filename = widget.transaction?.deProofFilename;
+        addFile(shipperConsigneeFiles, widget.transaction?.deProof, widget.transaction?.deProofFilename);
       } else if (widget.transaction?.requestNumber == widget.transaction?.plRequestNumber) {
         signBase64 = widget.transaction?.plSign;
         proofBase64 = widget.transaction?.plProof;
@@ -1116,81 +1119,82 @@ final delivery = scheduleMap['delivery'];
         child: Padding(
         padding: const EdgeInsets.only(bottom: 8),
         child: TextButton.icon(
-              onPressed: () async {
-                try {
-                  if (Platform.isAndroid) {
-                    int sdk = (await DeviceInfoPlugin().androidInfo).version.sdkInt;
+              onPressed: null,
+              // () async {
+            //     try {
+            //       if (Platform.isAndroid) {
+            //         int sdk = (await DeviceInfoPlugin().androidInfo).version.sdkInt;
 
-                    if (sdk <= 29) {
-                      // ✅ Android 9 & 10
-                      await Permission.storage.request();
-                    } else {
-                      // ✅ Android 11+
-                      if (await Permission.manageExternalStorage.isDenied) {
-                        await Permission.manageExternalStorage.request();
-                      }
-                    }
-                  }
+            //         if (sdk <= 29) {
+            //           // ✅ Android 9 & 10
+            //           await Permission.storage.request();
+            //         } else {
+            //           // ✅ Android 11+
+            //           if (await Permission.manageExternalStorage.isDenied) {
+            //             await Permission.manageExternalStorage.request();
+            //           }
+            //         }
+            //       }
 
-                  Directory dir = Platform.isAndroid
-                      ? Directory('/storage/emulated/0/Download')
-                      : await getApplicationDocumentsDirectory();
+            //       Directory dir = Platform.isAndroid
+            //           ? Directory('/storage/emulated/0/Download')
+            //           : await getApplicationDocumentsDirectory();
 
-                  if (!await dir.exists()) {
-                    dir = await getExternalStorageDirectory() ?? dir;
-                  }
+            //       if (!await dir.exists()) {
+            //         dir = await getExternalStorageDirectory() ?? dir;
+            //       }
 
-              final file = File('${dir.path}/$fileName');
-              await file.writeAsBytes(bytes);
+            //   final file = File('${dir.path}/$fileName');
+            //   await file.writeAsBytes(bytes);
 
-              if(context.mounted){
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      '✅ Downloaded: $fileName',
-                      style: AppTextStyles.caption.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    duration: const Duration(seconds: 2),
-                    behavior: SnackBarBehavior.floating, // ✅ Makes it float with margin
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    shape: RoundedRectangleBorder( // ✅ Rounded corners
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    backgroundColor: mainColor, // ✅ Soft black, not pure #000
-                    elevation: 6, // ✅ Soft shadow for depth
-                  ),
-                );
-              }
+            //   if(context.mounted){
+            //     ScaffoldMessenger.of(context).showSnackBar(
+            //       SnackBar(
+            //         content: Text(
+            //           '✅ Downloaded: $fileName',
+            //           style: AppTextStyles.caption.copyWith(
+            //             color: Colors.white,
+            //             fontWeight: FontWeight.w500,
+            //           ),
+            //         ),
+            //         duration: const Duration(seconds: 2),
+            //         behavior: SnackBarBehavior.floating, // ✅ Makes it float with margin
+            //         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            //         shape: RoundedRectangleBorder( // ✅ Rounded corners
+            //           borderRadius: BorderRadius.circular(12),
+            //         ),
+            //         backgroundColor: mainColor, // ✅ Soft black, not pure #000
+            //         elevation: 6, // ✅ Soft shadow for depth
+            //       ),
+            //     );
+            //   }
 
-              print('✅ File saved: ${file.path}');
-            } catch (e) {
-              print('❌ Save failed: $e');
-              if(context.mounted){
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      '❌ Download failed: $fileName',
-                      style: AppTextStyles.caption.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    duration: const Duration(seconds: 2),
-                    behavior: SnackBarBehavior.floating, // ✅ Makes it float with margin
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    shape: RoundedRectangleBorder( // ✅ Rounded corners
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    backgroundColor: Colors.red, // ✅ Soft black, not pure #000
-                    elevation: 6, // ✅ Soft shadow for depth
-                  ),
-                );
-              }
-            }
-                  },
+            //   print('✅ File saved: ${file.path}');
+            // } catch (e) {
+            //   print('❌ Save failed: $e');
+            //   if(context.mounted){
+            //     ScaffoldMessenger.of(context).showSnackBar(
+            //       SnackBar(
+            //         content: Text(
+            //           '❌ Download failed: $fileName',
+            //           style: AppTextStyles.caption.copyWith(
+            //             color: Colors.white,
+            //             fontWeight: FontWeight.w500,
+            //           ),
+            //         ),
+            //         duration: const Duration(seconds: 2),
+            //         behavior: SnackBarBehavior.floating, // ✅ Makes it float with margin
+            //         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            //         shape: RoundedRectangleBorder( // ✅ Rounded corners
+            //           borderRadius: BorderRadius.circular(12),
+            //         ),
+            //         backgroundColor: Colors.red, // ✅ Soft black, not pure #000
+            //         elevation: 6, // ✅ Soft shadow for depth
+            //       ),
+            //     );
+            //   }
+            // }
+                  // },
               icon: const Icon(Icons.download),
               label:Text(
                 'Download $fileName',

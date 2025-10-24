@@ -325,13 +325,13 @@ List<String> getUploadLimit(){
                         limit[index],
                         style:  AppTextStyles.caption,
                       ),
-                      const SizedBox(height: 8),
+                      // const SizedBox(height: 5),
                       Expanded(
                         child: SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
                           child: Row(
                             children: [
-                              const SizedBox(width: 10),
+                              // const SizedBox(width:),
                               ..._imageLists[index].map((upload) {
                                 return Padding(
                                   padding: const EdgeInsets.only(right: 10),

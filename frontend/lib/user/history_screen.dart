@@ -367,9 +367,9 @@ void initState() {
                         String getDisplayDate(Transaction item, MilestoneHistoryModel? delivery) {
                           try {
                             if (item.stageId == 'Cancelled') {
-                              return separateDateTime(item.writeDate)?['date'] ?? '—';
+                              return separateDateTime(item.writeDate)['date'] ?? '—';
                             } else if (item.requestStatus == 'Completed') {
-                              return separateDateTime(delivery?.actualDatetime)['date'] ?? '—';
+                              return separateDateTime(item.completedTime)['date'] ?? '—';
                             } else if (item.requestStatus == 'Backload') {
                               return item.backloadConsolidation?.formattedConsolidatedDate ?? '—';
                             }
@@ -518,7 +518,7 @@ void initState() {
                                               item.stageId == 'Cancelled'
                                                 ? separateDateTime(item.writeDate)['time'] ?? '—'
                                                 : item.requestStatus == 'Completed'
-                                                  ? separateDateTime(delivery?.actualDatetime)['time'] ?? '—'
+                                                  ? separateDateTime(item.completedTime)['time'] ?? '—'
                                                  : item.requestStatus == 'Backload'
                                                     ? separateDateTime(item.backloadConsolidation?.consolidatedDatetime)['time'] ?? '—'
 
