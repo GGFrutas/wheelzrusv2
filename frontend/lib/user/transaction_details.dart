@@ -1,6 +1,7 @@
 // ignore_for_file: avoid_print, unused_import
 
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -34,6 +35,13 @@ import 'package:http/http.dart' as ref;
 import 'package:latlong2/latlong.dart';
 import 'package:location/location.dart';
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart'; // For getApplicationDocumentsDirectory / getExternalStorageDirectory
+import 'package:permission_handler/permission_handler.dart' as perm;
+import 'package:permission_handler/permission_handler.dart' as locperm;
+import 'package:permission_handler/permission_handler.dart';
+import 'package:signature/signature.dart';
+import 'package:device_info_plus/device_info_plus.dart';
+
 
 
 
@@ -67,7 +75,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
  
   Location location = Location();
   // bool _isMapReady = false;
-  PermissionStatus? _permissionGranted;
+  locperm.PermissionStatus? _permissionGranted;
   bool _serviceEnabled = false;
   // LocationData? _locationData;
   static const gmaps.LatLng _pointA = gmaps.LatLng(10.300233284867856, 123.91189477293283);
@@ -179,7 +187,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
             fclCode: '',
             scheduledDatetime: '',
             actualDatetime: '',
-            serviceType: '',
+            serviceType: '', isBackload: '',
            
           ),
         );
@@ -199,7 +207,7 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
             fclCode: '',
             scheduledDatetime: '',
             actualDatetime: '',
-            serviceType: '',
+            serviceType: '', isBackload: '',
             
           ),
         );
@@ -232,16 +240,18 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
       if (!_serviceEnabled) return;
     }
 
-    _permissionGranted = await location.hasPermission();
-    if (_permissionGranted == PermissionStatus.denied) {
-      _permissionGranted = await location.requestPermission();
-      if (_permissionGranted != PermissionStatus.granted) return;
+    _permissionGranted = (await location.hasPermission()) as perm.PermissionStatus?;
+    if (_permissionGranted == locperm.PermissionStatus.denied) {
+      _permissionGranted = (await location.requestPermission()) as perm.PermissionStatus?;
+      if (_permissionGranted != locperm.PermissionStatus.granted) return;
     }
 
     // _locationData = await location.getLocation();
 
     
   }
+
+
 
   String getNullableValue(String? value, {String fallback = ''}) {
     return value ?? fallback;
@@ -259,9 +269,15 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
     }
   } 
 
+  
+
 
   @override
   Widget build(BuildContext context) {
+   final bookingNumber = widget.transaction?.bookingRefNumber?.trim();
+ 
+   
+   
     // If transaction is null, display a fallback message
       final scheduleMap = getPickupAndDeliverySchedule(widget.transaction!);
 final pickup = scheduleMap['pickup'];
@@ -269,7 +285,15 @@ final delivery = scheduleMap['delivery'];
     final showTabs = widget.transaction?.requestStatus == "Ongoing";
     return Consumer(
       builder: (context, ref, child) {
-        
+         final allTransactions = ref.watch(transactionListProvider);
+
+  final relatedFF = allTransactions.cast<Transaction?>().firstWhere(
+    (tx) =>
+      tx?.bookingRefNumber?.trim() == bookingNumber &&
+      tx?.dispatchType?.toLowerCase().trim() == 'ff',
+    orElse: () => null,
+  );
+
         if (widget.transaction == null) {
           return Scaffold(
             appBar: AppBar(
@@ -451,6 +475,119 @@ final delivery = scheduleMap['delivery'];
                     ],
                   ),
                 ),
+
+                Container(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center, // Align top of icon and text
+                    children: [
+                      const Icon(
+                        Icons.check_circle,
+                        color: mainColor,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8), // Space between icon and text
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Space between label and value
+                          
+                          Text(
+                            "Freight Booking Number",
+                            style: AppTextStyles.caption.copyWith(
+                              fontSize: 12,
+                              color: mainColor,
+                            ),
+                          ),
+                          Text(
+                            (widget.transaction?.freightBookingNumber?.isNotEmpty ?? false)
+                              ? widget.transaction!.freightBookingNumber! : '—',
+                            style: AppTextStyles.subtitle.copyWith(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: mainColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center, // Align top of icon and text
+                    children: [
+                      const Icon(
+                        Icons.check_circle,
+                        color: mainColor,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8), // Space between icon and text
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Space between label and value
+                          
+                          Text(
+                            "Freight BL Number",
+                            style: AppTextStyles.caption.copyWith(
+                              fontSize: 12,
+                              color: mainColor,
+                            ),
+                          ),
+                          Text(
+                            (widget.transaction?.freightBlNumber?.isNotEmpty ?? false)
+                              ? widget.transaction!.freightBlNumber! : '—',
+                            style: AppTextStyles.subtitle.copyWith(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: mainColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center, // Align top of icon and text
+                    children: [
+                      const Icon(
+                        Icons.check_circle,
+                        color: mainColor,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8), // Space between icon and text
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Space between label and value
+                          
+                          Text(
+                            "Container Number",
+                            style: AppTextStyles.caption.copyWith(
+                              fontSize: 12,
+                              color: mainColor,
+                            ),
+                          ),
+                          Text(
+                            (widget.transaction?.containerNumber?.isNotEmpty ?? false)
+                              ? widget.transaction!.containerNumber! : '—',
+                            style: AppTextStyles.subtitle.copyWith(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: mainColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
                 Column( // Use a Column to arrange the widgets vertically
                   crossAxisAlignment: CrossAxisAlignment.center, // Align text to the left
                   children: [
@@ -558,7 +695,8 @@ final delivery = scheduleMap['delivery'];
               size: 24,
             ),
             const SizedBox(width: 8),
-            Column(
+            Expanded(
+              child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
@@ -576,6 +714,8 @@ final delivery = scheduleMap['delivery'];
                 ),
               ],
             ),
+            )
+            
           ],
         ),
       ),
@@ -593,7 +733,8 @@ final delivery = scheduleMap['delivery'];
               size: 24,
             ),
             const SizedBox(width: 8),
-            Column(
+            Expanded(
+              child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
@@ -611,6 +752,8 @@ final delivery = scheduleMap['delivery'];
                 ),
               ],
             ),
+            )
+            
           ],
         ),
       ),
@@ -630,7 +773,8 @@ final delivery = scheduleMap['delivery'];
                             size: 24,
                           ),
                           const SizedBox(width: 8), // Space between icon and text
-                          Column(
+                          Expanded(
+                            child:Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               // Space between label and value
@@ -651,6 +795,8 @@ final delivery = scheduleMap['delivery'];
                               ),
                             ],
                           ),
+                          )
+                          
                         ],
                       ),
                     ),
@@ -716,148 +862,18 @@ final delivery = scheduleMap['delivery'];
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => ConfirmationScreen(uid: widget.uid, transaction: widget.transaction),
+                              builder: (context) => ConfirmationScreen(uid: widget.uid, transaction: widget.transaction, relatedFF:relatedFF ,),
                             ),
                           );
                         }else {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => DetailedDetailScreen(uid: widget.uid, transaction: widget.transaction),
+                              builder: (context) => DetailedDetailScreen(uid: widget.uid, transaction: widget.transaction, relatedFF: relatedFF),
                             ),
                           );
                         }
-                          
-                          
-                          // print("SUCCESS");
-                        // } else {
                         
-                        //   final acceptedTransactionNotifier = ref.read(accepted_transaction.acceptedTransactionProvider.notifier);
-
-                        //     final isAccepted = acceptedTransactionNotifier.isAccepted(
-                        //       widget.transaction!.id, 
-                        //       widget.transaction!.requestNumber.toString(),
-                        //     );
-
-                        //     // If not accepted, update the status and add it to accepted transactions
-                        //   if (isAccepted) {
-                        //       _loadingStates[widget.transaction!.requestNumber.toString()] = false;
-                        //     return;
-                        //   }
-
-                        //   final success = await acceptedTransactionNotifier.updateStatus(
-                        //     widget.transaction!.id.toString(),
-                        //     widget.transaction!.requestNumber.toString(),
-                        //     'Accepted', // Update status to 'Accepted'
-                        //     ref,
-                        //     context,
-                        //   );
-
-                        //   final updatedState = ref.read(transaction_list.acceptedTransactionProvider);
-
-                        //   // final updatedTransaction = updatedState.firstWhere(
-                        //   //   (transaction) => transaction.id == transaction.id,
-                        //   //   orElse: () => widget.transaction!, // Return the original if not found
-                        //   // );
-                        //   final updatedTransaction = updatedState.firstWhere(
-                        //     (t) =>
-                        //         t.id == widget.transaction!.id &&
-                        //         t.requestNumber == widget.transaction!.requestNumber,
-                        //     orElse: () => widget.transaction!, // fallback if not founds
-                        //   );
-                        
-                        
-                        //   print('✅ Update Status: ${updatedTransaction.requestStatus}'); // Should now be 'Accepted'
-
-                        //   if (success) {
-                        //     acceptedTransactionNotifier.addProduct(updatedTransaction); //Add to accepted 
-                        //     showDialog(
-                        //       context:context,
-                        //       barrierDismissible: false,
-                        //       builder: (context) {
-                        //         return const Center (
-                        //           child: CircularProgressIndicator(),
-                        //         );
-                        //       },
-                        //     );
-
-                        //     await Future.delayed(const Duration(seconds: 2));
-                        //     Navigator.of(context).pop(); // Close the loading dialog
-
-                        //     showDialog(
-                        //       context: context,
-                        //       barrierDismissible: false,
-                        //       builder: (_) => PopScope(
-                        //       canPop: false, // Prevent default pop behavior
-                        //       onPopInvoked: (didPop) {
-                        //         if (!didPop) {
-                        //           ref.invalidate(pendingTransactionProvider);
-                        //           ref.invalidate(acceptedTransactionProvider);
-                        //           ref.invalidate(bookingProvider);
-                        //           ref.invalidate(filteredItemsProvider);
-                        //           ref.read(navigationNotifierProvider.notifier).setSelectedIndex(0);
-                        //           // Navigate to home if system back button is pressed
-                        //           Navigator.of(context).popUntil((route) => route.isFirst);
-                        //         }
-                        //       },
-                        //       child: Dialog(
-                        //         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                        //         backgroundColor: Colors.white,
-                        //         child: Padding(
-                        //           padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
-                        //           child: Column(
-                        //             mainAxisSize: MainAxisSize.min,
-                        //             children: [
-                        //               Text(
-                        //                 'Booking has been accepted',
-                        //                 style: AppTextStyles.body.copyWith(
-                        //                   color: Colors.black87
-                        //                 ),
-                        //                 textAlign: TextAlign.center,
-                        //               ),
-                        //               const SizedBox(height: 16),
-                        //               const Icon (
-                        //                 Icons.check_circle,
-                        //                 color: mainColor,
-                        //                 size: 100
-                        //               ),
-                        //               const SizedBox(height: 24),
-                        //               SizedBox(
-                        //                 width: 200,
-                        //                 child:ElevatedButton(
-                        //                   onPressed: () {
-                        //                     Navigator.pop(context);
-                        //                     // Navigator.of(context).popUntil((route) => route.isFirst);
-                        //                     ref.invalidate(pendingTransactionProvider);
-                        //                     ref.invalidate(acceptedTransactionProvider);
-                        //                     ref.invalidate(bookingProvider);
-                        //                     ref.invalidate(filteredItemsProvider);
-                        //                     Navigator.push(
-                        //                       context,
-                        //                       MaterialPageRoute(
-                        //                         builder: (context) => DetailedDetailScreen(uid: widget.uid, transaction: updatedTransaction),
-                        //                       ),
-                        //                     );
-                        //                   },
-                        //                   style: ElevatedButton.styleFrom(
-                        //                     backgroundColor: mainColor,
-                        //                     padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                        //                     shape: RoundedRectangleBorder(
-                        //                       borderRadius: BorderRadius.circular(25),
-                        //                     ),
-                        //                   ),
-                        //                   child: Text("Continue", style: AppTextStyles.body.copyWith(color: Colors.white)),
-                        //                 ),
-                        //               )
-                                      
-                        //             ],
-                        //           ),
-                        //         ),
-                        //       ),
-                        //       ),
-                        //     );
-                        //   }
-                        // }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: mainColor,
@@ -872,10 +888,7 @@ final delivery = scheduleMap['delivery'];
                         ),
                       ),
                       child: Text(
-                        // widget.transaction?.requestStatus != 'Pending'
-                        // // widget.transaction?.requestStatus == 'Accepted' || widget.transaction?.requestStatus == 'Ongoing'
-                        //               ? 'View Booking' // New label for accepted transactions
-                        //               : 'Accept Booking', 
+                        
                         'View Booking',
                         style: AppTextStyles.body.copyWith(
                           color: Colors.white,
@@ -887,33 +900,7 @@ final delivery = scheduleMap['delivery'];
                       ),
                     ),
                   ),
-                    // const SizedBox(height: 10), // Add some space between buttons
-                    // if(widget.transaction?.requestStatus == "Pending" )
-                    // SizedBox(
-                    //   width: double.infinity, // Make the button full width
-                    //   child: OutlinedButton(
-                    //     onPressed: () {
-                    //       _showModal(context,ref);
-                    //     },
-                    //     style: ElevatedButton.styleFrom(
-                    //       backgroundColor: Colors.transparent,
-                    //       padding: const EdgeInsets.symmetric(horizontal: 80, vertical: 20),
-                    //       shape: RoundedRectangleBorder(
-                    //         borderRadius: BorderRadius.circular(30.0),
-                    //       ),
-                    //     ),
-                    //     child: Text(
-                    //       'Decline Booking',
-                    //       style: AppTextStyles.body.copyWith(
-                          
-                    //         fontWeight: FontWeight.bold,
-                    //       ),
-                    //       textAlign: TextAlign.center, // Ensure the text is centered
-                    //       overflow: TextOverflow.ellipsis, // Handle overflow if needed
-                    //       maxLines: 1,
-                    //     ),
-                    //   ),
-                    // ),
+                   
                     
                     
                   ],
@@ -925,7 +912,7 @@ final delivery = scheduleMap['delivery'];
             ],
           )
           
-          // bottomNavigationBar: const NavigationMenu(), // Show navigation menu only if it's the home screen
+        
 
         );
       },
@@ -935,6 +922,8 @@ final delivery = scheduleMap['delivery'];
   Widget _buildFreightTab (){
 
     final isDT = widget.transaction?.dispatchType == 'dt';
+
+      
    
 
     Uint8List? decodeBase64(String? data) {
@@ -950,23 +939,31 @@ final delivery = scheduleMap['delivery'];
 
     String? signBase64;
     String? proofBase64;
+    String? filename;
+
+    print('Request Number:${widget.transaction?.requestNumber}' );
     
 
     if (isDT) {
       if (widget.transaction?.requestNumber == widget.transaction?.dlRequestNumber) {
         signBase64 = widget.transaction?.plSign;
         proofBase64 = widget.transaction?.plProof;
+        filename = widget.transaction?.plProofFilename;
       } else if (widget.transaction?.requestNumber == widget.transaction?.peRequestNumber) {
         signBase64 = widget.transaction?.deSign;
         proofBase64 = widget.transaction?.deProof;
+        filename = widget.transaction?.deProofFilename;
       }
     } else {
       if (widget.transaction?.requestNumber == widget.transaction?.deRequestNumber) {
         signBase64 = widget.transaction?.peSign;
         proofBase64 = widget.transaction?.peProof;
+        filename = widget.transaction?.peProofFilename;
       } else if (widget.transaction?.requestNumber == widget.transaction?.plRequestNumber) {
         signBase64 = widget.transaction?.dlSign;
         proofBase64 = widget.transaction?.dlProof;
+        filename = widget.transaction?.dlProofFilename;
+       
       }
     }
 
@@ -984,18 +981,8 @@ final delivery = scheduleMap['delivery'];
           )
         ),
         const SizedBox(height: 10),
-        if(proofBytes != null)
-          GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => FullScreenImage(imageBytes: proofBytes),
-                ),
-              );
-            },
-            child: Image.memory(proofBytes, height: 100),
-          ),
+        if (proofBytes != null)
+        _buildDownloadButton("POD", proofBytes),
 
         const SizedBox(height: 10),
 
@@ -1032,25 +1019,53 @@ final delivery = scheduleMap['delivery'];
       }
     }
 
+     List<Map<String, dynamic>> shipperConsigneeFiles = [];
+    
+    void addFile(List<Map<String, dynamic>> targetList, String? base64, String? filename) {
+      if (base64 != null && base64.trim().isNotEmpty) {
+        final decoded = decodeBase64(base64);
+        if (decoded != null) {
+          final safeName = (filename == null || filename.trim().isEmpty)
+              ? 'file_${targetList.length + 1}.png'
+              : filename;
+          targetList.add({
+            "bytes": decoded,
+            "filename": safeName,
+          });
+        }
+      }
+    }
+
+
     String? signBase64;
     String? proofBase64;
+    String? filename;
     
 
     if (isDT) {
       if (widget.transaction?.requestNumber == widget.transaction?.dlRequestNumber) {
         signBase64 = widget.transaction?.dlSign;
         proofBase64 = widget.transaction?.dlProof;
+        filename = widget.transaction?.dlProofFilename;
+        addFile(shipperConsigneeFiles, widget.transaction?.dlProof, widget.transaction?.dlProofFilename);
       } else if (widget.transaction?.requestNumber == widget.transaction?.peRequestNumber) {
         signBase64 = widget.transaction?.peSign;
         proofBase64 = widget.transaction?.peProof;
+        filename = widget.transaction?.peProofFilename;
+        addFile(shipperConsigneeFiles, widget.transaction?.peProof, widget.transaction?.peProofFilename); 
       }
     } else {
       if (widget.transaction?.requestNumber == widget.transaction?.deRequestNumber) {
         signBase64 = widget.transaction?.deSign;
         proofBase64 = widget.transaction?.deProof;
+        filename = widget.transaction?.deProofFilename;
+        addFile(shipperConsigneeFiles, widget.transaction?.deProof, widget.transaction?.deProofFilename);
       } else if (widget.transaction?.requestNumber == widget.transaction?.plRequestNumber) {
         signBase64 = widget.transaction?.plSign;
         proofBase64 = widget.transaction?.plProof;
+        filename = widget.transaction?.dlProofFilename;
+        addFile(shipperConsigneeFiles, widget.transaction?.plProof, widget.transaction?.plProofFilename); // shipper has plProof
+        addFile(shipperConsigneeFiles, widget.transaction?.proofStock, widget.transaction?.proofStockFilename); // shipper has stock transfer
       }
     }
 
@@ -1067,19 +1082,18 @@ final delivery = scheduleMap['delivery'];
           )
         ),
          const SizedBox(height: 10),
-        if(proofBytes != null)
-          GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => FullScreenImage(imageBytes: proofBytes),
-                ),
-              );
-            },
-            child: Image.memory(proofBytes, height: 100),
-          ),
-
+         if (shipperConsigneeFiles.isNotEmpty)
+        Wrap(
+          alignment: WrapAlignment.start,
+          spacing: 8, // horizontal gap
+          runSpacing: 8, // vertical gap
+          children: shipperConsigneeFiles.map((file) {
+            return _buildDownloadButton(
+              file["filename"] as String,
+              file["bytes"] as Uint8List,
+            );
+          }).toList(),
+        ),
         const SizedBox(height: 10),
 
         if(signBytes != null)
@@ -1100,331 +1114,107 @@ final delivery = scheduleMap['delivery'];
     );
   }
 
+   Widget _buildDownloadButton(String fileName, Uint8List bytes) {
+      return SizedBox(
+        child: Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: TextButton.icon(
+              onPressed: null,
+              // () async {
+            //     try {
+            //       if (Platform.isAndroid) {
+            //         int sdk = (await DeviceInfoPlugin().androidInfo).version.sdkInt;
 
-  // void _showModal(BuildContext context, WidgetRef ref) {
-  //   TextEditingController controller = TextEditingController();
-  //   final rootContext = context;
-  //   showDialog(
-  //     context: rootContext,
-  //     barrierDismissible: false,
-  //     builder: (BuildContext context) {
-  //       return Dialog(
-  //         insetPadding: const EdgeInsets.all(20.0),
-  //         child: LayoutBuilder(
-  //           builder:(context, constraints) {
-  //             return Stack (
-  //               children: [
-  //                 SingleChildScrollView(
-  //                   padding: EdgeInsets.only(
-  //                     bottom: MediaQuery.of(context).viewInsets.bottom, // Add padding for keyboard
-  //                     top: 20.0, // Add top padding for better appearance
-  //                     left: 20.0,
-  //                     right: 20.0,
-  //                   ),
-  //                   child: Column(
-  //                     mainAxisSize: MainAxisSize.min, // Use min size to fit content
-  //                     children: [
-  //                       Column(
-  //                         mainAxisAlignment: MainAxisAlignment.center,
-  //                         mainAxisSize: MainAxisSize.min,
-  //                         children: [
-  //                           Text('REJECT BOOKING', style: AppTextStyles.subtitle.copyWith(color: mainColor), textAlign: TextAlign.center),
-  //                           const SizedBox(height: 8),
-  //                           const Icon(Icons.sentiment_dissatisfied, color: mainColor, size: 75), // Cancel icon
-  //                         ],
-  //                       ),
-  //                       Column(
-  //                       mainAxisSize: MainAxisSize.min,
-  //                       children: <Widget>[
-  //                         Text('Please let us know your reason for cancelling or rejecting this booking to help us improve our services.',
-  //                         style: AppTextStyles.caption.copyWith(color: Colors.black, fontWeight: FontWeight.bold),
-  //                           textAlign: TextAlign.center,
-  //                         ),
-  //                         const SizedBox(height: 16),
-  //                         Consumer(
-  //                           builder: (context, ref, child) {
-  //                             final rejectionReasonsAsync = ref.watch(rejectionReasonsProvider);
-  //                             final selectedValue = ref.watch(selectedReasonsProvider);
-  //                             return rejectionReasonsAsync.when(
-  //                               data: (reasons) {
-  //                                 return Container(
-  //                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-  //                                   decoration: BoxDecoration(
-  //                                     border: Border.all(color: Colors.grey, width: 1),
-  //                                     borderRadius: BorderRadius.circular(5),
-  //                                   ),
-  //                                   child: DropdownButton<String>(
-  //                                     isExpanded: true,
-  //                                     value: selectedValue,
-  //                                     hint: Text('Select Reason', style: AppTextStyles.body),
-  //                                     underline: const SizedBox(), // Remove the underline
-  //                                     onChanged: (String? newValue) {
-  //                                       ref.read(selectedReasonsProvider.notifier).state = newValue;
-  //                                     },
-  //                                     items: reasons.map<DropdownMenuItem<String>>((RejectionReason reason) {
-  //                                       return DropdownMenuItem<String>(
-  //                                         value: reason.id.toString(), // Using the 'id' from the model
-  //                                         child: Text(reason.name, style: AppTextStyles.body), // Using the 'name' from the model
-  //                                       );
-  //                                     }).toList(),
-  //                                   ),
-  //                                 );
-                                  
-  //                               },
-  //                                 loading: () => const CircularProgressIndicator(),
-  //                               error: (e, stackTrace) => Text('Error: $e'),
-  //                             );
-  //                           },
-  //                         ),
+            //         if (sdk <= 29) {
+            //           // ✅ Android 9 & 10
+            //           await Permission.storage.request();
+            //         } else {
+            //           // ✅ Android 11+
+            //           if (await Permission.manageExternalStorage.isDenied) {
+            //             await Permission.manageExternalStorage.request();
+            //           }
+            //         }
+            //       }
 
-  //                         const SizedBox(height: 10),
-                          
+            //       Directory dir = Platform.isAndroid
+            //           ? Directory('/storage/emulated/0/Download')
+            //           : await getApplicationDocumentsDirectory();
 
-  //                         // Text Area for feedback s
-  //                         TextField(
-  //                           controller: controller,
-  //                           maxLines: 3,  // Multi-line text area
-  //                           decoration: InputDecoration(
-  //                             border: const OutlineInputBorder(),
-  //                             hintText: 'Your feedback...',
-  //                             hintStyle: AppTextStyles.body, // Use caption style for hint text
-  //                           ),
-  //                         ),
-  //                         const SizedBox(height: 10),
-  //                         SizedBox(
-  //                           width: double.infinity,
-  //                           child: ElevatedButton(
-  //                             onPressed: () async {
-  //                               final uid = ref.read(authNotifierProvider).uid;
-  //                               final transactionId = widget.transaction!;
-  //                               final baseUrl = ref.watch(baseUrlProvider);
-  //                               // Handle Reject Action here (using _selectedValue and controller.text)
-  //                               final selectedReason = ref.read(selectedReasonsProvider);
-  //                               final feedback = controller.text;
+            //       if (!await dir.exists()) {
+            //         dir = await getExternalStorageDirectory() ?? dir;
+            //       }
 
-  //                               if(selectedReason == null || selectedReason.isEmpty){
-  //                                 showDialog(
-  //                                   context: context,
-  //                                   builder: (context) {
-  //                                     return AlertDialog(
-  //                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-  //                                       title: Text (
-  //                                         "No Reason Selected!",
-  //                                         style: AppTextStyles.body.copyWith(color: Colors.red, fontWeight: FontWeight.bold),
-  //                                         textAlign: TextAlign.center,
-  //                                       ),
-  //                                       content: Text (
-  //                                         'Please select a reason before rejecting.',
-  //                                         style: AppTextStyles.body,
-  //                                         textAlign: TextAlign.center,
-  //                                       ),
-  //                                       actions: [
-  //                                         Padding(
-  //                                           padding: const EdgeInsets.only(bottom: 12.0),
-  //                                           child: Center(
-  //                                             child: SizedBox(
-  //                                               width: 200,
-  //                                               child: ElevatedButton(
-  //                                               onPressed: () {
-  //                                                 Navigator.of(context).pop();
-  //                                               }, 
-  //                                               style: ElevatedButton.styleFrom(
-  //                                                 backgroundColor: Colors.red,
-  //                                                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-  //                                                 shape: RoundedRectangleBorder(
-  //                                                   borderRadius: BorderRadius.circular(25),
-  //                                                 ),
-  //                                               ),
-  //                                               child: Text(
-  //                                                 "OK",
-  //                                                 style: AppTextStyles.body.copyWith(
-  //                                                   color: Colors.white,
-  //                                                 )
-  //                                               )
-  //                                             ),
-  //                                             )
-  //                                           )
-  //                                         )
-  //                                       ],
-  //                                     );
-  //                                   }
-  //                                 );
-  //                                 return;
-  //                               }
+            //   final file = File('${dir.path}/$fileName');
+            //   await file.writeAsBytes(bytes);
 
-  //                               //Clear selection//
-  //                               ref.read(selectedReasonsProvider.notifier).state = null;
-  //                               controller.clear();
+            //   if(context.mounted){
+            //     ScaffoldMessenger.of(context).showSnackBar(
+            //       SnackBar(
+            //         content: Text(
+            //           '✅ Downloaded: $fileName',
+            //           style: AppTextStyles.caption.copyWith(
+            //             color: Colors.white,
+            //             fontWeight: FontWeight.w500,
+            //           ),
+            //         ),
+            //         duration: const Duration(seconds: 2),
+            //         behavior: SnackBarBehavior.floating, // ✅ Makes it float with margin
+            //         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            //         shape: RoundedRectangleBorder( // ✅ Rounded corners
+            //           borderRadius: BorderRadius.circular(12),
+            //         ),
+            //         backgroundColor: mainColor, // ✅ Soft black, not pure #000
+            //         elevation: 6, // ✅ Soft shadow for depth
+            //       ),
+            //     );
+            //   }
 
-  //                               print('🟥 Rejecting Transaction');
-  //                               print('🔹 UID: $uid');
-  //                               print('🔹 Transaction ID: ${transactionId.id}');
-  //                               print('🔹 Reason: $selectedReason');
-  //                               print('🔹 Feedback: $feedback');
+            //   print('✅ File saved: ${file.path}');
+            // } catch (e) {
+            //   print('❌ Save failed: $e');
+            //   if(context.mounted){
+            //     ScaffoldMessenger.of(context).showSnackBar(
+            //       SnackBar(
+            //         content: Text(
+            //           '❌ Download failed: $fileName',
+            //           style: AppTextStyles.caption.copyWith(
+            //             color: Colors.white,
+            //             fontWeight: FontWeight.w500,
+            //           ),
+            //         ),
+            //         duration: const Duration(seconds: 2),
+            //         behavior: SnackBarBehavior.floating, // ✅ Makes it float with margin
+            //         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            //         shape: RoundedRectangleBorder( // ✅ Rounded corners
+            //           borderRadius: BorderRadius.circular(12),
+            //         ),
+            //         backgroundColor: Colors.red, // ✅ Soft black, not pure #000
+            //         elevation: 6, // ✅ Soft shadow for depth
+            //       ),
+            //     );
+            //   }
+            // }
+                  // },
+              icon: const Icon(Icons.download),
+              label:Text(
+                'Download $fileName',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                softWrap: false, // ✅ Force no wrapping!
+                style: AppTextStyles.caption,
+              )
+            ),
+          )
+      
+      );
+    }
 
-  //                               showDialog(
-  //                                 context: context,
-  //                                 barrierDismissible: false,
-  //                                 builder:(context) {
-  //                                   return const Center (
-  //                                     child: CircularProgressIndicator(),
-  //                                   );
-  //                                 },
-  //                               );
 
-  //                               try{
-  //                                 final password = ref.watch(authNotifierProvider).password ?? '';
-  //                                 final login = ref.watch(authNotifierProvider).login ?? '';
-  //                                 final now = DateTime.now();
-  //                                 final timestamp = DateFormat("yyyy-MM-dd HH:mm:ss").format(now);
-  //                                 final response = await http.post(
-  //                                   Uri.parse('$baseUrl/api/odoo/reject-booking'),
-  //                                   headers:{
-  //                                     'Content-Type': 'application/json',
-  //                                     'Accept': 'application/json',
-  //                                     'password': password,
-  //                                     'login': login
-  //                                   },
-  //                                   body: jsonEncode({
-  //                                     'uid': uid,
-  //                                     'transaction_id': transactionId.id,
-  //                                     'reason': selectedReason,
-  //                                     'feedback': feedback,
-  //                                     'timestamp': timestamp,
-  //                                     'request_number': widget.transaction?.requestNumber,
-  //                                   }),
-  //                                 );
-  //                                 // Navigator.of(context, rootNavigator: true).pop(); // close loading
-                                  
-                                
-  //                                 if (response.statusCode == 200) {
-  //                                   print("Rejection Successful");
-  //                                   final rejectedTransactionNotifier = ref.read(accepted_transaction.acceptedTransactionProvider.notifier);
-  //                                   rejectedTransactionNotifier.updateStatus(transactionId.id.toString(), transactionId.requestNumber.toString(),'Rejected',ref, context);
-
-  //                                   await Future.delayed(const Duration(seconds: 1));
-  //                                   final updated = await fetchTransactionStatus(ref,baseUrl, transactionId.id.toString());
-  //                                   print('Updated Status: $updated.requestStatus');
-
-  //                                   if(updated.requestStatus == "Rejected") {
-  //                                     print('Rejection Successful');
-  //                                     ref.read(selectedReasonsProvider.notifier).state = null; // Clear the selected reason
-  //                                     controller.clear(); // Clear the text field
-
-  //                                     Navigator.of(context, rootNavigator: true).pop(); // close loading
-
-  //                                     print('🔁 Redirecting to HistoryScreen with UID: $uid');
-
-  //                                     await Future.delayed(const Duration(seconds: 2));
-  //                                     ref.invalidate(bookingProvider);
-  //                                     ref.invalidate(filteredItemsProvider);
-  //                                     Navigator.of(context, rootNavigator: true).popUntil((route) => route.isFirst);
-  //                                     ref.read(navigationNotifierProvider.notifier).setSelectedIndex(2);
-                                     
-
-  //                                   } else {
-  //                                     print('Rejection Failed');
-  //                                     Navigator.of(context, rootNavigator: true).pop(); // close loading
-  //                                     await Future.delayed(const Duration(seconds: 2));
-  //                                     ref.invalidate(bookingProvider);
-  //                                     ref.invalidate(filteredItemsProvider);
-  //                                     Navigator.of(context, rootNavigator: true).popUntil((route) => route.isFirst);
-  //                                     ref.read(navigationNotifierProvider.notifier).setSelectedIndex(2);
-  //                                   }
-                                   
-  //                                 } else {
-  //                                   print('Button Rejection Failed');
-  //                                   Navigator.of(context, rootNavigator: true).pop(); // close loading
-  //                                   await Future.delayed(const Duration(seconds: 2));
-  //                                     ref.invalidate(bookingProvider);
-  //                                     ref.invalidate(filteredItemsProvider);
-  //                                     Navigator.of(context, rootNavigator: true).popUntil((route) => route.isFirst);
-  //                                     ref.read(navigationNotifierProvider.notifier).setSelectedIndex(2);
-  //                                 }
-  //                               }catch (e){
-  //                                 print('Error: $e');
-  //                               }
-
-                                
-  //                             },
-  //                             style: ElevatedButton.styleFrom(
-  //                               backgroundColor: const Color.fromARGB(255, 236, 162, 55),
-  //                               padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 20),
-  //                               shape: RoundedRectangleBorder(
-  //                                 borderRadius: BorderRadius.circular(30.0),
-  //                               ),  
-  //                             ),
-  //                             child: Text(
-  //                               'Confirm',
-  //                               style: AppTextStyles.subtitle.copyWith(
-  //                                 color: Colors.black, // White text color
-  //                                 fontSize: 14,
-  //                                 fontWeight: FontWeight.bold,
-  //                               ),
-  //                               textAlign: TextAlign.center,
-  //                             ),
-  //                           ),
-  //                         ),
-  //                         const SizedBox(height: 10),
-  //                         SizedBox(
-  //                           width: double.infinity,
-  //                           child: ElevatedButton(
-  //                             onPressed: () async {
-  //                               Navigator.of(context).pop(); // Close the dialog
-                                
-  //                             },
-  //                             style: ElevatedButton.styleFrom(
-  //                               backgroundColor: Colors.red,
-  //                               padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 20),
-  //                               shape: RoundedRectangleBorder(
-  //                                 borderRadius: BorderRadius.circular(30.0),
-  //                               ),  
-  //                             ),
-  //                             child: Text(
-  //                               'Cancel',
-  //                               style: AppTextStyles.subtitle.copyWith(
-  //                                 color: Colors.white, // White text color
-  //                                 fontSize: 14,
-  //                                 fontWeight: FontWeight.bold,
-  //                               ),
-  //                               textAlign: TextAlign.center,
-  //                             ),
-  //                           ),
-  //                         ),
-  //                         const SizedBox(height: 10),
-                          
-  //                       ],
-  //                     ),
-  //                     ],
-  //                   ),
-                    
-  //                 ),
-  //                 Positioned(
-  //                     top: 8,
-  //                     right: 8,
-  //                     child: GestureDetector(
-  //                       onTap: () => Navigator.of(context).pop(),
-  //                       child: Container(
-  //                         decoration: const BoxDecoration(
-  //                           shape: BoxShape.circle,
-  //                           color: Colors.red,
-  //                         ),
-  //                         padding: const EdgeInsets.all(4),
-  //                         child: const Icon(Icons.close, size: 25, color: Colors.white),
-  //                       ),
-  //                     ),
-  //                   ),
-  //               ]
-  //             );
-              
-  //           },
-  //         )
-          
-  //       );
-  //     },
-  //   );
-  // }
 }
+
+  
+
+
 
 // Move FullScreenImage to the top-level (outside of any class)
 class FullScreenImage extends StatelessWidget{

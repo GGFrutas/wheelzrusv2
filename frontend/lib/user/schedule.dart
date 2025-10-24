@@ -11,6 +11,7 @@ import 'package:frontend/models/milestone_history_model.dart';
 import 'package:frontend/models/transaction_model.dart';
 import 'package:frontend/notifiers/auth_notifier.dart';
 import 'package:frontend/provider/accepted_transaction.dart' as accepted_transaction;
+import 'package:frontend/provider/base_url_provider.dart';
 import 'package:frontend/provider/theme_provider.dart';
 import 'package:frontend/provider/transaction_list_notifier.dart';
 import 'package:frontend/provider/transaction_provider.dart';
@@ -18,6 +19,8 @@ import 'package:frontend/screen/navigation_menu.dart';
 import 'package:frontend/theme/colors.dart';
 import 'package:frontend/theme/text_styles.dart';
 import 'package:frontend/user/confirmation.dart';
+import 'package:frontend/user/detailed_details.dart';
+import 'package:frontend/widgets/progress_row.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
@@ -28,7 +31,7 @@ class ScheduleScreen extends ConsumerStatefulWidget {
   final String uid;
   final Transaction? transaction;
 
-  const ScheduleScreen({super.key, required this.uid, required this.transaction});
+  const ScheduleScreen({super.key, required this.uid, required this.transaction, required relatedFF});
 
   @override
   ConsumerState<ScheduleScreen> createState() => _ScheduleState();
@@ -64,7 +67,8 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
           },
           'pl': {
             'delivery': 'CLOT',
-            'pickup': 'TLOT'
+            'pickup': 'TLOT',
+            'email': 'ELOT'
           },
         },
         'Less-Than-Container Load': {
@@ -82,7 +86,8 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
           },
           'pe': {
             'delivery': 'CYDT',
-            'pickup': 'GLDT'
+            'pickup': 'GLDT',
+            'email': 'EEDT'
           },
         },
         'Less-Than-Container Load': {
@@ -115,9 +120,11 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
       final fclMap = fclPrefixes[dispatchType]?[serviceType]?[matchingLegs];
       final pickupFcl = fclMap?['pickup'];
       final deliveryFcl = fclMap?['delivery'];
+      final emailFcl = fclMap?['email'];
 
       MilestoneHistoryModel? pickupSchedule;
       MilestoneHistoryModel? deliverySchedule;
+      MilestoneHistoryModel? emailSchedule;
 
       if(pickupFcl != null) {
         pickupSchedule = history.firstWhere(
@@ -132,7 +139,7 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
             fclCode: '',
             scheduledDatetime: '',
             actualDatetime: '',
-            serviceType: '',
+            serviceType: '', isBackload: '',
            
           ),
         );
@@ -152,24 +159,93 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
             fclCode: '',
             scheduledDatetime: '',
             actualDatetime: '',
-            serviceType: '',
+            serviceType: '', isBackload: '',
             
           ),
         );
         if(deliverySchedule.id == -1) deliverySchedule  = null;
       }
+
+      if(emailFcl != null) {
+        emailSchedule = history.firstWhere(
+          (h) => 
+            h.fclCode.trim().toUpperCase() == emailFcl.toUpperCase() &&
+            h.dispatchId == dispatchId.toString() &&
+            h.serviceType == serviceType,
+          orElse: () => const MilestoneHistoryModel(
+            id: -1,
+            dispatchId: '',
+            dispatchType: '',
+            fclCode: '',
+            scheduledDatetime: '',
+            actualDatetime: '',
+            serviceType: '', isBackload: '',
+           
+          ),
+        );
+        if(emailSchedule.id == -1) emailSchedule  = null;
+      }
       return {
         'pickup': pickupSchedule,
         'delivery': deliverySchedule,
+        'email' : emailSchedule
       };
     }
     return {
       'pickup': null,
       'delivery': null,
+      'email': null
     };
+  }
+
+  bool _isLoading = false;
 
 
-   }
+  Future<void> _sendEmail() async {
+
+     setState(() => _isLoading = true);
+    final now = DateTime.now();
+    final adjustedTime = now.subtract(const Duration(hours: 8));
+    final timestamp = DateFormat("yyyy-MM-dd HH:mm:ss").format(adjustedTime);
+
+    final baseUrl = ref.watch(baseUrlProvider);
+    var uid = ref.read(authNotifierProvider).uid; // 👈 Grab UID from login response
+  
+    Uri url;
+ 
+    url = Uri.parse('$baseUrl/api/odoo/notify?uid=$uid');
+
+    var response = await http.post(url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'password': ref.read(authNotifierProvider).password ?? '',
+        'login':ref.watch(authNotifierProvider).login ?? ''
+      },
+      body: jsonEncode({
+        'id': widget.transaction?.id,
+        'uid': uid,
+        'dispatch_type': widget.transaction?.dispatchType,
+        'request_number': widget.transaction?.requestNumber,
+        'timestamp': timestamp,
+      }),
+    );
+    print("Response status code: ${response.statusCode}");
+    
+  
+    if (!mounted) return;
+    if (response.statusCode == 200) {
+      setState(() => _isLoading = false);
+      showSuccessDialog(context, "Email Sent!");
+    } else {
+       setState(() => _isLoading = false);
+      showSuccessDialog(context, "Failed send email!");
+      print("Failed to upload files: ${response.statusCode}");
+     
+    }
+
+    
+  }
 
   
 
@@ -195,8 +271,37 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
   @override
   Widget build(BuildContext context) {
    final scheduleMap = getPickupAndDeliverySchedule(widget.transaction!);
-final pickup = scheduleMap['pickup'];
-final delivery = scheduleMap['delivery'];
+  final pickup = scheduleMap['pickup'];
+  final delivery = scheduleMap['delivery'];
+  final email = scheduleMap['email'];
+
+  
+  bool isAlreadyNotified = email?.actualDatetime != null ;
+
+  int currentStep = 2; // Assuming Schedule is step 2 (0-based index)
+  final bookingNumber = widget.transaction?.bookingRefNumber;
+
+    final allTransactions = ref.watch(transactionListProvider);
+    print("Schedule All Transaction: $allTransactions");
+
+    // for (var tx in allTransactions) {
+    //   print("🔍 TX → bookingRefNumber: '${tx.bookingRefNumber}', dispatchType: '${tx.dispatchType}'");
+    // }
+
+    final relatedFF = allTransactions.cast<Transaction?>().firstWhere(
+        (tx) {
+          final refNum = tx?.bookingRefNumber?.trim();
+          final currentRef = bookingNumber?.trim();
+          final dispatch = tx?.dispatchType.toLowerCase().trim();
+
+          return refNum != null &&
+                refNum == currentRef &&
+                dispatch == 'ff'; // ✅ specifically look for FF
+        },
+        orElse: () => null,
+      );
+   
+
     return Scaffold(
       appBar: AppBar(
         iconTheme: const IconThemeData(color: mainColor),
@@ -217,7 +322,7 @@ final delivery = scheduleMap['delivery'];
                 ),
               ),
               const SizedBox(height: 20),
-              progressRow(2), // Pass an integer value for currentStep
+              ProgressRow(currentStep: currentStep, uid: uid, transaction: widget.transaction,relatedFF: relatedFF,), // Pass an integer value for currentStep
               const SizedBox(height: 20),
               Container(
                 padding: const EdgeInsets.all(8.0), // Add padding inside the container
@@ -368,6 +473,82 @@ final delivery = scheduleMap['delivery'];
                 ),
                 
               ),
+              const SizedBox(height: 20),
+              if(widget.transaction?.plRequestNumber == widget.transaction?.requestNumber || widget.transaction?.peRequestStatus == widget.transaction?.requestNumber)
+
+              Text (
+                "Optional",
+                style: AppTextStyles.caption.copyWith(
+                  fontStyle: FontStyle.italic,
+                  color: darkerBgColor,
+                ),
+              ),
+              
+              if(widget.transaction?.plRequestNumber == widget.transaction?.requestNumber|| widget.transaction?.peRequestNumber == widget.transaction?.requestNumber)...[
+              Column (
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: (!isAlreadyNotified || _isLoading)
+                        ? null
+                        : _sendEmail, 
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: (!isAlreadyNotified || _isLoading)
+                          ? Colors.grey
+                          : mainColor,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30.0),
+                        ),
+                      ),
+                      
+                      child:  _isLoading
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                      : Row (
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.notifications_active,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8), // Space between icon and text
+                          Text(
+                            widget.transaction?.dispatchType == 'ot' ? "Notify Shipper" : "Notify Consignee",
+                            style: AppTextStyles.body.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                        ]
+                      )
+                      
+                    ),
+                  )
+                ],
+              ), 
+              ],
+              const SizedBox(height: 10),
+
+              // Text (
+              //   "Note: Schedule is subject to change based on unforeseen circumstances. Please stay updated through your notifications.",
+              //   style: AppTextStyles.caption.copyWith(
+              //     fontStyle: FontStyle.italic,
+              //     color: const Color.fromARGB(255, 128, 137, 145),
+              //   ),
+              // )
             ],
           ),
           
@@ -392,7 +573,7 @@ final delivery = scheduleMap['delivery'];
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => ConfirmationScreen(uid: widget.uid, transaction: widget.transaction),
+                            builder: (context) => ConfirmationScreen(uid: widget.uid, transaction: widget.transaction, relatedFF: relatedFF,),
                           ),
                         );
                       },
@@ -427,85 +608,61 @@ final delivery = scheduleMap['delivery'];
     );
   }
 
-  // Progress Indicator Row
-  Widget progressRow(int currentStep) {
-  return Row(
-    mainAxisAlignment: MainAxisAlignment.center,
-    children: List.generate(3 * 2 - 1, (index) {
-      // Step indices: 0, 2, 4; Connector indices: 1, 3
-      if (index.isEven) {
-        int stepIndex = index ~/ 2 + 1;
-        Color stepColor = stepIndex < currentStep
-            ? mainColor     // Completed
-            : stepIndex == currentStep
-                ? mainColor  // Active
-                : Colors.grey;     // Upcoming
-
-        bool isCurrent = stepIndex == currentStep;
-
-        String label;
-        switch (stepIndex) {
-          case 1:
-            label = "Delivery Log";
-            break;
-          case 2:
-            label = "Schedule";
-            break;
-          case 3:
-          default:
-            label = "Confirmation";
-        }
-
-        return buildStep(label, stepColor, isCurrent);
-      } else {
-        int connectorIndex = (index - 1) ~/ 2 + 1;
-        Color connectorColor = connectorIndex < currentStep
-            ? mainColor
-            : Colors.grey;
-
-        return buildConnector(connectorColor);
-      }
-    }),
-  );
-}
-
-
-  /// Single Progress Step Widget
- Widget buildStep(String label, Color color, bool isCurrent) {
-  return Column(
-    children: [
-      CircleAvatar(
-        radius: 10,
-        backgroundColor: color,
-        child: isCurrent
-            ? const CircleAvatar(
-                radius: 7,
-                backgroundColor: Colors.white,
-              )
-            : null,
-      ),
-      const SizedBox(height: 5),
-      Text(
-        label,
-        style: AppTextStyles.caption.copyWith(
-          color: color,
-        ),
-      ),
-    ],
-  );
-}
-
-
-  /// Connector Line Between Steps
-  Widget buildConnector(Color color) {
-    return Transform.translate(
-      offset: const Offset(0, -10),
-      child: 
-        Container(
-          width: 40,
-          height: 4,
-          color: color,
-        ),
-    );
+  void showSuccessDialog(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Consumer(
+        builder: (context, ref, _) {
+          return Dialog(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  backgroundColor: Colors.white,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 70,
+                          height: 70,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: mainColor,
+                          ),
+                          child: const Icon(
+                            Icons.check,
+                            color: Colors.white,
+                            size: 40,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          message,
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.body.copyWith(
+                              color: Colors.black87
+                            ),
+                        ),
+                        const SizedBox(height: 20),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: mainColor,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                          child: Text("OK", style: AppTextStyles.body.copyWith(color: Colors.white)),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+            )
+          );
+     
   }
 }

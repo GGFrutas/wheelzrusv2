@@ -57,7 +57,7 @@ class HomePage extends ConsumerWidget {
     final authState = ref.watch(authNotifierProvider);
     final String uid = authState.uid ?? '';
 
-   final ongoingTransactions = ref.watch(filteredItemsProvider);
+  //  final ongoingTransactions = ref.watch(filteredItemsProvider);
    Uint8List? imageBytes;
     if (authState.partnerImageBase64 != null &&
         authState.partnerImageBase64!.isNotEmpty) {
@@ -164,44 +164,21 @@ class HomePage extends ConsumerWidget {
                         Navigator.pop(context); // Close the drawer
                       },
                     ),
-                    // ListTile(
-                    //   leading: const FaIcon(FontAwesomeIcons.bookmark),
-                    //   iconColor: mainColor,
-                    //   title: Text(
-                    //     'For Delivery',
-                    //     style: AppTextStyles.body.copyWith(
-                    //       fontWeight: FontWeight.bold,
-                    //     ),
-                    //   ),
-                    //   trailing: ongoingTransactions.when(
-                    //     data: (transactions) => transactions.isNotEmpty
-                    //         ? Container(
-                    //             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    //             decoration: const BoxDecoration(
-                    //               color: Color.fromARGB(255, 152, 203, 186),
-                    //             ),
-                    //             child: Text(
-                    //               transactions.length.toString(),
-                    //               style: AppTextStyles.caption.copyWith(
-                    //                 color: mainColor,
-                    //                 fontSize: 16,
-                    //                 fontWeight: FontWeight.bold,
-                    //               ),
-                    //             ),
-                    //           )
-                    //         : null,
-                    //     loading: () => const SizedBox(
-                    //       width: 24,
-                    //       height: 24,
-                    //       child: CircularProgressIndicator(strokeWidth: 2),
-                    //     ),
-                    //     error: (error, stack) => const Icon(Icons.error, color: Colors.red),
-                    //   ),
-                    //   onTap: () {
-                    //     ref.read(navigationNotifierProvider.notifier).setSelectedIndex(0);
-                    //     Navigator.pop(context); // Close the drawer
-                    //   },
-                    // ),
+                    ListTile(
+                      leading: const FaIcon(FontAwesomeIcons.bookmark),
+                      iconColor: mainColor,
+                      title: Text(
+                        'Ongoing Delivery',
+                        style: AppTextStyles.body.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      
+                      onTap: () {
+                        ref.read(navigationNotifierProvider.notifier).setSelectedIndex(0);
+                        Navigator.pop(context); // Close the drawer
+                      },
+                    ),
 
                     // const Divider(), // Add a divider for better separation
 
@@ -223,50 +200,50 @@ class HomePage extends ConsumerWidget {
                         );
                       },
                     ),
-                    ListTile(
-                      leading: const FaIcon(FontAwesomeIcons.paperPlane),
-                      iconColor: mainColor,
-                      title: Text(
-                        'Dispatch',
-                        style: AppTextStyles.body.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      onTap: () {},
-                    ),
-                    ListTile(
-                      leading: const FaIcon(FontAwesomeIcons.ban),
-                      iconColor: mainColor,
-                      title: Text(
-                        'Declined',
-                        style: AppTextStyles.body.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      onTap: () {},
-                    ),
-                    ListTile(
-                      leading: const FaIcon(FontAwesomeIcons.circleCheck),
-                      iconColor: mainColor,
-                      title: Text(
-                        'Completed',
-                        style: AppTextStyles.body.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      onTap: () {},
-                    ),
-                    ListTile(
-                      leading: const Icon(FontAwesomeIcons.chartPie),
-                      iconColor: mainColor,
-                      title: Text(
-                        'Analytics',
-                        style: AppTextStyles.body.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      onTap: () {},
-                    ),
+                    // ListTile(
+                    //   leading: const FaIcon(FontAwesomeIcons.paperPlane),
+                    //   iconColor: mainColor,
+                    //   title: Text(
+                    //     'Dispatch',
+                    //     style: AppTextStyles.body.copyWith(
+                    //       fontWeight: FontWeight.bold,
+                    //     ),
+                    //   ),
+                    //   onTap: () {},
+                    // ),
+                    // ListTile(
+                    //   leading: const FaIcon(FontAwesomeIcons.ban),
+                    //   iconColor: mainColor,
+                    //   title: Text(
+                    //     'Declined',
+                    //     style: AppTextStyles.body.copyWith(
+                    //       fontWeight: FontWeight.bold,
+                    //     ),
+                    //   ),
+                    //   onTap: () {},
+                    // ),
+                    // ListTile(
+                    //   leading: const FaIcon(FontAwesomeIcons.circleCheck),
+                    //   iconColor: mainColor,
+                    //   title: Text(
+                    //     'Completed',
+                    //     style: AppTextStyles.body.copyWith(
+                    //       fontWeight: FontWeight.bold,
+                    //     ),
+                    //   ),
+                    //   onTap: () {},
+                    // ),
+                    // ListTile(
+                    //   leading: const Icon(FontAwesomeIcons.chartPie),
+                    //   iconColor: mainColor,
+                    //   title: Text(
+                    //     'Analytics',
+                    //     style: AppTextStyles.body.copyWith(
+                    //       fontWeight: FontWeight.bold,
+                    //     ),
+                    //   ),
+                    //   onTap: () {},
+                    // ),
                   ],
                 ),
               ),
@@ -345,7 +322,7 @@ class HomePage extends ConsumerWidget {
             case 1:
               return HomepageScreen(user: user);
             case 2:
-              return HistoryScreen(user: user);
+              return HistoryScreen(user: user, transaction: null,);
             default:
               return const SizedBox.shrink();
           }

@@ -5,6 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 class TransactionListNotifier extends StateNotifier<List<Transaction>> {
   TransactionListNotifier() : super([]);
 
+  void loadTransactions(List<Transaction> transactions) {
+    state = transactions;
+  }
+
+
   // Method to update a transaction’s status
   void updateTransactionStatus(int id, String newStatus) {
     state = [

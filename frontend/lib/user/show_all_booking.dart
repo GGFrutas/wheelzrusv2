@@ -19,6 +19,7 @@ import 'package:frontend/screen/navigation_menu.dart';
 import 'package:frontend/theme/colors.dart';
 import 'package:frontend/theme/text_styles.dart';
 import 'package:frontend/user/transaction_details.dart';
+import 'package:frontend/util/transaction_utils.dart';
 import 'package:intl/intl.dart';
 
 class AllBookingScreen extends ConsumerStatefulWidget{
@@ -37,28 +38,44 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
 
   late final List<DateTime> weekStartDates;
 
+  late final List<String> tabTitles;
+
   final ScrollController _scrollableController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     weekStartDates = _generateWeekStartDates();
-    _expandedTabIndex =0;
+    tabTitles = [
+      'Delayed',
+      ...weekStartDates.map((d) => DateFormat('MMM d').format(d)),
+    ];
+    _expandedTabIndex = 1;
     _scrollableController.addListener(() {
-      if (_scrollableController.position.pixels == _scrollableController.position.maxScrollExtent) {
-        ref.read(paginatedTransactionProvider('all-bookings'));
+      final state = ref.read(paginatedTransactionProvider('all-bookings'));
+      if (_scrollableController.position.pixels >=
+              _scrollableController.position.maxScrollExtent - 200 &&
+          !state.isLoading &&
+          state.hasMore) {
+        ref.read(paginatedTransactionProvider('all-bookings').notifier).fetchNextPage();
       }
     });
   }
+  
 
   List<DateTime> _generateWeekStartDates() {
     DateTime now = DateTime.now();
-    // Find the most recent Sunday
-    int daysSinceSunday = now.weekday % 7; 
-    DateTime thisSunday = now.subtract(Duration(days: daysSinceSunday));
 
-    // Generate current + next 3 Sundays (4 weeks total)
-    return List.generate(4, (i) => thisSunday.add(Duration(days: i * 7)));
+    // Normalize to midnight
+    DateTime today = DateTime(now.year, now.month, now.day);
+
+    // Find the most recent Sunday
+    int daysSinceSunday = today.weekday % 7;
+    DateTime thisSunday = today.subtract(Duration(days: daysSinceSunday));
+
+    // Generate current + next 4 Sundays (5 weeks total)
+    return List.generate(5, (i) => thisSunday.add(Duration(days: i * 7)));
+
   }
 
   String formatDateTime(String? dateString) {
@@ -86,9 +103,8 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
    bool sameWeekRange(DateTime? target, DateTime weekStart) {
     // Get the start of the week for both dates
     if (target == null) return false; // Handle null target date
-    final weekEnd = weekStart.add(const Duration(days: 5));
-    return target.isAfter(weekStart.subtract(const Duration(days: 1))) &&
-        target.isBefore(weekEnd.add(const Duration(days: 1)));
+    final weekEnd = weekStart.add(const Duration(days: 6));
+    return !target.isBefore(weekStart) && !target.isAfter(weekEnd);
    }
 
 
@@ -96,6 +112,10 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
   @override
   Widget build(BuildContext context) {
     final dateFormat = DateFormat('MMM d');
+    final tabTitles = [
+      'Delayed',
+      ...weekStartDates.map((d) => dateFormat.format(d)),
+    ];
     return Scaffold(
       appBar: AppBar(
         title: const Text("All Bookings"),
@@ -126,7 +146,7 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
                       ),
                       alignment: Alignment.center,
                       child: Text(
-                        dateFormat.format(weekStartDates[index]),
+                        tabTitles[index],
                         style: TextStyle(
                           color: tabColor,
                           fontWeight: FontWeight.bold,
@@ -140,7 +160,11 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
             const SizedBox(height: 20),
 
             if (_expandedTabIndex != null)
-             Expanded(child: _buildWeekContent(weekStartDates[_expandedTabIndex!])),
+              _expandedTabIndex == 0
+              ? Expanded(child: _buildWeekContent(isDelayed: true))
+              : Expanded(child: _buildWeekContent(
+                  date: weekStartDates[_expandedTabIndex! - 1],
+                ))
           ],
         ),
       ),
@@ -155,24 +179,12 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
     );
   }
 
-  Widget _buildWeekContent(DateTime date) {
-    
-    // final acceptedTransaction = ref.watch(accepted_transaction.acceptedTransactionProvider);
-    // DateTime now = DateTime.now();
-    // int daysSinceSunday = now.weekday % 7;
-    // DateTime sunday = now.subtract(Duration(days: daysSinceSunday));
 
-    // // Define the week range: Sunday to Saturday
-    // DateTime weekStart = sunday;
-    // DateTime weekEnd = sunday.add(const Duration(days: 6));
-
-
-    // final query = WeekQuery(start: weekStart, end: weekEnd, page: 1, limit: 5);
-    // final allTransaction = ref.watch(allTransactionProvider(query));
-     final allTransaction = ref.watch(allTransactionProvider);
+  Widget _buildWeekContent({DateTime? date, bool isDelayed = false}){ {
+    final allTransaction = ref.watch(allTransactionFilteredProvider);
     final acceptedTransaction = ref.watch(accepted_transaction.acceptedTransactionProvider);
-
-
+ 
+    print("Tab index: $_expandedTabIndex, isDelayed: $isDelayed, date: $date");
     return Expanded(
       child: RefreshIndicator(
         onRefresh: _refreshTransaction,
@@ -193,6 +205,7 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
                     height: MediaQuery.of(context).size.height * 0.6, // Enough height to allow pull gesture
                     alignment: Alignment.center,
                     child: Text(
+                     isDelayed ? 'No delayed transactions available.' :
                       'No transaction for this week.',
                       style: AppTextStyles.subtitle,
                     ),
@@ -219,114 +232,10 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
             final authPartnerId = ref.watch(authNotifierProvider).partnerId;
             final driverId = authPartnerId?.toString();
 
-            final expandedTransactions = transaction.expand((item) {
-              
-              String removeBrackets(String input) {
-                          return input.replaceAll(RegExp(r'\s*\[.*?\]'), '')
-                                      .replaceAll(RegExp(r'\s*\(.*?\)'), '')
-                                      .trim();
-                        }
-                        String cleanAddress(List<String?> parts) {
-                          return parts
-                            .where((e) => e != null && e.trim().isNotEmpty && e.trim().toLowerCase() != 'ph')
-                            .map((e) => removeBrackets(e!)) // now safe because nulls are filtered above
-                            .join(', ');
-                        }
-
-                        String buildConsigneeAddress(Transaction item, {bool cityLevel = false}) {
-                          return cleanAddress(cityLevel ? [item.consigneeCity,item.consigneeProvince]
-                          : [item.consigneeStreet,item.consigneeBarangay,item.consigneeCity,item.consigneeProvince]
-                          );
-                        }
-
-                        String buildShipperAddress(Transaction item, {bool cityLevel = false}) {
-                          return cleanAddress(cityLevel ? [item.shipperCity,item.shipperProvince]
-                          : [item.shipperStreet,item.shipperBarangay,item.shipperCity,item.shipperProvince]
-                          );
-                        }
-                        String descriptionMsg(Transaction item) {
-                          if (item.landTransport == 'transport'){
-                            return 'Deliver Laden Container to Consignee';
-                          } else {
-                            return 'Pickup Laden Container from Shipper';
-                          }
-                        }
-                        String newName(Transaction item) {
-                          if (item.landTransport == 'transport'){
-                            return 'Deliver to Consignee';
-                          } else {
-                            return 'Pickup from Shipper';
-                          }
-                        }
-    
-              if (item.dispatchType == "ot") {
-                final shipperOrigin = buildShipperAddress(item);
-                final shipperDestination = cleanAddress([item.destination]);
-                return [
-                  // First instance: Deliver to Shipper
-                  if (item.deTruckDriverName == driverId) // Filter out if accepted
-                    // Check if the truck driver is the same as the authPartnerId
-                    item.copyWith(
-                      name: "Deliver to Shipper",
-                      origin:shipperDestination,
-                      destination: shipperOrigin,
-                      requestNumber: item.deRequestNumber,
-                      requestStatus: item.deRequestStatus,
-                      assignedDate:item.deAssignedDate,
-                      originAddress: "Deliver Empty Container to Shipper",
-                      freightBookingNumber:item.freightBookingNumber,
-                      // truckPlateNumber: item.deTruckPlateNumber,
-                    ),
-                    // Second instance: Pickup from Shipper
-                  if ( item.plTruckDriverName == driverId) // Filter out if accepted
-                    // if (item.plTruckDriverName == authPartnerId)
-                    item.copyWith(
-                      name: newName(item),
-                      origin:shipperOrigin,
-                      destination:shipperDestination,
-                      requestNumber: item.plRequestNumber,
-                      requestStatus: item.plRequestStatus,
-                      assignedDate:item.plAssignedDate,
-                      originAddress: descriptionMsg(item),
-                      freightBookingNumber:item.freightBookingNumber,
-                      // truckPlateNumber: item.plTruckPlateNumber,
-                    ),
-                ];
-              } else if (item.dispatchType == "dt") {
-                final consigneeOrigin = buildConsigneeAddress(item);
-                final consigneeDestination = cleanAddress([item.origin]);
-                return [
-                  // First instance: Deliver to Consignee
-                  if (item.dlTruckDriverName == driverId) // Filter out if accepted
-                    item.copyWith(
-                      name: "Deliver to Consignee",
-                      origin:  consigneeDestination,
-                      destination: consigneeOrigin,
-                      requestNumber: item.dlRequestNumber,
-                      requestStatus: item.dlRequestStatus,
-                      assignedDate:item.dlAssignedDate,
-                      originAddress: "Deliver Laden Container to Consignee",
-                      freightBookingNumber:item.freightBookingNumber,
-                      // truckPlateNumber: item.dlTruckPlateNumber,
-                    ),
-                  // Second instance: Pickup from Consignee
-                  if (item.peTruckDriverName == driverId) // Filter out if accepted
-                    item.copyWith(
-                      name: "Pickup from Consignee",
-                      origin: consigneeOrigin,
-                      destination: consigneeDestination,
-                      requestNumber: item.peRequestNumber,
-                      requestStatus: item.peRequestStatus,
-                      assignedDate:item.peAssignedDate,
-                      originAddress: "Pickup Empty Container from Consignee",
-                      freightBookingNumber:item.freightBookingNumber,
-                      // truckPlateNumber: item.peTruckPlateNumber,
-                    ),
-                ];  
-              }
-              // Return as-is if no match
-              return [item];
-            }).toList();
+            final expandedTransactions = TransactionUtils.expandTransactions(
+              transaction,
+              driverId ?? '',
+            );
 
           
 
@@ -337,17 +246,26 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
                 "Assigned",
               ].contains(tx.requestStatus);
 
-              final notCancelled = tx.stageId == "Cancelled";
+              final notCancelled = tx.stageId != "Cancelled";
 
-              if (!isOngoing || notCancelled) return false;
+              if (!isOngoing || !notCancelled) return false;
 
               // Safely parse the string to DateTime
               try{
-                final dateToCheck = tx.dispatchType == "ot"
-                ? DateTime.parse(tx.departureDate)
-                : DateTime.parse(tx.arrivalDate); // Handle null dates
+                final rawDate = tx.dispatchType == "ot" ? tx.pickupDate : tx.deliveryDate;
+                if (rawDate.isEmpty) return false;
 
-                return sameWeekRange(dateToCheck, date);
+                // Parse and handle UTC safely
+                final parsedUtc = DateTime.parse(rawDate).toUtc();
+                final localDate = parsedUtc.toLocal();
+
+                print('pickupDate: ${tx.pickupDate}, deliveryDate: ${tx.deliveryDate}, localDate: $localDate');
+
+                if (isDelayed) {
+                  return localDate.isBefore(weekStartDates.first.toLocal());
+                } else {
+                  return sameWeekRange(localDate, date!);
+                }
               }catch(_) {
                 return false; // If parsing fails, exclude this transaction
               }
@@ -365,7 +283,8 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
                         height: constraints.maxHeight, // Adjust height as needed
                         child: Center(
                           child: Text(
-                            'No transactions for this week.',
+                            isDelayed ? 'No delayed transactions available.' :
+                      'No transaction for this week.',
                             style: AppTextStyles.subtitle,
                           ),
                         ),
@@ -536,6 +455,7 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
         ),  
       )
     );
+  }
   }
 
 }

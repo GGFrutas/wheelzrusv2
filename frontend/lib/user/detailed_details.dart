@@ -15,7 +15,9 @@ import 'package:frontend/provider/transaction_provider.dart';
 import 'package:frontend/screen/navigation_menu.dart';
 import 'package:frontend/theme/colors.dart';
 import 'package:frontend/theme/text_styles.dart';
+import 'package:frontend/user/confirmation.dart';
 import 'package:frontend/user/schedule.dart';
+import 'package:frontend/widgets/progress_row.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
@@ -25,7 +27,7 @@ class DetailedDetailScreen extends ConsumerStatefulWidget {
   final String uid;
   final Transaction? transaction;
 
-  const DetailedDetailScreen({super.key, required this.uid, required this.transaction});
+  const DetailedDetailScreen({super.key, required this.uid, required this.transaction, required relatedFF});
 
   @override
   ConsumerState<DetailedDetailScreen> createState() => _DetailedDetailState();
@@ -38,6 +40,11 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
   void initState() {
     super.initState();
     uid = widget.uid; // Initialize uid
+
+    Future.microtask(() async {
+      await ref.refresh(combinedTransactionProvider.future);
+    });
+
   }
 
   String getNullableValue(String? value, {String fallback = ''}) {
@@ -47,59 +54,55 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
   
   @override
   Widget build(BuildContext context) {
-    // final transaction = widget.transaction;
-    // final dispatchType = transaction?.dispatchType;
-    // final serviceType = transaction?.serviceType;
-    // final bookingNumber = transaction?.freightBookingNumber;
+  
+    final transaction = widget.transaction;
+    final bookingNumber = transaction?.bookingRefNumber;
+    int currentStep = 1; // Assuming Detailed Details is step 1 (0-based index)
 
-    // /// Helper to check if a value is null or empty
-    // bool isNullOrEmpty(dynamic value) {
-    //   return value == null || value.toString().trim().isEmpty;
+    final allTransactions = ref.watch(transactionListProvider);
+    print("All Transaction: $allTransactions");
+
+    // for (var tx in allTransactions) {
+    //   print("🔍 TX → bookingRefNumber: '${tx.bookingRefNumber}', dispatchType: '${tx.dispatchType}'");
     // }
 
-    // /// Determine if the button should be hidden
-    // final showButton = (dispatchType == 'ot' && (isNullOrEmpty(transaction?.deProof) || isNullOrEmpty(transaction?.deSign))&& widget.transaction?.plRequestNumber == widget.transaction?.requestNumber) ||
-    //                   (dispatchType == 'dt' && (isNullOrEmpty(transaction?.dlProof) || isNullOrEmpty(transaction?.dlSign))  && widget.transaction?.peRequestNumber == widget.transaction?.requestNumber);
-    final transaction = widget.transaction;
-    final dispatchType = transaction?.dispatchType;
-    final serviceType = transaction?.serviceType;
-    final requestNumber = transaction?.requestNumber;
-    final plRequestNumber = transaction?.plRequestNumber;
-    final peRequestNumber = transaction?.peRequestNumber;
-    final bookingNumber = transaction?.bookingRefNo;
+    final relatedFF = ref.watch(relatedFFProvider(bookingNumber ?? ''));
+   
 
-    /// Helper
-    bool isNullOrEmpty(dynamic value) {
-      return value == null || value.toString().trim().isEmpty;
+    String? checkPrerequisites(Transaction transaction, String requestNumber) {
+      print("Related FF: ${relatedFF?.stageId}");
+      
+
+
+      if (requestNumber == transaction.plRequestNumber &&
+          transaction.deRequestStatus != "Completed" &&  transaction.deRequestStatus != "Backload") {
+        return "Delivery Empty should be completed first.";
+      }
+
+      // if (requestNumber == transaction.dlRequestNumber) {
+      //   if (relatedFF == null || relatedFF.stageId != "Completed") {
+      //     return "Associated Freight Forwarding should be completed first.";
+      //   }
+      // }
+
+      if(transaction.freightForwarderName!.isEmpty) {
+        return "Associated Freight Forwarding Vendor has not yet been assigned.";
+      }
+
+      // if (requestNumber == transaction.deRequestNumber) {
+      //   if (relatedFF == null || relatedFF.stageId?.trim() != "Vendor Accepted") {
+      //     return "Associated Freight Forwarding Vendor has not yet been assigned.";
+      //   }
+      // }
+    
+      if (requestNumber == transaction.peRequestNumber &&
+          transaction.dlRequestStatus != "Completed") {
+        return "Delivery Laden should be completed first.";
+      }
+
+      return null; // ✅ All good
     }
 
-    /// Base conditions (ot and dt)
-    bool hideForCurrentDispatch = 
-      (dispatchType == 'ot' &&
-      serviceType == 'Full Container Load' &&
-        (isNullOrEmpty(transaction?.deProof) || isNullOrEmpty(transaction?.deSign)) &&
-        plRequestNumber == requestNumber) ||
-
-      (dispatchType == 'dt' &&
-        (isNullOrEmpty(transaction?.dlProof) || isNullOrEmpty(transaction?.dlSign)) &&
-        peRequestNumber == requestNumber);
-
-    bool isLandTransport = transaction?.landTransport != 'transport';
-
-    final allTransactions = ref.read(acceptedTransactionProvider);
-
-    print("All: $allTransactions");
-    final relatedFF = allTransactions.cast<Transaction?>().firstWhere(
-      (tx) => (tx?.bookingRefNo == bookingNumber) && (tx?.dispatchType == 'ff'),
-      orElse: () => null,
-    );
-
-    print("Related FF: $relatedFF");
-
-    bool ffNotComplete = relatedFF != null && relatedFF.stageId != '7';
-
-    /// Final decision: if any rule to hide the button is true, we hide it
-    final showButton = (isLandTransport && hideForCurrentDispatch) || (isLandTransport && ffNotComplete);
 
         
     return PopScope(
@@ -142,7 +145,7 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                progressRow(1),
+                ProgressRow(currentStep: currentStep, uid: uid, transaction: transaction, relatedFF: relatedFF,),
                 const SizedBox(height: 20),
                 Container(
                   padding: const EdgeInsets.all(16.0), // Add padding inside the container
@@ -478,10 +481,12 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
           ),
           
         ),
+        
         bottomNavigationBar: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if(!showButton)
+            // if(!showButton)
+            
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: Column (
@@ -491,15 +496,74 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () {
-                        
-                        print("uid: ${widget.uid}");
-                    
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ScheduleScreen(uid: widget.uid, transaction: widget.transaction),
-                          ),
-                        );
+                        // Example: Replace this with your real prerequisite check
+                        String? errorMessage;
+                        if (widget.transaction != null) {
+                          errorMessage = checkPrerequisites(
+                            widget.transaction!,
+                            widget.transaction!.requestNumber ?? '', // <- pass whichever request they’re on, fallback to empty string if null
+                          );
+                        } else {
+                          errorMessage = "Transaction data is missing.";
+                        }
+
+
+                        if (errorMessage != null) {
+                          // Show modal with message
+                          showDialog(
+                            context: context,
+                            builder: (context) {
+                              return AlertDialog(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                title: Text(
+                                  "Invalid Action!",
+                                  style: AppTextStyles.body.copyWith(
+                                    color: Colors.red,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                content: Text(
+                                  errorMessage!,
+                                  textAlign: TextAlign.center,
+                                  style: AppTextStyles.body.copyWith(
+                                    color: Colors.black87
+                                  ),
+                                ),
+                                actions: [
+                                  Center(
+                                    child: ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: mainColor,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                      ),
+                                      onPressed: () {
+                                        Navigator.of(context).pop();
+                                      },
+                                      child: Text("OK", style: AppTextStyles.body.copyWith(color: Colors.white)),
+                                    )
+                                  )
+                                  
+                                ],
+                              );
+                            },
+                          );
+                        } else {
+                          // If everything is okay -> go to ScheduleScreen
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ScheduleScreen(
+                                uid: widget.uid,
+                                transaction: widget.transaction, relatedFF: relatedFF,
+                              ),
+                            ),
+                          );
+                        }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: mainColor,
@@ -519,7 +583,7 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
                         maxLines: 1,
                       ),
                     ),
-                  )
+                  ),
                 ],
               )
               
@@ -534,56 +598,7 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
     );
    
   }
+  
 
-   /// Progress Indicator Row
-  Widget progressRow(int currentStep ) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        buildStep("Delivery Log", currentStep > 1 ? mainColor : Colors.grey, currentStep == 1), // Active step
-        buildConnector(currentStep > 1 ? Colors.green : Colors.grey),
-        buildStep("Schedule", currentStep > 2 ? mainColor : Colors.grey, currentStep == 2),
-        buildConnector(currentStep > 2 ? Colors.green : Colors.grey),
-        buildStep("Confirmation", currentStep == 3 ? mainColor : Colors.grey, currentStep == 3),
-      ],
-    );
-  }
-
-  /// Single Progress Step Widget
-  Widget buildStep(String label, Color color, bool isCurrent) {
-    return Column(
-      children: [
-        CircleAvatar(
-          radius: 10,
-          backgroundColor: isCurrent ? mainColor : Colors.grey,
-          child: isCurrent
-              ? const CircleAvatar(
-                  radius: 7,
-                  backgroundColor: Colors.white,
-                )
-              : null,
-        ),
-        const SizedBox(height: 5),
-        Text(
-          label, 
-          style: AppTextStyles.caption.copyWith(
-            color: isCurrent ? mainColor : Colors.grey
-          )
-        ),
-      ],
-    );
-  }
-
-  /// Connector Line Between Steps
-  Widget buildConnector(Color color) {
-    return Transform.translate(
-      offset: const Offset(0, -10),
-      child: 
-        Container(
-          width: 40,
-          height: 4,
-          color: color,
-        ),
-    );
-  }
+ 
 }

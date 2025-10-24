@@ -182,7 +182,12 @@ final bookingProvider = FutureProvider<List<Transaction>>((ref) async {
 
 final filteredItemsProvider = FutureProvider<List<Transaction>>((ref) async {
   
-  return fetchFilteredTransactions(ref: ref, endpoint: 'today', queryParams: {});
+   final transactions = await fetchFilteredTransactions(ref: ref, endpoint: 'today', queryParams: {});
+  // final filtered = transactions
+  //     .where((tx) => tx.dispatchType.toLowerCase() != 'ff')
+  //     .toList();
+  ref.read(transactionListProvider.notifier).loadTransactions(transactions);
+  return transactions;
 });
 
 final filteredItemsProviderForTransactionScreen = FutureProvider<List<Transaction>>((ref) async {
@@ -205,11 +210,11 @@ final filteredItemsProviderForHistoryScreen = FutureProvider<List<Transaction>>(
 //     },);
 // });
 
-final allTransactionProvider = FutureProvider<List<Transaction>>((ref) async {
+// final allTransactionProvider = FutureProvider<List<Transaction>>((ref) async {
   
 
-  return fetchFilteredTransactions(ref: ref, endpoint: 'all-bookings', queryParams: {});
-});
+//   return fetchFilteredTransactions(ref: ref, endpoint: 'all-bookings', queryParams: {});
+// });
 
 final allHistoryProvider = FutureProvider<List<Transaction>>((ref) async {
   
@@ -221,4 +226,51 @@ final allHistoryProvider = FutureProvider<List<Transaction>>((ref) async {
 final paginatedTransactionProvider = StateNotifierProvider.family<PaginatedNotifier, PaginatedTransactionState, String>((ref, endpoint) {
   return PaginatedNotifier(ref, endpoint);
 });
+
+final allTransactionProvider = FutureProvider<List<Transaction>>((ref) async {
+  final transactions = await fetchFilteredTransactions(ref: ref, endpoint: 'all-bookings', queryParams: {});
+  // final filtered = transactions
+  //     .where((tx) => tx.dispatchType.toLowerCase() != 'ff')
+  //     .toList();
+  ref.read(transactionListProvider.notifier).loadTransactions(transactions);
+  return transactions;
+});
+
+final allTransactionFilteredProvider = FutureProvider<List<Transaction>>((ref) async {
+  final transactions = await ref.watch(allTransactionProvider.future);
+
+  final filtered = transactions
+      .where((tx) => tx.dispatchType.toLowerCase() != 'ff')
+      .toList();
+
+  return filtered;
+});
+
+
+final relatedFFProvider = Provider.family<Transaction?, String>((ref, bookingNumber) {
+  final allTransactions = ref.watch(transactionListProvider);
+  return allTransactions.cast<Transaction?>().firstWhere(
+    (tx) =>
+      tx?.bookingRefNumber?.trim() == bookingNumber.trim() &&
+      tx?.dispatchType.toLowerCase().trim() == 'ff',
+    orElse: () => null,
+  );
+});
+
+
+final combinedTransactionProvider = FutureProvider<List<Transaction>>((ref) async {
+  final todayTx = await ref.refresh(filteredItemsProvider.future);
+  final allTx = await ref.refresh(allTransactionProvider.future);
+
+  // Combine and deduplicate by bookingRefNumber
+  final combined = [
+    ...todayTx,
+    ...allTx.where((tx) =>
+      !todayTx.any((t) => t.bookingRefNumber == tx.bookingRefNumber))
+  ];
+
+  ref.read(transactionListProvider.notifier).loadTransactions(combined);
+  return combined;
+});
+
 

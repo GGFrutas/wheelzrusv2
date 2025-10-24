@@ -17,6 +17,7 @@ import 'package:frontend/screen/navigation_menu.dart';
 import 'package:frontend/theme/colors.dart';
 import 'package:frontend/theme/text_styles.dart';
 import 'package:frontend/user/proof_of_delivery_screen.dart';
+import 'package:frontend/widgets/progress_row.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
@@ -27,7 +28,7 @@ class ConfirmationScreen extends ConsumerStatefulWidget {
   final String uid;
   final Transaction? transaction;
 
-  const ConfirmationScreen({super.key, required this.uid, required this.transaction});
+  const ConfirmationScreen({super.key, required this.uid, required this.transaction, required relatedFF});
 
   @override
   ConsumerState<ConfirmationScreen> createState() => _ConfirmationState();
@@ -35,9 +36,53 @@ class ConfirmationScreen extends ConsumerStatefulWidget {
 
 class _ConfirmationState extends ConsumerState<ConfirmationScreen> {
   String? uid;
- final List<File?> _images = [];
+ 
+ late List<List<UploadImage>> _imageLists;
 
-  Future<void> _pickImage() async {
+ late List<String> limit;
+
+ final List<String> labels = [
+  'Transfer of Liability Form',
+  'HWB—Signed',
+  'Delivery Receipt',
+  'Packing List',
+  'Delivery Note',
+  'Stock Delivery Receipt',
+  'Sales Invoice',
+  'Stock Transfer',
+  'POD'
+ ];
+
+List<String> getUploadLimit(){
+  final requestNumber = widget.transaction?.requestNumber ?? '';
+  
+  if(widget.transaction?.dlRequestNumber == requestNumber && widget.transaction?.dlRequestStatus == "Ongoing") {
+    print('dl_requestNumber: ${widget.transaction?.dlRequestNumber}');
+    return [
+      labels[0],
+      labels[1],
+      labels[2],
+      labels[3],
+      labels[4],
+      labels[5],
+      labels[6],
+
+    ];
+  } else if (widget.transaction?.plRequestNumber == requestNumber && widget.transaction?.plRequestStatus == "Assigned"){
+    print('plRequestNumber: ${widget.transaction?.plRequestNumber}');
+    return [
+      labels[6],
+      labels[7],
+
+    ];
+  } else {
+    print('RequestNumber: ${widget.transaction?.requestNumber}');
+    return [labels.last];
+    
+  }
+ }
+
+  Future<void> _pickImage(int index) async {
     final ImagePicker picker = ImagePicker();
     showModalBottomSheet(
       context: context,
@@ -52,11 +97,51 @@ class _ConfirmationState extends ConsumerState<ConfirmationScreen> {
                 onTap: () async {
                   final navigator = Navigator.of(context);
                   final List<XFile> pickedFile = await picker.pickMultiImage();
-                  if (mounted) {
+                  if (mounted && pickedFile.isNotEmpty) {
+                  final validFiles = <UploadImage>[];
+
+                  for (final xfile in pickedFile) {
+                    final file = File(xfile.path);
+                    final sizeInMB = (await file.length()) / (1024 * 1024);
+
+                    if (sizeInMB > 10) {
+                      // ❌ Too large — show message
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              "❌ ${xfile.name} is too large (${sizeInMB.toStringAsFixed(2)} MB). Max allowed: 10 MB.",
+                              style: AppTextStyles.caption.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        duration: const Duration(seconds: 3),
+                        behavior: SnackBarBehavior.floating, // ✅ Makes it float with margin
+                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        shape: RoundedRectangleBorder( // ✅ Rounded corners
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        backgroundColor: Colors.red, // ✅ Soft black, not pure #000
+                        elevation: 6,
+                          ),
+                        );
+                      }
+                    } else {
+                      // ✅ Valid file
+                      validFiles.add(
+                        UploadImage(file: file, label: limit[index]),
+                      );
+                    }
+                  }
+
+                  // ✅ Only add valid files
+                  if (validFiles.isNotEmpty) {
                     setState(() {
-                      _images.addAll(pickedFile.map((pickedFile) => File(pickedFile.path))); // Add image to the list
+                      _imageLists[index].addAll(validFiles);
                     });
                   }
+                }
                   navigator.pop();
                 },
               ),
@@ -67,12 +152,38 @@ class _ConfirmationState extends ConsumerState<ConfirmationScreen> {
                   final navigator = Navigator.of(context);
                   final XFile? pickedFile =
                       await picker.pickImage(source: ImageSource.camera);
-                  if (pickedFile != null) {
+                  if (pickedFile != null && mounted) {
+                  final file = File(pickedFile.path);
+                  final sizeInMB = (await file.length()) / (1024 * 1024);
+
+                  if (sizeInMB > 10) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          "❌ ${pickedFile.name} is too large (${sizeInMB.toStringAsFixed(2)} MB). Max allowed: 10 MB.",
+                          style: AppTextStyles.caption.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        duration: const Duration(seconds: 3),
+                        behavior: SnackBarBehavior.floating, // ✅ Makes it float with margin
+                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        shape: RoundedRectangleBorder( // ✅ Rounded corners
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        backgroundColor: Colors.red, // ✅ Soft black, not pure #000
+                        elevation: 6,
+                      ),
+                    );
+                  } else {
                     setState(() {
-                      _images
-                          .add(File(pickedFile.path)); // Add image to the list
+                      _imageLists[index].add(
+                        UploadImage(file: file, label: limit[index]),
+                      );
                     });
                   }
+                }
                   navigator.pop();
                 },
               ),
@@ -93,12 +204,43 @@ class _ConfirmationState extends ConsumerState<ConfirmationScreen> {
     return base64Images;
   }
 
+  Future<Map<String, dynamic>> buildUploadMap() async {
+    final Map<String, dynamic> uploadMap = {};
+    for (int i = 0; i < limit.length; i++) {
+      final label = limit[i];
+
+      if(_imageLists[i].isNotEmpty) {
+        final upload = _imageLists[i].first;
+        final file = upload.file;
+
+        final ext = file.path.split('.').last.toLowerCase();
+        final safeExt = (ext == 'jpg' || ext == 'png') ? ext: 'jpg';
+
+        final bytes = await file.readAsBytes();
+
+        final base64Str = base64Encode(bytes);
+
+        final filename = '${label.replaceAll(' ', '_')}.$safeExt';
+
+        uploadMap[label] = {
+          'filename': filename,
+          'content': base64Str,
+        };
+      }else{
+        uploadMap[label] = null;
+      }
+    }
+    return uploadMap;
+  }
+
 
   
    
   @override
   void initState() {
     super.initState();
+    limit = getUploadLimit();
+    _imageLists = List.generate(limit.length, (_) => <UploadImage>[]);
   }
 
   String getNullableValue(String? value, {String fallback = ''}) {
@@ -107,6 +249,32 @@ class _ConfirmationState extends ConsumerState<ConfirmationScreen> {
   
   @override
   Widget build(BuildContext context) {
+   
+  int currentStep = 3; // Assuming Confirmation is step 3 (0-based index)
+
+  final bookingNumber = widget.transaction?.bookingRefNumber;
+
+    final allTransactions = ref.watch(transactionListProvider);
+    // print("All Transaction: $allTransactions");
+
+    // for (var tx in allTransactions) {
+    //   print("🔍 TX → bookingRefNumber: '${tx.bookingRefNumber}', dispatchType: '${tx.dispatchType}'");
+    // }
+
+    final relatedFF = allTransactions.cast<Transaction?>().firstWhere(
+        (tx) {
+          final refNum = tx?.bookingRefNumber?.trim();
+          final currentRef = bookingNumber?.trim();
+          final dispatch = tx?.dispatchType.toLowerCase().trim();
+
+          return refNum != null &&
+                refNum == currentRef &&
+                dispatch == 'ff'; // ✅ specifically look for FF
+        },
+        orElse: () => null,
+      );
+   
+
    
     return Scaffold(
       appBar: AppBar(
@@ -128,94 +296,191 @@ class _ConfirmationState extends ConsumerState<ConfirmationScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              progressRow(3), // Pass an integer value for currentStep
+              ProgressRow(currentStep: currentStep, uid: widget.uid, transaction: widget.transaction,relatedFF: relatedFF,),
 
               const SizedBox(height: 20),
-              Container(
-                height: 250,
-                padding: const EdgeInsets.all(16.0), // Add padding inside the container
-                
-                decoration: BoxDecoration(
-                  color: bgColor,
-                  borderRadius: BorderRadius.circular(20.0), // Rounded edges
+
+             GridView.builder(
+                itemCount: limit.length,
+                shrinkWrap: true, // ✅ prevents unbounded height error
+            physics: const NeverScrollableScrollPhysics(), // ✅ disables nested scrolling
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 1,
                 ),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row (
+              itemBuilder: (context,index) {
+              
+                return Container (
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column (
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      
-                      const SizedBox(width: 10),
-                      ..._images.map((imageFile){
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 10),
-                          child: Stack(
+                      Text(
+                        limit[index],
+                        style:  AppTextStyles.caption,
+                      ),
+                      // const SizedBox(height: 5),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
                             children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.file(
-                                  imageFile!,
-                                  width: 100,
-                                  height: 100,
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                              Positioned(
-                                top: 2,
-                                right: 2,
-                                child: GestureDetector(
-                                  onTap: (){
-                                    setState(() {
-                                      _images.remove(imageFile);
-                                    });
-                                  },
-                                  child: const CircleAvatar(
-                                    radius: 12,
-                                    backgroundColor: Colors.red,
-                                    child: Icon(Icons.close, size: 16, color: Colors.white),
+                              // const SizedBox(width:),
+                              ..._imageLists[index].map((upload) {
+                                return Padding(
+                                  padding: const EdgeInsets.only(right: 10),
+                                  child: Stack(
+                                    children: [
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Image.file(
+                                          upload.file,
+                                          width: 100,
+                                          height: 100,
+                                          fit: BoxFit.cover,
+                                        ),
+                                      ),
+                                      Positioned(
+                                        top: 2,
+                                        right: 2,
+                                        child: GestureDetector(
+                                          onTap: () {
+                                            setState(() {
+                                              _imageLists[index].remove(upload);
+                                            });
+                                          },
+                                          child: const CircleAvatar(
+                                            radius: 12,
+                                            backgroundColor: Colors.red,
+                                            child: Icon(Icons.close, size: 16, color: Colors.white),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }),
+                              GestureDetector(
+                                onTap: () => _pickImage(index),
+                                child: Container(
+                                  width: 80,
+                                  height: 80,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: Colors.grey.shade400),
+                                  ),
+                                  child: const Icon(Icons.camera_alt_outlined,
+                                      size: 40,
+                                      color: mainColor
                                   ),
                                 ),
                               ),
                             ],
                           ),
-                        );
-                      }),
+                        ),
+                      )
                     ],
-                  ),
-                ),
-                
-              ),
-              const SizedBox(height: 10),
-              Center(
-                child: GestureDetector(
-                  onTap: () async {
-                    _pickImage();
-                  },
-                  child: Container (
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade400),
-                    ),
-                    child: const Icon(Icons.camera_alt_outlined,
-                      size: 40,
-                      color: mainColor
-                    ),
-                  ),
-                )
-              ),
-          
+                  )
+                );
+              }
             
-              const SizedBox(height: 10),
-              Center(
-                child: Text(
-                  'Upload Picture as Proof of Delivery',
-                  style: AppTextStyles.caption.copyWith(
-                    color:  Colors.black54,
-                  ),
-                ), 
-              ),
+            ),
+
+              // ...List.generate(5, (index) {
+              //   return Column(
+              //     children: [
+              //       Padding(
+              //         padding: const EdgeInsets.all(16.0), // Add padding inside the container
+              //         child: Container(
+              //           height: 150,
+              //           width: 150,
+              //           padding: const EdgeInsets.all(16.0), // Add padding inside the container
+              //           decoration: BoxDecoration(
+              //             color: bgColor,
+              //             borderRadius: BorderRadius.circular(20.0), // Rounded edges
+              //           ),
+              //           child: SingleChildScrollView(
+              //             scrollDirection: Axis.horizontal,
+              //             child: Row(
+              //               children: [
+              //                 const SizedBox(width: 10),
+              //                 ..._imageLists[index].map((file) {
+              //                   return Padding(
+              //                     padding: const EdgeInsets.only(right: 10),
+              //                     child: Stack(
+              //                       children: [
+              //                         ClipRRect(
+              //                           borderRadius: BorderRadius.circular(8),
+              //                           child: Image.file(
+              //                             file,
+              //                             width: 100,
+              //                             height: 100,
+              //                             fit: BoxFit.cover,
+              //                           ),
+              //                         ),
+              //                         Positioned(
+              //                           top: 2,
+              //                           right: 2,
+              //                           child: GestureDetector(
+              //                             onTap: () {
+              //                               setState(() {
+              //                                 _imageLists[index].remove(file);
+              //                               });
+              //                             },
+              //                             child: const CircleAvatar(
+              //                               radius: 12,
+              //                               backgroundColor: Colors.red,
+              //                               child: Icon(Icons.close, size: 16, color: Colors.white),
+              //                             ),
+              //                           ),
+              //                         ),
+              //                       ],
+              //                     ),
+              //                   );
+              //                 }).toList(),
+              //               ],
+              //             ),
+              //           ),
+              //         ),
+              //       ),
+              //       const SizedBox(height: 10),
+              //       Center(
+              //         child: GestureDetector(
+              //           onTap: () => _pickImage(index),
+              //           child: Container(
+              //             width: 80,
+              //             height: 80,
+              //             decoration: BoxDecoration(
+              //               color: Colors.white,
+              //               borderRadius: BorderRadius.circular(12),
+              //               border: Border.all(color: Colors.grey.shade400),
+              //             ),
+              //             child: const Icon(Icons.camera_alt_outlined,
+              //                 size: 40,
+              //                 color: mainColor
+              //             ),
+              //           ),
+              //         ),
+              //       ),
+              //       const SizedBox(height: 10),
+              //       Center(
+              //         child: Text(
+              //           'Upload Picture as Proof of Delivery',
+              //           style: AppTextStyles.caption.copyWith(
+              //             color: Colors.black54,
+              //           ),
+              //         ),
+              //       ),
+              //     ],
+              //   );
+              // }),
               const SizedBox(height: 70),
             ],
           ),
@@ -233,7 +498,8 @@ class _ConfirmationState extends ConsumerState<ConfirmationScreen> {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed:() async {
-                      if (_images.isEmpty) {
+                      final hasAnyImage = _imageLists.any((list) => list.isNotEmpty);
+                      if (!hasAnyImage) {
                         showDialog(
                           context: context,
                           builder: (context) {
@@ -296,17 +562,21 @@ class _ConfirmationState extends ConsumerState<ConfirmationScreen> {
                           }
                         );
                       } else {
-                        final validImages = _images.whereType<File>().toList();
+                        final validImages = _imageLists
+    .expand((list) => list)
+    .map((upload) => upload.file) // ✅ extract File from UploadImage
+    .toList();
 
                         if (validImages.isEmpty) {
                           return;
                         }
                         final navigator  = Navigator.of(context);
                         final base64Images =  await _convertImagestoBase64(validImages);
-                          print('Base64 Image: $base64Images\n');
+                        print('Base64 Image: $base64Images\n');
+                        final uploadMap = await buildUploadMap();
                         navigator.push(
                           MaterialPageRoute(
-                            builder: (context) => ProofOfDeliveryScreen(uid: widget.uid, transaction: widget.transaction,base64Images: base64Images),
+                            builder: (context) => ProofOfDeliveryScreen(uid: widget.uid, transaction: widget.transaction, base64ImagesWithLabels: uploadMap),
                           ),
                         );
                       }
@@ -423,4 +693,11 @@ class _ConfirmationState extends ConsumerState<ConfirmationScreen> {
         ),
     );
   }
+}
+
+class UploadImage {
+  final File file;
+  final String label;
+
+  UploadImage({required this.file, required this.label});
 }

@@ -6,6 +6,7 @@ use Illuminate\Http\Middleware\HandleCors;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\FetchDataController;
 
 Route::middleware([HandleCors::class])->group(function () {
     Route::get('/user', function (Request $request) {
@@ -25,18 +26,20 @@ Route::middleware([HandleCors::class])->group(function () {
     Route::post('logout', [AuthenticationController::class, 'logout'])->middleware('auth:sanctum');
     Route::put('update', [AuthenticationController::class, 'updateProfile'])->middleware('auth:sanctum');
     Route::get('/odoo/users', [AuthenticationController::class, 'getUser']);
-    Route::get('/odoo/booking/today', [TransactionController::class, 'getTodayBooking']);
-    Route::get('/odoo/history', [TransactionController::class, 'getHistory']);
-    Route::get('/odoo/reason', [TransactionController::class, 'getRejectionReason']);
+    Route::get('/odoo/booking/today', [FetchDataController::class, 'getTodayBooking']);
+    Route::get('/odoo/history', [FetchDataController::class, 'getHistory']);
+    Route::get('/odoo/reason', [FetchDataController::class, 'getRejectionReason']);
     Route::post('/odoo/{transactionId}/status', [TransactionController::class, 'updateStatus']);
     Route::post('/odoo/reject-booking', [TransactionController::class, 'rejectBooking']);
     Route::get('/odoo/reject_vendor', [TransactionController::class, 'rejectVendor']);
     Route::post('/odoo/pod-accepted-to-ongoing', [TransactionController::class, 'uploadPOD']);
     Route::post('/odoo/pod-ongoing-to-complete', [TransactionController::class, 'uploadPOD_sec']);
 
-    Route::get('/odoo/booking/ongoing', [TransactionController::class, 'getOngoingBooking']);
-    Route::get('/odoo/booking/history', [TransactionController::class, 'getHistoryBooking']);
-    Route::get('/odoo/booking/all-bookings', [TransactionController::class, 'getAllBooking']);
-    Route::get('/odoo/booking/all-history', [TransactionController::class, 'getAllHistory']);
+    Route::get('/odoo/booking/ongoing', [FetchDataController::class, 'getOngoingBooking']);
+    Route::get('/odoo/booking/history', [FetchDataController::class, 'getHistoryBooking']);
+    Route::get('/odoo/booking/all-bookings', [FetchDataController::class, 'getAllBooking']);
+    Route::get('/odoo/booking/all-history', [FetchDataController::class, 'getAllHistory']);
+
+    Route::post('/odoo/notify', [TransactionController::class, 'notifyShipperConsignee']);
 
 });

@@ -19,6 +19,7 @@ import 'package:frontend/theme/colors.dart';
 import 'package:frontend/theme/text_styles.dart';
 import 'package:frontend/user/history_details.dart';
 import 'package:frontend/user/transaction_details.dart';
+import 'package:frontend/util/transaction_utils.dart';
 import 'package:intl/intl.dart';
 
 class AllHistoryScreen extends ConsumerStatefulWidget{
@@ -167,99 +168,38 @@ void initState() {
                     final driverId = authPartnerId?.toString();
 
                    
-
-
-
-                    final expandedTransactions = transaction.expand((item) {
-                      
-                      String cleanAddress(String address) {
-                        return address
-                          .split(',') // splits the string by commas
-                          .map((e) => e.trim()) //removes extra spaces
-                          .where((e) => e.isNotEmpty && e.toLowerCase() != 'ph') //filters out empty strings and 'ph'
-                          .join(', '); // joins the remaining parts back together
-                      }
-    
-                      if (item.dispatchType == "ot") {
-                        return [
-                          // First instance: Deliver to Shipper
-                          if (item.deTruckDriverName == driverId) // Filter out if accepted
-                            // Check if the truck driver is the same as the authPartnerId
-                            item.copyWith(
-                              name: "Deliver to Shipper",
-                              destination: cleanAddress(item.origin),
-                              origin: cleanAddress(item.destination),
-                              requestNumber: item.deRequestNumber,
-                              requestStatus: item.deRequestStatus,
-                              rejectedTime: item.deRejectedTime,
-                              completedTime: item.deCompletedTime,
-
-                              truckPlateNumber: item.deTruckPlateNumber,
-                            ),
-                            // Second instance: Pickup from Shipper
-                          if ( item.plTruckDriverName == driverId) // Filter out if accepted
-                            // if (item.plTruckDriverName == authPartnerId)
-                              item.copyWith(
-                              name: "Pickup from Shipper",
-                              destination: cleanAddress(item.origin),
-                              origin: cleanAddress(item.destination),
-                              requestNumber: item.plRequestNumber,
-                              requestStatus: item.plRequestStatus,
-                              rejectedTime: item.plRejectedTime,
-                              completedTime: item.plCompletedTime,
-                              truckPlateNumber: item.plTruckPlateNumber,
-                              ),
-                        ];
-                      } else if (item.dispatchType == "dt") {
-                        return [
-                          // First instance: Deliver to Consignee
-                          if (item.dlTruckDriverName == driverId) // Filter out if accepted
-                            item.copyWith(
-                              name: "Deliver to Consignee",
-                              origin: cleanAddress(item.destination),
-                              destination: cleanAddress(item.origin),
-                              requestNumber: item.dlRequestNumber,
-                              requestStatus: item.dlRequestStatus,
-                              rejectedTime: item.dlRejectedTime,
-                              completedTime: item.dlCompletedTime,
-                              truckPlateNumber: item.dlTruckPlateNumber,
-                            ),
-                          // Second instance: Pickup from Consignee
-                          if (item.peTruckDriverName == driverId) // Filter out if accepted
-                            item.copyWith(
-                              name: "Pickup from Consignee",
-                              origin: cleanAddress(item.origin),
-                              destination: cleanAddress(item.destination),
-                              requestNumber: item.peRequestNumber,
-                              requestStatus: item.peRequestStatus,
-                              rejectedTime: item.peRejectedTime,
-                              completedTime: item.peCompletedTime,
-                              truckPlateNumber: item.peTruckPlateNumber,
-                            ),
-                        ]; 
-                      }
-                      // Return as-is if no match
-                      return [item];
-                    }).toList();
-
-                    expandedTransactions.sort((a,b){
-                      DateTime dateACompleted = DateTime.tryParse(a.completedTime ?? '') ?? DateTime(0);
-                      DateTime dateARejected = DateTime.tryParse(a.rejectedTime ?? '') ?? DateTime(0);
-                      DateTime dateBCompleted = DateTime.tryParse(b.completedTime ?? '') ?? DateTime(0);
-                      DateTime dateBRejected = DateTime.tryParse(b.rejectedTime ?? '') ?? DateTime(0);
-
-                      DateTime latestA = dateACompleted.isAfter(dateARejected) ? dateACompleted : dateARejected;
-                      DateTime latestB = dateBCompleted.isAfter(dateBRejected) ? dateBCompleted : dateBRejected;
-                      
-                      return latestB.compareTo(latestA);
-                      
-                    });
+                    final expandedTransactions = TransactionUtils.expandTransactions(
+                      transaction,
+                      driverId ?? '',
+                    );
                     
 
                     final ongoingTransactions = expandedTransactions
-                      .where((tx) =>  ['Cancelled', 'Completed'].contains(tx.stageId) || tx.requestStatus == 'Completed')
-                      .toList();
+                      .where((tx) =>  ['Cancelled', 'Completed'].contains(tx.stageId) || ['Backload', 'Completed', 'Reassigned'].contains(tx.requestStatus))
+                      .toList()
+                      ..sort((a,b){
+                      DateTime getRecentDate(Transaction t) {
+                        final completed = DateTime.tryParse(t.completedTime ?? '');
+                        final cancelled = DateTime.tryParse(t.writeDate ?? '');
+                        final backload = DateTime.tryParse(t.backloadConsolidation?.consolidatedDatetime ?? '');
+                        
+                        return completed ?? backload ??cancelled ?? DateTime.fromMillisecondsSinceEpoch(0);
 
+                      }
+                      return getRecentDate(b).compareTo(getRecentDate(a));
+                    });
+
+                    String getStatusLabel(Transaction item) {
+                      final status = item.requestStatus?.trim();
+                      final stage = item.stageId?.trim();
+
+                      if (status == 'Completed' || status == 'Backload') return status!;
+                      if (stage == 'Completed' || stage == 'Cancelled') return stage!;
+                      return '—';
+                    }
+                    
+                      
+                   
                   
                     if (ongoingTransactions.isEmpty) {
                       return LayoutBuilder(
@@ -283,24 +223,13 @@ void initState() {
                       );
                       
                     }
+
+                    
                     return ListView.builder(
-                      controller: _scrollableController,
-                      itemCount: ongoingTransactions.length + 1,
+                      itemCount: ongoingTransactions.length,
                       itemBuilder: (context, index) {
-                        if (index == ongoingTransactions.length) {
-                          // Show a loading indicator at the end of the list
-                          return const Padding(
-                            padding: EdgeInsets.all(8.0),
-                            // child: Center(child: CircularProgressIndicator()),
-                          );
-                        }
                         final item = ongoingTransactions[index];
-                        final statusLabel =
-                        item.requestStatus == 'Completed'
-                            ? item.requestStatus
-                            : item.stageId == 'Completed' || item.stageId == 'Cancelled'
-                                ? item.stageId
-                                : '—';
+                        final statusLabel = getStatusLabel(item);
                         return Container(
                           margin: const EdgeInsets.only(bottom: 20),
                          
@@ -355,7 +284,7 @@ void initState() {
                                     
                                       Container(
                                         decoration: BoxDecoration(
-                                          color: getStatusColor((statusLabel ?? 'Unknown').trim()),
+                                          color: getStatusColor((statusLabel).trim()),
                                           borderRadius: BorderRadius.circular(8),
                                         ),
                                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -363,8 +292,8 @@ void initState() {
                                           crossAxisAlignment: CrossAxisAlignment.end,
                                           children: [
                                             Text(
-                                            (item.requestStatus == 'Completed' || item.stageId == 'Completed')
-                                              ? 'Completed'
+                                             (item.requestStatus == 'Completed' || item.requestStatus == 'Backload' || item.stageId == 'Completed')
+                                              ? item.requestStatus == 'Backload' ? 'Backloading' : 'Completed'
                                               : item.stageId == 'Cancelled'
                                                 ? 'Cancelled'
                                                 : '—',
@@ -411,7 +340,9 @@ void initState() {
                                                 ? separateDateTime(item.writeDate)['date'] ?? '—'
                                                 : item.requestStatus == 'Completed'
                                                   ? separateDateTime(item.completedTime)['date'] ?? '—'
-                                                  : '—',
+                                                  : item.requestStatus == 'Backload'
+                                                    ? item.backloadConsolidation?.formattedConsolidatedDate ?? '—'
+                                                    : '—',
                                               style: AppTextStyles.caption.copyWith(
                                                 color: mainColor,
                                                 fontWeight: FontWeight.bold,
@@ -451,7 +382,10 @@ void initState() {
                                                 ? separateDateTime(item.writeDate)['time'] ?? '—'
                                                 : item.requestStatus == 'Completed'
                                                   ? separateDateTime(item.completedTime)['time'] ?? '—'
-                                                  : '—',
+                                                 : item.requestStatus == 'Backload'
+                                                    ? separateDateTime(item.backloadConsolidation?.consolidatedDatetime)['time'] ?? '—'
+
+                                                    : '—',
                                               style: AppTextStyles.caption.copyWith(
                                                 color: mainColor,
                                                 fontWeight: FontWeight.bold,
