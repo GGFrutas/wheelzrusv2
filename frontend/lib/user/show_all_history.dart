@@ -48,11 +48,11 @@ void initState() {
     });
   });
 
-  _scrollableController.addListener(() {
-      if (_scrollableController.position.pixels == _scrollableController.position.maxScrollExtent) {
-        ref.read(paginatedTransactionProvider('all-history').notifier).fetchNextPage();
-      }
-    });
+  // _scrollableController.addListener(() {
+  //     if (_scrollableController.position.pixels == _scrollableController.position.maxScrollExtent) {
+  //       ref.read(paginatedTransactionProvider('all-history').notifier).fetchNextPage();
+  //     }
+  //   });
 }
 
   Future<void> _refreshTransaction() async {
