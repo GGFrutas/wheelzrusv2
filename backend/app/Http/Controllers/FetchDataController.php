@@ -22,7 +22,7 @@ class FetchDataController extends Controller
 {
     protected $url = "http://gsq-ibx-rda:8068";
     protected $db = 'rda_beta_new';
-    // protected $odoo_url = "http://192.168.118.102:8000/odoo/jsonrpc";
+    // protected $odoo_url = "http://192.168.76.205:8080/odoo/jsonrpc";
     protected $odoo_url = "http://gsq-ibx-rda:8068/jsonrpc";
 
     private function authenticateDriver(Request $request)
@@ -1013,9 +1013,13 @@ class FetchDataController extends Controller
                 'transactions' => $data,
                 'reassigned' => $reassigned,
                 
+                'transactions' => $data,
+                'reassigned' => $reassigned,
+                
             ]
         ]);
     }
+
 
     public function getAllBooking(Request $request)
     {
