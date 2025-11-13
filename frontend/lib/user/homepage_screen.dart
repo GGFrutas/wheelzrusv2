@@ -56,8 +56,8 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
     super.initState();
 
     Future.microtask(() async {
-      ref.invalidate(bookingProvider);
-      await ref.refresh(allTransactionProvider.future); // if async
+      ref.invalidate(filteredItemsProvider);
+      await ref.refresh(filteredItemsProvider.future); // if async
     });
   }
 
@@ -383,7 +383,7 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                                                       crossAxisAlignment: CrossAxisAlignment.start,
                                                       children: [
                                                         Text (
-                                                          item.name,
+                                                          item.name!,
                                                           style: AppTextStyles.body.copyWith(
                                                             fontSize: 14,
                                                             fontWeight: FontWeight.bold,

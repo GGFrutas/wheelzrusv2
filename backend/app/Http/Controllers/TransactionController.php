@@ -19,7 +19,7 @@ use Carbon\Carbon;
 
 class TransactionController extends Controller
 {
-    protected $url = "http://gsq-ibx-rda:8068";
+    protected $url = "http://gsq-ibx-rda:8068/jsonrpc";
     protected $db = 'rda_beta_new';
     // protected $odoo_url = "http://192.168.118.102:8000/odoo/jsonrpc";
     protected $odoo_url = "http://gsq-ibx-rda:8068/jsonrpc";
@@ -1391,7 +1391,6 @@ class TransactionController extends Controller
                         "id" => rand(1000, 9999)
                     ]);
                     $originBookingRef = $originDispatch['result'][0]['booking_reference_no'] ?? null;
-
                     if ($originBookingRef) {
                         $searchBooking = jsonRpcRequest($odooUrl, [
                             "jsonrpc" => "2.0",
@@ -1403,32 +1402,37 @@ class TransactionController extends Controller
                                     $db, $uid, $odooPassword,
                                     "freight.management", "search_read",
                                     [[["booking_reference_no", "=", $originBookingRef]]],
-                                    ["fields" => ["id", "stage_id"]]
+                                    ["fields" => ["id", "stage_id","container_number"]]
                                 ],
                             ],
                             "id" => rand(1000, 9999)
                         ]);
 
                         $bookingIds = $searchBooking['result'][0]['id'] ?? null;
-                        if ($bookingIds) {
-                            $updateBookingStage = jsonRpcRequest($odooUrl, [
-                                "jsonrpc" => "2.0",
-                                "method"  => "call",
-                                "params"  => [
-                                    "service" => "object",
-                                    "method"  => "execute_kw",
-                                    "args"    => [
-                                        $db, $uid, $odooPassword,
-                                        "freight.management", "write",
-                                        [[$bookingIds], ["stage_id" => 5]]
-                                    ]
-                                ],
-                                "id" => rand(1000, 9999)
-                            ]);
-                            $resultSummary['origin_booking_update'] = $updateBookingStage;
-                            Log::info("Origin freight.management updated to stage 5", ['originBookingRef' => $originBookingRef, 'bookingId' => $bookingIds, 'response' => $updateBookingStage]);
+                        $containerNo =  trim($searchBooking['result'][0]['container_number'] ?? '');
+                        if (!empty($containerNo)) {
+                            if ($bookingIds) {
+                                $updateBookingStage = jsonRpcRequest($odooUrl, [
+                                    "jsonrpc" => "2.0",
+                                    "method"  => "call",
+                                    "params"  => [
+                                        "service" => "object",
+                                        "method"  => "execute_kw",
+                                        "args"    => [
+                                            $db, $uid, $odooPassword,
+                                            "freight.management", "write",
+                                            [[$bookingIds], ["stage_id" => 5]]
+                                        ]
+                                    ],
+                                    "id" => rand(1000, 9999)
+                                ]);
+                                $resultSummary['origin_booking_update'] = $updateBookingStage;
+                                Log::info("Origin freight.management updated to stage 5", ['originBookingRef' => $originBookingRef, 'bookingId' => $bookingIds, 'response' => $updateBookingStage]);
+                            } else {
+                                Log::warning("divertedConsol: no freight.management booking found for origin bookingRef", ['originBookingRef' => $originBookingRef]);
+                            }
                         } else {
-                            Log::warning("divertedConsol: no freight.management booking found for origin bookingRef", ['originBookingRef' => $originBookingRef]);
+                            Log::warning("divertedConsol: origin dispatch has no container number", ['consolOriginId' => $consolOriginId]);
                         }
                     } else {
                         Log::warning("divertedConsol: origin dispatch has no booking_reference_no", ['consolOriginId' => $consolOriginId]);
@@ -1592,76 +1596,156 @@ class TransactionController extends Controller
         }
     }
 
-    private function updateBookingStatus($bookingRef, $db, $uid, $odooPassword, $odooUrl, $updateBookingStatus)
+    // private function updateBookingStatus($bookingRef, $db, $uid, $odooPassword, $odooUrl, $updateBookingStatus)
+    // {
+    //     if (!$bookingRef) return;
+
+    //     $searchBooking = [
+    //         "jsonrpc" => "2.0",
+    //         "method" => "call",
+    //         "params" => [
+    //             "service" => "object",
+    //             "method" => "execute_kw",
+    //             "args" => [
+    //                 $db,
+    //                 $uid,
+    //                 $odooPassword,
+    //                 "freight.management",
+    //                 "search_read",
+    //                 [[["booking_reference_no", '=', $bookingRef]]],
+    //                 ["fields" => ["id", "stage_id"]]
+    //             ],
+    //         ],
+    //         "id" => rand(1000, 9999)
+    //     ];
+    //     $searchResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
+    //         "http" => [
+    //             "header" => "Content-Type: application/json",
+    //             "method" => "POST",
+    //             "content" => json_encode($searchBooking),
+    //         ]
+    //     ])), true);
+        
+    //     $bookingIds = $searchResponse['result'][0]['id'] ?? null;
+
+    //     if ($bookingIds) {
+    //         $updateBookingStage = [
+    //             "jsonrpc" => "2.0",
+    //             "method" => "call",
+    //             "params" => [
+    //                 "service" => "object",
+    //                 "method" => "execute_kw",
+    //                 "args" => [
+    //                     $db,
+    //                     $uid,
+    //                     $odooPassword,
+    //                     "freight.management",
+    //                     "write",
+    //                     [
+    //                         [$bookingIds],
+                            
+    //                         $updateBookingStatus
+                           
+    //                     ]
+    //                 ]
+    //             ],
+    //             "id" => rand(1000, 9999)
+    //         ];
+    //         $response = json_decode(file_get_contents($odooUrl, false, stream_context_create([
+    //             "http" => [
+    //                 "header" => "Content-Type: application/json",
+    //                 "method" => "POST",
+    //                 "content" => json_encode($updateBookingStage),
+    //             ]
+    //         ])), true);
+
+    //         Log::info("Updated booking status for bookingRef {$bookingRef}, bookingId: {$bookingIds}");
+
+    //         return $response;
+           
+    //     } else {
+    //         Log::warning("No booking found for bookingRef {$bookingRef}");
+    //     }
+    // }
+    private function updateBookingStatus($bookingRef, $db, $uid, $odooPassword, $odooUrl, $updateBookingStatus, $transactionId = null)
     {
         if (!$bookingRef) return;
 
-        $searchBooking = [
-            "jsonrpc" => "2.0",
-            "method" => "call",
-            "params" => [
-                "service" => "object",
-                "method" => "execute_kw",
-                "args" => [
+        // 1️⃣ First, normal booking lookup
+        $searchResponse = jsonRpcRequest($odooUrl, [
+            'jsonrpc' => '2.0',
+            'method' => 'call',
+            'params' => [
+                'service' => 'object',
+                'method' => 'execute_kw',
+                'args' => [
                     $db,
                     $uid,
                     $odooPassword,
-                    "freight.management",
-                    "search_read",
-                    [[["booking_reference_no", '=', $bookingRef]]],
-                    ["fields" => ["id", "stage_id"]]
-                ],
-            ],
-            "id" => rand(1000, 9999)
-        ];
-        $searchResponse = json_decode(file_get_contents($odooUrl, false, stream_context_create([
-            "http" => [
-                "header" => "Content-Type: application/json",
-                "method" => "POST",
-                "content" => json_encode($searchBooking),
-            ]
-        ])), true);
-        
-        $bookingIds = $searchResponse['result'][0]['id'] ?? null;
-
-        if ($bookingIds) {
-            $updateBookingStage = [
-                "jsonrpc" => "2.0",
-                "method" => "call",
-                "params" => [
-                    "service" => "object",
-                    "method" => "execute_kw",
-                    "args" => [
-                        $db,
-                        $uid,
-                        $odooPassword,
-                        "freight.management",
-                        "write",
-                        [
-                            [$bookingIds],
-                            
-                            $updateBookingStatus
-                           
-                        ]
-                    ]
-                ],
-                "id" => rand(1000, 9999)
-            ];
-            $response = json_decode(file_get_contents($odooUrl, false, stream_context_create([
-                "http" => [
-                    "header" => "Content-Type: application/json",
-                    "method" => "POST",
-                    "content" => json_encode($updateBookingStage),
+                    'freight.management',
+                    'search_read',
+                    [[['booking_reference_no', '=', $bookingRef]]],
+                    ['fields' => ['id', 'stage_id']]
                 ]
-            ])), true);
+            ],
+            'id' => rand(1000, 9999)
+        ]);
 
-            Log::info("Updated booking status for bookingRef {$bookingRef}, bookingId: {$bookingIds}");
+        $bookingId = $searchResponse['result'][0]['id'] ?? null;
 
-            return $response;
-           
-        } else {
+        if (!$bookingId) {
             Log::warning("No booking found for bookingRef {$bookingRef}");
+            return;
         }
+
+        // 2️⃣ Check if this booking is part of a consolidated destination
+        $notebookRes = jsonRpcRequest($odooUrl, [
+            'jsonrpc' => '2.0',
+            'method' => 'call',
+            'params' => [
+                'service' => 'object',
+                'method' => 'execute_kw',
+                'args' => [
+                    $db, $uid, $odooPassword,
+                    'consol.type.notebook', 'search_read',
+                    [[['consol_destination', '=', $transactionId]]],
+                    ['fields' => ['id', 'type_consol', 'consol_destination']]
+                ]
+            ],
+            'id' => rand(1000, 9999)
+        ]);
+
+        $consolNotebook = $notebookRes['result'][0] ?? null;
+        $consolType = $consolNotebook['type_consol'][0] ?? null;
+
+        // 3️⃣ Decide if we should force stage 6
+        if ($consolNotebook && $consolType == 1) {
+            Log::info("BookingRef {$bookingRef} is part of consolidated destination → forcing stage 6");
+            $updateBookingStatus['stage_id'] = 6;
+        }
+
+        // 4️⃣ Update booking stage/status
+        $updateResponse = jsonRpcRequest($odooUrl, [
+            'jsonrpc' => '2.0',
+            'method' => 'call',
+            'params' => [
+                'service' => 'object',
+                'method' => 'execute_kw',
+                'args' => [
+                    $db, $uid, $odooPassword,
+                    'freight.management', 'write',
+                    [[$bookingId], $updateBookingStatus]
+                ]
+            ],
+            'id' => rand(1000, 9999)
+        ]);
+
+        Log::info("Updated booking status for bookingRef {$bookingRef}, bookingId: {$bookingId}", [
+            'update' => $updateBookingStatus,
+            'response' => $updateResponse
+        ]);
+
+        return $updateResponse;
     }
 
 
@@ -1832,6 +1916,10 @@ class TransactionController extends Controller
         $newStatus = $request->input('newStatus');
         $containerNumber = $request->input('enteredContainerNumber');
         $odooUrl = $this->odoo_url;
+
+Log::info("Request Number: $requestNumber, Dispatch Type: $dispatchType, Entered Name: $enteredName, New Status: $newStatus, Container Number: $containerNumber, Actual Time: $actualTime, UID: $uid");
+
+       
        
 
         $type = $this->handleDispatchRequest($request);

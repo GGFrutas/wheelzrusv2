@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/models/transaction_model.dart';
 import 'package:frontend/notifiers/auth_notifier.dart';
 import 'package:frontend/provider/accepted_transaction.dart' as accepted_transaction;
+import 'package:frontend/provider/base_url_provider.dart';
 import 'package:frontend/provider/theme_provider.dart';
 import 'package:frontend/provider/transaction_list_notifier.dart';
 import 'package:frontend/provider/transaction_provider.dart';
@@ -35,7 +36,7 @@ class DetailedDetailScreen extends ConsumerStatefulWidget {
 
 class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
   late String uid;
-
+ Transaction? transaction;
   @override
   void initState() {
     super.initState();
@@ -44,8 +45,61 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
     Future.microtask(() async {
       await ref.refresh(combinedTransactionProvider.future);
     });
+     _fetchTransactionDetails();
 
   }
+    bool isLoading = true;
+
+  Future<void> _fetchTransactionDetails() async {
+  print("Fetching details for transaction ID: ${widget.transaction?.id}");
+  print("Detailed Request Number: ${widget.transaction?.requestNumber}");
+  print('➡️ TransactionDetails params: id=${widget.transaction?.id}, uid=${widget.uid}');
+
+  try {
+    final baseUrl = ref.read(baseUrlProvider);
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/odoo/booking/transaction_details/${widget.transaction?.id}?uid=${widget.uid}'),
+      headers: {
+        'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'password': ref.read(authNotifierProvider).password ?? '',
+          'login':ref.read(authNotifierProvider).login ?? ''
+      },
+    );
+
+  if (response.statusCode == 200) {
+      final jsonData = jsonDecode(response.body);
+
+      // check if structure is what you expect
+      final data = jsonData['data'];
+      final transactions = data?['transactions'];
+
+      if (transactions != null && transactions is List && transactions.isNotEmpty) {
+        final selected = transactions.firstWhere(
+          (tx) => tx['id'] == widget.transaction?.id,
+          orElse: () => transactions.first,
+        );
+
+        debugPrint('✅ Found transaction: ${selected['id']}');
+
+        setState(() {
+          transaction = Transaction.fromJson(selected);
+          isLoading = false;
+        });
+      } else {
+        debugPrint('⚠️ No transactions found in response.');
+        setState(() => isLoading = false);
+      }
+    } else {
+      debugPrint('❌ Failed request. Code: ${response.statusCode}');
+      setState(() => isLoading = false);
+    }
+  } catch (e) {
+    setState(() => isLoading = false);
+    debugPrint('Error fetching transaction: $e');
+  }
+  
+}
 
   String getNullableValue(String? value, {String fallback = ''}) {
     return value ?? fallback;
@@ -79,11 +133,11 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
         return "Delivery Empty should be completed first.";
       }
 
-      // if (requestNumber == transaction.dlRequestNumber) {
-      //   if (relatedFF == null || relatedFF.stageId != "Completed") {
-      //     return "Associated Freight Forwarding should be completed first.";
-      //   }
-      // }
+      if (requestNumber == transaction.dlRequestNumber) {
+        if (relatedFF == null || relatedFF.stageId != "Completed") {
+          return "Associated Freight Forwarding should be completed first.";
+        }
+      }
 
       if(transaction.freightForwarderName!.isEmpty) {
         return "Associated Freight Forwarding Vendor has not yet been assigned.";
@@ -172,7 +226,7 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
                             children: [
                               // Space between label and value
                               Text(
-                                widget.transaction?.requestNumber ?? 'N/A',
+                                transaction?.requestNumber ?? 'N/A',
                                 style: AppTextStyles.subtitle.copyWith(
                                   color: mainColor,
                                 ),
@@ -205,8 +259,8 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
                                 Text(
                                 // (widget.transaction?.originAddress.isNotEmpty ?? false)
                                 // ? widget.transaction!.originAddress.toUpperCase() : '—',
-                                (widget.transaction?.origin.isNotEmpty ?? false)
-                                ? widget.transaction!.origin.toUpperCase() : '—',
+                                (widget.transaction?.origin!.isNotEmpty ?? false)
+                                ? widget.transaction!.origin!.toUpperCase() : '—',
                                   // Use the originPort variable here
                                   style: AppTextStyles.subtitle.copyWith(
                                     color: mainColor,

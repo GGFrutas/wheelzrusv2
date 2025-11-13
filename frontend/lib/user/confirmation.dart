@@ -28,7 +28,7 @@ class ConfirmationScreen extends ConsumerStatefulWidget {
   final String uid;
   final Transaction? transaction;
 
-  const ConfirmationScreen({super.key, required this.uid, required this.transaction, required relatedFF});
+  const ConfirmationScreen({super.key, required this.uid, required this.transaction, required relatedFF, required requestNumber});
 
   @override
   ConsumerState<ConfirmationScreen> createState() => _ConfirmationState();
@@ -36,6 +36,7 @@ class ConfirmationScreen extends ConsumerStatefulWidget {
 
 class _ConfirmationState extends ConsumerState<ConfirmationScreen> {
   String? uid;
+  Transaction? transaction;
  
  late List<List<UploadImage>> _imageLists;
 
@@ -76,7 +77,7 @@ List<String> getUploadLimit(){
 
     ];
   } else {
-    print('RequestNumber: ${widget.transaction?.requestNumber}');
+    print('RequestNumber for upload: ${widget.transaction?.requestNumber}');
     return [labels.last];
     
   }
@@ -249,6 +250,8 @@ List<String> getUploadLimit(){
   
   @override
   Widget build(BuildContext context) {
+
+    print('Confirmation Screen - Transaction Request Number: ${widget.transaction?.requestNumber}');
    
   int currentStep = 3; // Assuming Confirmation is step 3 (0-based index)
 
@@ -265,7 +268,7 @@ List<String> getUploadLimit(){
         (tx) {
           final refNum = tx?.bookingRefNumber?.trim();
           final currentRef = bookingNumber?.trim();
-          final dispatch = tx?.dispatchType.toLowerCase().trim();
+          final dispatch = tx?.dispatchType!.toLowerCase().trim();
 
           return refNum != null &&
                 refNum == currentRef &&

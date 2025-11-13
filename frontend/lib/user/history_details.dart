@@ -11,6 +11,7 @@ import 'package:frontend/models/milestone_history_model.dart';
 import 'package:frontend/models/transaction_model.dart';
 import 'package:frontend/notifiers/auth_notifier.dart';
 import 'package:frontend/provider/accepted_transaction.dart' as accepted_transaction;
+import 'package:frontend/provider/base_url_provider.dart';
 import 'package:frontend/provider/theme_provider.dart';
 import 'package:frontend/provider/transaction_list_notifier.dart';
 import 'package:frontend/provider/transaction_provider.dart';
@@ -18,6 +19,7 @@ import 'package:frontend/screen/navigation_menu.dart';
 import 'package:frontend/theme/colors.dart';
 import 'package:frontend/theme/text_styles.dart';
 import 'package:frontend/user/schedule.dart';
+import 'package:frontend/util/transaction_utils.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
@@ -39,7 +41,9 @@ class HistoryDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
-  late String uid;
+ 
+  Transaction? transaction;
+  Transaction? leg;
 
   int? _expandedTabIndex;
 
@@ -57,163 +61,131 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
   @override
   void initState() {
     super.initState();
-    uid = widget.uid; // Initialize uid
     _expandedTabIndex = 0; // Default to the first tab
+    _fetchHistoryDetails();
   }
+
+  bool isLoading = true;
+
+Future<void> _fetchHistoryDetails() async {
+  final uid = ref.read(authNotifierProvider).uid ?? '';
+
+  print("Fetching details for transaction ID: ${widget.transaction?.id}");
+  print("Request Number: ${widget.transaction?.requestNumber}");
+  print('➡️ TransactionDetails params: id=${widget.transaction?.id}, uid=$uid');
+
+  try {
+    final baseUrl = ref.read(baseUrlProvider);
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/odoo/booking/history_details/${widget.transaction?.id}?uid=$uid'),
+      headers: {
+        'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'password': ref.read(authNotifierProvider).password ?? '',
+          'login':ref.read(authNotifierProvider).login ?? ''
+      },
+    );
+
+  if (response.statusCode == 200) {
+      final jsonData = jsonDecode(response.body);
+
+      // check if structure is what you expect
+      final data = jsonData['data'];
+      final transactions = data?['transactions'];
+
+      if (transactions != null && transactions is List && transactions.isNotEmpty) {
+        final selected = transactions.firstWhere(
+          (tx) => tx['id'] == widget.transaction?.id,
+          orElse: () => transactions.first,
+        );
+
+        debugPrint('✅ Found transaction: ${selected['id']}');
+
+        setState(() {
+          transaction = Transaction.fromJson(selected);
+          isLoading = false;
+        });
+      } else {
+        debugPrint('⚠️ No transactions found in response.');
+        setState(() => isLoading = false);
+      }
+    } else {
+      debugPrint('❌ Failed request. Code: ${response.statusCode}');
+      setState(() => isLoading = false);
+    }
+  } catch (e) {
+    setState(() => isLoading = false);
+    debugPrint('Error fetching transaction: $e');
+  }
+  
+}
+
 
   String getNullableValue(String? value, {String fallback = ''}) {
     return value ?? fallback;
   }
-  Map<String, MilestoneHistoryModel?> getPickupAndDeliverySchedule(Transaction? transaction) {
-    final dispatchType = transaction!.dispatchType;
-    final history = transaction.history;
-    final serviceType = transaction.serviceType;
-    final dispatchId = transaction.id;
-    final requestNumber = transaction.requestNumber;
 
-    final fclPrefixes = {
-      'ot': {
-        'Full Container Load': {
-          'de': {
-            'delivery': 'TEOT',
-            'pickup': 'TYOT'
-          },
-          'pl': {
-            'delivery': 'CLOT',
-            'pickup': 'TLOT'
-          },
-        },
-        'Less-Than-Container Load': {
-          'pl': {
-            'delivery': 'LCLOT',
-            'pickup': 'LTEOT'
-          },
-        },
-      },
-      'dt': {
-        'Full Container Load': {
-          'dl': {
-            'delivery': 'CLDT',
-            'pickup': 'GYDT'
-          },
-          'pe': {
-            'delivery': 'CYDT',
-            'pickup': 'GLDT'
-          },
-        },
-        'Less-Than-Container Load': {
-          'pl': {
-            'delivery': 'LCLOT',
-            'pickup': 'LTEOT'
-          },
-        }
-      }
-    };
 
-    final fclCodeMap = {
-      'de': transaction.deRequestNumber,
-      'pl': transaction.plRequestNumber,
-      'dl': transaction.dlRequestNumber,
-      'pe': transaction.peRequestNumber,
-    };
 
-    String? matchingLegs;
-    for (final entry in fclCodeMap.entries) {
-      if (entry.value !=null && entry.value == requestNumber) {
-        matchingLegs = entry.key;
-        break;
-      }
+
+  String formatDateTime(String? dateString) {
+    if (dateString == null || dateString.isEmpty) return "N/A"; // Handle null values
+    
+    try {
+      DateTime dateTime = DateTime.parse(dateString); // Convert string to DateTime
+      DateTime adjustedTime = dateTime.add(const Duration(hours:8));
+      return DateFormat('dd MMM, yyyy  - h:mm a').format(adjustedTime); // Format date-time
+    } catch (e) {
+      return "Invalid Date"; // Handle errors gracefully
     }
+  } 
 
-    print("Matching Leg for $requestNumber: $matchingLegs");
-
-    if(matchingLegs != null) {
-      final fclMap = fclPrefixes[dispatchType]?[serviceType]?[matchingLegs];
-      final pickupFcl = fclMap?['pickup'];
-      final deliveryFcl = fclMap?['delivery'];
-
-      MilestoneHistoryModel? pickupSchedule;
-      MilestoneHistoryModel? deliverySchedule;
-
-      if(pickupFcl != null) {
-        pickupSchedule = history.firstWhere(
-          (h) => 
-            h.fclCode.trim().toUpperCase() == pickupFcl.toUpperCase() &&
-            h.dispatchId == dispatchId.toString() &&
-            h.serviceType == serviceType,
-          orElse: () => const MilestoneHistoryModel(
-            id: -1,
-            dispatchId: '',
-            dispatchType: '',
-            fclCode: '',
-            scheduledDatetime: '',
-            serviceType: '',
-            actualDatetime: '', isBackload: ''
-          ),
-        );
-        if(pickupSchedule.id == -1) pickupSchedule  = null;
-      }
-
-      if(deliveryFcl != null) {
-        deliverySchedule = history.firstWhere(
-          (h) => 
-            h.fclCode.trim().toUpperCase() == deliveryFcl.toUpperCase() &&
-            h.dispatchId == dispatchId.toString() &&
-            h.serviceType == serviceType,
-          orElse: () => const MilestoneHistoryModel(
-            id: -1,
-            dispatchId: '',
-            dispatchType: '',
-            fclCode: '',
-            scheduledDatetime: '',
-            serviceType: '',
-            actualDatetime: '', isBackload: ''
-          ),
-        );
-        if(deliverySchedule.id == -1) deliverySchedule  = null;
-      }
-      return {
-        'pickup': pickupSchedule,
-        'delivery': deliverySchedule,
-      };
-    }
-    return {
-      'pickup': null,
-      'delivery': null,
-    };
-
-
-   }
-
-
-    String formatDateTime(String? dateString) {
-      if (dateString == null || dateString.isEmpty) return "N/A"; // Handle null values
-      
-      try {
-        DateTime dateTime = DateTime.parse(dateString); // Convert string to DateTime
-        DateTime adjustedTime = dateTime.add(const Duration(hours:8));
-        return DateFormat('dd MMM, yyyy  - h:mm a').format(adjustedTime); // Format date-time
-      } catch (e) {
-        return "Invalid Date"; // Handle errors gracefully
-      }
-    } 
 
   
   @override
   Widget build(BuildContext context) {
+     if (isLoading) {
+    // Show a loading spinner while fetching data
+    return const Scaffold(
+      body: Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+  }
+  
+
+  // Once loaded, show the normal content
+  final transaction = this.transaction ?? widget.transaction;
+    
     // 1️⃣ Backloaded message
     final backloadedName = (widget.transaction?.backloadConsolidation?.name.trim().isNotEmpty ?? false)
         ? widget.transaction?.backloadConsolidation?.name
         : 'N/A';
     final backloadedMessage = 'This booking has been backloaded: $backloadedName';
-    final transaction = widget.transaction;
+    
 
-    final scheduleMap = getPickupAndDeliverySchedule(transaction);
+   final String driverId = ref.watch(authNotifierProvider).partnerId ?? '';
 
-     final delivery = scheduleMap['delivery'];
+  final Map<String, dynamic> scheduleMap = TransactionUtils.getScheduleForTransaction(transaction!, driverId, widget.transaction?.requestNumber);
+  final expandedList = TransactionUtils.expandTransaction(transaction, driverId);
+  final openedRequestNumber = widget.transaction?.requestNumber;
 
+ 
 
-
+  // For OT
+  if (transaction.dispatchType == "ot") {
+    leg = expandedList.firstWhere(
+      (tx) => (tx.plTruckDriverName == driverId || tx.deTruckDriverName == driverId) &&
+              tx.requestNumber == openedRequestNumber,
+      orElse: () => expandedList.first,
+    );
+  } else if (transaction.dispatchType == "dt") {
+    leg = expandedList.firstWhere(
+      (tx) => (tx.dlTruckDriverName == driverId || tx.peTruckDriverName == driverId) &&
+              tx.requestNumber == openedRequestNumber,
+      orElse: () => expandedList.first,
+    );
+  }
 
     return Scaffold(
       appBar: AppBar(
@@ -314,32 +286,66 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Space between label and value
-                              Text(
-                                (widget.transaction?.requestStatus == 'Completed' || widget.transaction?.stageId == 'Completed')
-                                  ? formatDateTime(delivery?.actualDatetime)
-                                  : widget.transaction?.stageId == 'Cancelled'
-                                    ? formatDateTime(widget.transaction?.writeDate)
-                                    : widget.transaction?.requestStatus == 'Backload' ? formatDateTime( widget.transaction?.backloadConsolidation?.consolidatedDatetime)
-                                    : '—',
-                                
-                                style: AppTextStyles.subtitle.copyWith(
-                                  color: Colors.white,
-                                ),
-                              ),
-                              Text(
-                               (widget.transaction?.requestStatus == 'Completed' || widget.transaction?.stageId == 'Completed')
-                                              ? 'Completed Date'
-                                              : widget.transaction?.stageId == 'Cancelled'
-                                                ? 'Cancelled Date' 
-                                                : widget.transaction?.requestStatus == 'Backload' ? 'Consolidated Date'
-                                                : '—',
-                                style: AppTextStyles.caption.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
+      // 🕒 Display correct date depending on status
+      Text(
+        (() {
+         print("isReassigned: ${widget.transaction?.isReassigned}");
+
+          if (widget.transaction?.isReassigned == true &&
+              (widget.transaction?.reassigned?.isNotEmpty ?? false)) {
+            return formatDateTime(widget.transaction!.reassigned!.first.createDate);
+          } 
+          // ✅ Completed or stage completed
+          else if (widget.transaction?.requestStatus == 'Completed' ) {
+            final completedDate = widget.transaction?.completedTime;
+            final deliveryActual = scheduleMap['delivery']?.actualDatetime;
+
+            if (completedDate != null && completedDate.isNotEmpty) {
+              return formatDateTime(completedDate);
+            } else if (deliveryActual != null && deliveryActual.isNotEmpty) {
+              // fallback to delivery actual datetime
+              return formatDateTime(deliveryActual);
+            } else {
+              return '—';
+            }
+          } 
+          // Cancelled
+          else if (widget.transaction?.stageId == 'Cancelled') {
+            return formatDateTime(widget.transaction?.writeDate);
+          } 
+          // Backload
+          else if (widget.transaction?.requestStatus == 'Backload') {
+            return formatDateTime(widget.transaction?.backloadConsolidation?.consolidatedDatetime);
+          } 
+          // Default
+          else {
+            return '—';
+          }
+        })(),
+        style: AppTextStyles.subtitle.copyWith(color: Colors.white),
+      ),
+      // 🏷 Label
+      Text(
+        (() {
+          if (widget.transaction?.isReassigned == true &&
+              (widget.transaction?.reassigned?.isNotEmpty ?? false)) {
+            return 'Reassigned Date';
+          } else if (widget.transaction?.requestStatus == 'Completed' ) {
+            return 'Completed Date';
+          } else if (widget.transaction?.stageId == 'Cancelled') {
+            return 'Cancelled Date';
+          } else if (widget.transaction?.requestStatus == 'Backload') {
+            return 'Consolidated Date';
+          } else {
+            return '—';
+          }
+        })(),
+        style: AppTextStyles.caption.copyWith(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    ],
                           ),
                         ),
                       ],
@@ -347,6 +353,18 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
                   ],
                 ),
               ),  
+              (widget.transaction?.requestStatus == "Reassigned") ?
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                    child: Text(
+                      'This booking was reassigned to another driver.',
+                      style: AppTextStyles.subtitle,
+                      textAlign: TextAlign.center,
+                    ),
+                  )
+                )
+                : 
               (widget.transaction?.stageId == "Cancelled") ?
               Center(
                 child: Padding(
@@ -442,32 +460,50 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
 
   Widget _buildShipConsTab (){
 
-    final transaction = widget.transaction;
-
-    // 🔒 Add this guard — it prevents null crashes during screen transition
+    final transaction = this.transaction ?? widget.transaction;
     if (transaction == null) {
-      return const Scaffold(
-        body: Center(child: Text('No transaction data available')),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
     final isDT = widget.transaction?.dispatchType == 'dt';
-    final scheduleMap = getPickupAndDeliverySchedule(transaction);
-    final pickup = scheduleMap['pickup'];
-    final delivery = scheduleMap['delivery'];
-    final isDiverted = widget.transaction?.backloadConsolidation?.isDiverted == "true";
+     final String driverId = ref.watch(authNotifierProvider).partnerId ?? '';
+
+  final Map<String, dynamic> scheduleMap = TransactionUtils.getScheduleForTransaction(transaction!, driverId, widget.transaction?.requestNumber);
+  final expandedList = TransactionUtils.expandTransaction(transaction, driverId);
+  final openedRequestNumber = widget.transaction?.requestNumber;
+
+  // For OT
+  if (transaction.dispatchType == "ot") {
+    leg = expandedList.firstWhere(
+      (tx) => (tx.plTruckDriverName == driverId || tx.deTruckDriverName == driverId) &&
+              tx.requestNumber == openedRequestNumber,
+      orElse: () => expandedList.first,
+    );
+  } else if (transaction.dispatchType == "dt") {
+    leg = expandedList.firstWhere(
+      (tx) => (tx.dlTruckDriverName == driverId || tx.peTruckDriverName == driverId) &&
+              tx.requestNumber == openedRequestNumber,
+      orElse: () => expandedList.first,
+    );
+  }
+ 
+
+
+  final pickup = scheduleMap['pickup'];
+  final delivery = scheduleMap['delivery'];
+    final isDiverted = transaction.backloadConsolidation?.isDiverted == "true";
     final divertedBookingNo = isDiverted 
-    ? 'Diverted Booking No: ${widget.transaction?.backloadConsolidation?.name ?? '—'}'
+    ? 'Diverted Booking No: ${transaction.backloadConsolidation?.name ?? '—'}'
     : null;
-    final consolStatus = widget.transaction?.backloadConsolidation?.status;
+    final consolStatus = transaction.backloadConsolidation?.status;
 
 
     print('pickup actual datetime: ${pickup?.actualDatetime}');
-    print('Dispatch Typr: ${widget.transaction?.dispatchType}');
+    print('Dispatch Typr: ${transaction.dispatchType}');
     print("request Number: ${widget.transaction?.requestNumber}");
-    print("Seal Number: ${widget.transaction?.sealNumber}");
+    print("Seal Number: ${transaction.sealNumber}");
     print("Is Diverted: $isDiverted");
-    print("'Diverted Booking No: ${widget.transaction?.backloadConsolidation?.name ?? '—'}'");
+    print("'Diverted Booking No: ${transaction.backloadConsolidation?.name ?? '—'}'");
     print("Consol Status $consolStatus");
 
     
@@ -514,11 +550,11 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
 
     if (isDT) {
       // === DT LOGIC (existing) ===
-      if (widget.transaction?.requestNumber == widget.transaction?.dlRequestNumber) {
-        String tempYardSign = widget.transaction?.plSign ?? '';
-        String tempSign = widget.transaction?.dlSign ?? '';
-        String tempYardName = widget.transaction?.peReleasedBy ?? '';
-        String tempName = widget.transaction?.deReleasedBy ?? '';
+      if (widget.transaction?.requestNumber == transaction.dlRequestNumber) {
+        String tempYardSign =transaction.plSign ?? '';
+        String tempSign =transaction.dlSign ?? '';
+        String tempYardName =transaction.peReleasedBy ?? '';
+        String tempName =transaction.deReleasedBy ?? '';
         String tempYardActualDate = formatDateTime(pickup?.actualDatetime);
         String tempActualDate = formatDateTime(delivery?.actualDatetime);
         String tempYardTitle = "Yard/Port";
@@ -534,11 +570,11 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
           yardtitle = tempYardTitle;
           title = tempTitle;
         
-      } else if (widget.transaction?.requestNumber == widget.transaction?.peRequestNumber) {
-        String tempYardSign = widget.transaction?.deSign ?? '';
-        String tempSign = widget.transaction?.peSign ?? '';
-        String tempYardName = widget.transaction?.plReceivedBy ?? '';
-        String tempName = widget.transaction?.dlReceivedBy ?? '';
+      } else if (widget.transaction?.requestNumber == transaction.peRequestNumber) {
+        String tempYardSign =transaction.deSign ?? '';
+        String tempSign =transaction.peSign ?? '';
+        String tempYardName =transaction.plReceivedBy ?? '';
+        String tempName =transaction.dlReceivedBy ?? '';
         String tempYardActualDate = formatDateTime(pickup?.actualDatetime);
         String tempActualDate = formatDateTime(delivery?.actualDatetime);
         String tempYardTitle = "Consignee";
@@ -564,21 +600,21 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
           title = tempTitle;
         }
       } else {
-        if (widget.transaction?.requestNumber == widget.transaction?.dlRequestNumber) {
-          yardSignBase64 = widget.transaction?.peSign;
-          signBase64 = widget.transaction?.deSign;
-          yardName = widget.transaction?.peReleasedBy;
-          name = widget.transaction?.deReleasedBy;
+        if (widget.transaction?.requestNumber == transaction.dlRequestNumber) {
+          yardSignBase64 =transaction.peSign;
+          signBase64 =transaction.deSign;
+          yardName =transaction.peReleasedBy;
+          name =transaction.deReleasedBy;
           yardactualdate = formatDateTime(pickup?.actualDatetime);
           actualdate = formatDateTime(delivery?.actualDatetime);
           yardtitle = "Yard/Port";
           title = "Shipper";
 
-        } else if (widget.transaction?.requestNumber == widget.transaction?.plRequestNumber) {
-          yardSignBase64 = widget.transaction?.dlSign;
-          signBase64 = widget.transaction?.plSign;
-          yardName = widget.transaction?.plReceivedBy;
-          name = widget.transaction?.dlReceivedBy;
+        } else if (widget.transaction?.requestNumber == transaction.plRequestNumber) {
+          yardSignBase64 = transaction.dlSign;
+          signBase64 = transaction.plSign;
+          yardName = transaction.plReceivedBy;
+          name = transaction.dlReceivedBy;
           yardactualdate = formatDateTime(pickup?.actualDatetime);
           actualdate = formatDateTime(delivery?.actualDatetime);
           yardtitle = "Shipper";
@@ -588,11 +624,11 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
 
     } else {
       // === OT / NON-DT LOGIC (mirrored) ===
-      if (widget.transaction?.requestNumber == widget.transaction?.deRequestNumber) {
-        String tempYardSign = widget.transaction?.peSign ?? '';
-        String tempSign = widget.transaction?.deSign ?? '';
-        String tempYardName = widget.transaction?.peReleasedBy ?? '';
-        String tempName = widget.transaction?.deReleasedBy ?? '';
+      if (widget.transaction?.requestNumber == transaction.deRequestNumber) {
+        String tempYardSign = transaction.peSign ?? '';
+        String tempSign = transaction.deSign ?? '';
+        String tempYardName = transaction.peReleasedBy ?? '';
+        String tempName = transaction.deReleasedBy ?? '';
         String tempYardActualDate = formatDateTime(pickup?.actualDatetime);
         String tempActualDate = formatDateTime(delivery?.actualDatetime);
         String tempYardTitle = "Yard/Port";
@@ -617,11 +653,11 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
           yardtitle = tempYardTitle;
           title = tempTitle;
         }
-      } else if (widget.transaction?.requestNumber == widget.transaction?.plRequestNumber) {
-        String tempYardSign = widget.transaction?.dlSign ?? '';
-        String tempSign = widget.transaction?.plSign ?? '';
-        String tempYardName = widget.transaction?.plReceivedBy ?? '';
-        String tempName = widget.transaction?.dlReceivedBy ?? '';
+      } else if (widget.transaction?.requestNumber == transaction.plRequestNumber) {
+        String tempYardSign = transaction.dlSign ?? '';
+        String tempSign = transaction.plSign ?? '';
+        String tempYardName = transaction.plReceivedBy ?? '';
+        String tempName = transaction.dlReceivedBy ?? '';
         String tempYardActualDate = formatDateTime(pickup?.actualDatetime);
         String tempActualDate = formatDateTime(delivery?.actualDatetime);
         String tempYardTitle = "Shipper";
@@ -639,10 +675,10 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
         
       } else {
         // fallback — if no specific requestNumber matches
-        yardSignBase64 = widget.transaction?.plSign;
-        signBase64 = widget.transaction?.dlSign;
-        yardName = widget.transaction?.plReceivedBy;
-        name = widget.transaction?.dlReceivedBy;
+        yardSignBase64 = transaction.plSign;
+        signBase64 = transaction.dlSign;
+        yardName = transaction.plReceivedBy;
+        name = transaction.dlReceivedBy;
         yardactualdate = formatDateTime(pickup?.actualDatetime);
         actualdate = formatDateTime(delivery?.actualDatetime);
         yardtitle = "Shipper";
@@ -657,35 +693,35 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
 
     final reqNo = widget.transaction?.requestNumber;
 
-  if (isDT && reqNo == widget.transaction?.dlRequestNumber) {
+  if (isDT && reqNo == transaction.dlRequestNumber) {
     // DT + dlRequestNumber:
     // Yard: only plProof
-    addFile(yardFiles, widget.transaction?.plProof, widget.transaction?.plProofFilename ?? "POD");
+    addFile(yardFiles, transaction.plProof,transaction.plProofFilename ?? "POD");
 
     // Consignee (full pack): plProof + shared( hwbSigned, dlProof, deliveryReceipt, packingList, deliveryNote, stockDelivery, salesInvoice )
-    addFile(shipperConsigneeFiles, widget.transaction?.dlProof, widget.transaction?.dlProofFilename);
-    addFile(shipperConsigneeFiles, widget.transaction?.hwbSigned, widget.transaction?.hwbSignedFilename);
-    addFile(shipperConsigneeFiles, widget.transaction?.deliveryReceipt, widget.transaction?.deliveryReceiptFilename);
-    addFile(shipperConsigneeFiles, widget.transaction?.packingList, widget.transaction?.packingListFilename);
-    addFile(shipperConsigneeFiles, widget.transaction?.deliveryNote, widget.transaction?.deliveryNoteFilename);
-    addFile(shipperConsigneeFiles, widget.transaction?.stockDelivery, widget.transaction?.stockDeliveryFilename);
-    addFile(shipperConsigneeFiles, widget.transaction?.salesInvoice, widget.transaction?.salesInvoiceFilename);
-  }else  if (isDT && reqNo == widget.transaction?.peRequestNumber) {
+    addFile(shipperConsigneeFiles,transaction.dlProof,transaction.dlProofFilename);
+    addFile(shipperConsigneeFiles,transaction.hwbSigned,transaction.hwbSignedFilename);
+    addFile(shipperConsigneeFiles,transaction.deliveryReceipt,transaction.deliveryReceiptFilename);
+    addFile(shipperConsigneeFiles,transaction.packingList,transaction.packingListFilename);
+    addFile(shipperConsigneeFiles,transaction.deliveryNote,transaction.deliveryNoteFilename);
+    addFile(shipperConsigneeFiles,transaction.stockDelivery,transaction.stockDeliveryFilename);
+    addFile(shipperConsigneeFiles,transaction.salesInvoice,transaction.salesInvoiceFilename);
+  }else  if (isDT && reqNo == transaction.peRequestNumber) {
     // DT + dlRequestNumber:
     // Yard: only plProof
-    addFile(yardFiles, widget.transaction?.peProof, widget.transaction?.peProofFilename ?? "POD");
-    addFile(shipperConsigneeFiles, widget.transaction?.deProof, widget.transaction?.deProofFilename ?? "POD");
+    addFile(yardFiles, transaction.peProof, transaction.peProofFilename ?? "POD");
+    addFile(shipperConsigneeFiles, transaction.deProof, transaction.deProofFilename ?? "POD");
   } 
-  else if (!isDT && reqNo == widget.transaction?.plRequestNumber) {
+  else if (!isDT && reqNo == transaction.plRequestNumber) {
     // OT + plRequestNumber:
-    addFile(shipperConsigneeFiles, widget.transaction?.dlProof, widget.transaction?.dlProofFilename); // yard has dlProof
-    addFile(yardFiles, widget.transaction?.plProof, widget.transaction?.plProofFilename); // shipper has plProof
-    addFile(yardFiles, widget.transaction?.proofStock, widget.transaction?.proofStockFilename); // shipper has stock transfer
-  } else if (!isDT && reqNo == widget.transaction?.deRequestNumber) {
+    addFile(shipperConsigneeFiles, transaction.dlProof, transaction.dlProofFilename); // yard has dlProof
+    addFile(yardFiles, transaction.plProof, transaction.plProofFilename); // shipper has plProof
+    addFile(yardFiles, transaction.proofStock, transaction.proofStockFilename); // shipper has stock transfer
+  } else if (!isDT && reqNo == transaction.deRequestNumber) {
     // Fallback: if nothing matches, attempt to add any non-null generic files so user can still download what's available
    
-    addFile(yardFiles, widget.transaction?.peProof, widget.transaction?.peProofFilename);
-    addFile(shipperConsigneeFiles, widget.transaction?.deProof, widget.transaction?.deProofFilename);
+    addFile(yardFiles, transaction.peProof, transaction.peProofFilename);
+    addFile(shipperConsigneeFiles, transaction.deProof, transaction.deProofFilename);
 
   }
 
@@ -702,7 +738,7 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
           )
         ),
         const SizedBox(height: 20),
-        if(isDiverted && widget.transaction?.deRequestNumber == reqNo  && consolStatus != 'draft') ... [
+        if(isDiverted && transaction.deRequestNumber == reqNo  && consolStatus != 'draft') ... [
           Text(
             "Remarks: Diverted",
             style: AppTextStyles.body.copyWith(
@@ -780,7 +816,7 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
         ),
 
         // SHIPPER CONSIGNEE
-        if(isDiverted && widget.transaction?.peRequestNumber == reqNo   && consolStatus != 'draft') ... [
+        if(isDiverted && transaction.peRequestNumber == reqNo   && consolStatus != 'draft') ... [
           Text(
             "Remarks: Diverted",
             style: AppTextStyles.body.copyWith(
@@ -866,12 +902,13 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
       );
     }
 
-    Widget _buildDownloadButton(String fileName, Uint8List bytes) {
+   Widget _buildDownloadButton(String fileName, Uint8List bytes) {
       return SizedBox(
         child: Padding(
         padding: const EdgeInsets.only(bottom: 8),
         child: TextButton.icon(
-              onPressed: () async {
+              onPressed: 
+              () async {
                 try {
                   if (Platform.isAndroid) {
                     int sdk = (await DeviceInfoPlugin().androidInfo).version.sdkInt;
@@ -894,58 +931,68 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
                   if (!await dir.exists()) {
                     dir = await getExternalStorageDirectory() ?? dir;
                   }
+                  
+                  final ext = fileName.split('.').last;
+                  final baseName = fileName.replaceAll('.$ext', '');
+                  String uniqueFileName =  fileName;
 
-              final file = File('${dir.path}/$fileName');
-              await file.writeAsBytes(bytes);
-
-              if(context.mounted){
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      '✅ Downloaded: $fileName',
-                      style: AppTextStyles.caption.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w500,
+                  int counter = 1;
+                   while (File('${dir.path}/$uniqueFileName').existsSync()) {
+                    uniqueFileName = '$baseName($counter).$ext';
+                    counter++;
+                  }
+                  
+                  final file = File('${dir.path}/$uniqueFileName');
+                  await file.writeAsBytes(bytes);
+                  
+                  if(context.mounted){
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          '✅ Downloaded: $uniqueFileName',
+                          style: AppTextStyles.caption.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        duration: const Duration(seconds: 2),
+                        behavior: SnackBarBehavior.floating, // ✅ Makes it float with margin
+                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        shape: RoundedRectangleBorder( // ✅ Rounded corners
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        backgroundColor: mainColor, // ✅ Soft black, not pure #000
+                        elevation: 6, // ✅ Soft shadow for depth
                       ),
-                    ),
-                    duration: const Duration(seconds: 2),
-                    behavior: SnackBarBehavior.floating, // ✅ Makes it float with margin
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    shape: RoundedRectangleBorder( // ✅ Rounded corners
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    backgroundColor: mainColor, // ✅ Soft black, not pure #000
-                    elevation: 6, // ✅ Soft shadow for depth
-                  ),
-                );
-              }
+                    );
+                  }
 
-              print('✅ File saved: ${file.path}');
-            } catch (e) {
-              print('❌ Save failed: $e');
-              if(context.mounted){
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      '❌ Download failed: $fileName',
-                      style: AppTextStyles.caption.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w500,
+                  print('✅ File saved: ${file.path}');
+                } catch (e) {
+                  print('❌ Save failed: $e');
+                  if(context.mounted){
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          '❌ Download failed: $fileName',
+                          style: AppTextStyles.caption.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        duration: const Duration(seconds: 2),
+                        behavior: SnackBarBehavior.floating, // ✅ Makes it float with margin
+                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        shape: RoundedRectangleBorder( // ✅ Rounded corners
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        backgroundColor: Colors.red, // ✅ Soft black, not pure #000
+                        elevation: 6, // ✅ Soft shadow for depth
                       ),
-                    ),
-                    duration: const Duration(seconds: 2),
-                    behavior: SnackBarBehavior.floating, // ✅ Makes it float with margin
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    shape: RoundedRectangleBorder( // ✅ Rounded corners
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    backgroundColor: Colors.red, // ✅ Soft black, not pure #000
-                    elevation: 6, // ✅ Soft shadow for depth
-                  ),
-                );
-              }
-            }
-                  },
+                    );
+                  }
+                }
+              },
               icon: const Icon(Icons.download),
               label:Text(
                 'Download $fileName',
@@ -959,6 +1006,8 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
       
       );
     }
+
+
 
 
   Widget  _buildFreightTab(){
@@ -1024,8 +1073,8 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
                   ),
                 ),
                 Text(
-                  (widget.transaction?.origin.isNotEmpty ?? false)
-                  ? widget.transaction!.origin : '—',
+                  (widget.transaction?.origin?.isNotEmpty ?? false)
+                  ? widget.transaction!.origin! : '—',
                   style: AppTextStyles.body.copyWith(
                     color: Colors.black,
                   ),
@@ -1054,8 +1103,8 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
                     ),
                   ),
                   Text(
-                  (widget.transaction?.freightForwarderName?.isNotEmpty ?? false)
-                  ? widget.transaction!.freightForwarderName! : '—',
+                  (transaction?.freightForwarderName?.isNotEmpty ?? false)
+                  ? transaction!.freightForwarderName! : '—',
                     // Use the originPort variable here
                     style: AppTextStyles.body.copyWith(
                       color: Colors.black,
@@ -1084,8 +1133,8 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
                   ),
                 ),
                 Text(
-                  (widget.transaction?.freightBlNumber?.isNotEmpty ?? false)
-                  ? widget.transaction!.freightBlNumber! : '—',
+                  (transaction?.freightBlNumber?.isNotEmpty ?? false)
+                  ? transaction!.freightBlNumber! : '—',
                   style: AppTextStyles.body.copyWith(
                     color: Colors.black,
                   ),
@@ -1112,8 +1161,8 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
                 ),
                 Text(
                   
-                (widget.transaction?.containerNumber?.isNotEmpty ?? false)
-                  ? widget.transaction!.containerNumber!
+                (transaction?.containerNumber?.isNotEmpty ?? false)
+                  ? transaction!.containerNumber!
                   : '—',
                   // Use the originPort variable here
                   style: AppTextStyles.body.copyWith(
@@ -1141,8 +1190,8 @@ class _HistoryDetailState extends ConsumerState<HistoryDetailScreen> {
                   ),
                 ),
                 Text(
-                (widget.transaction?.sealNumber?.isNotEmpty ?? false)
-                  ? widget.transaction!.sealNumber!
+                (transaction?.sealNumber?.isNotEmpty ?? false)
+                  ? transaction!.sealNumber!
                   : '—',
                   // Use the originPort variable here
                   style: AppTextStyles.body.copyWith(

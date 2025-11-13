@@ -180,7 +180,7 @@ class HomePage extends ConsumerWidget {
                       },
                     ),
 
-                    const Divider(), // Add a divider for better separation
+                    // const Divider(), // Add a divider for better separation
 
                     ListTile(
                       leading: const FaIcon(FontAwesomeIcons.gear),
