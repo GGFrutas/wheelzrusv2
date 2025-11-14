@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/models/transaction_model.dart';
 import 'package:frontend/notifiers/auth_notifier.dart';
 import 'package:frontend/provider/accepted_transaction.dart' as accepted_transaction;
+import 'package:frontend/provider/base_url_provider.dart';
 import 'package:frontend/provider/theme_provider.dart';
 import 'package:frontend/provider/transaction_list_notifier.dart';
 import 'package:frontend/provider/transaction_provider.dart';
@@ -37,15 +38,57 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
   late String uid;
 
   @override
-  void initState() {
-    super.initState();
-    uid = widget.uid; // Initialize uid
+void initState() {
+  super.initState();
+  uid = widget.uid; // Initialize uid
 
-    Future.microtask(() async {
-      await ref.refresh(combinedTransactionProvider.future);
-    });
+  // Load transactions into provider
+  Future.microtask(() async {
+    await _fetchTransactionTransactions();
+  });
+}
 
+Future<void> _fetchTransactionTransactions() async {
+  if (widget.transaction?.id == null) return;
+
+  print("Fetching merged transactions for transaction ID: ${widget.transaction!.id}");
+
+  try {
+    final baseUrl = ref.read(baseUrlProvider);
+    final url = Uri.parse(
+        '$baseUrl/api/odoo/booking/transaction_details/${widget.transaction!.id}?uid=${widget.uid}');
+    final response = await http.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'password': ref.read(authNotifierProvider).password ?? '',
+        'login': ref.read(authNotifierProvider).login ?? '',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body)['data']['transactions'];
+      final transactions = data
+          .map<Transaction>((t) => Transaction.fromJson(t))
+          .toList();
+
+      // Populate provider
+      ref.read(transactionListProvider.notifier).loadTransactions(transactions);
+
+      // Debug prints
+      print("✅ Transactions loaded into provider:");
+      for (var tx in transactions) {
+        print("${tx.dispatchType} | ${tx.bookingRefNumber} | ${tx.stageId}");
+      }
+    } else {
+      print("Failed to fetch transactions: ${response.statusCode}");
+    }
+  } catch (e, st) {
+    print("Error fetching transactions: $e\n$st");
   }
+}
+
 
   String getNullableValue(String? value, {String fallback = ''}) {
     return value ?? fallback;
@@ -70,9 +113,10 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
    
 
     String? checkPrerequisites(Transaction transaction, String requestNumber) {
-      print("Related FF: ${relatedFF?.stageId}");
       
-
+      
+ final relatedFF = ref.read(relatedFFProvider(transaction.bookingRefNumber ?? ''));
+   print("Related FF: ${relatedFF?.stageId}");
 
       if (requestNumber == transaction.plRequestNumber &&
           transaction.deRequestStatus != "Completed" &&  transaction.deRequestStatus != "Backload") {

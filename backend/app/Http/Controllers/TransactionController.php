@@ -19,10 +19,10 @@ use Carbon\Carbon;
 
 class TransactionController extends Controller
 {
-    protected $url = "https://alpha-yxe.odoo.com";
+    protected $url = "https://jralejandria-alpha-dev-yxe.odoo.com";
     protected $db = 'jralejandria-alpha-dev-yxe1-production-alpha-24944074';
     // protected $odoo_url = "http://192.168.76.205:8080/odoo/jsonrpc";
-    protected $odoo_url = "https://alpha-yxe.odoo.com/jsonrpc";
+    protected $odoo_url = "https://jralejandria-alpha-dev-yxe.odoo.com/jsonrpc";
 
 
 
@@ -400,7 +400,9 @@ class TransactionController extends Controller
                 "container_number" => $containerNumber,
                 
             ];
-            
+            $updateBookingStatus = [
+                "booking_status" => 1
+            ];
 
         }   
         if($type['dispatch_type'] === "dt" && $type['dl_request_no'] === $requestNumber) {
@@ -466,9 +468,6 @@ class TransactionController extends Controller
                 "dl_stock_delivery_receipt_filename" => $stock_delivery_receipt_filename,
                 "dl_sales_invoice" => $sales_invoice,
                 "dl_sales_invoice_filename" => $sales_invoice_filename
-            ];
-            $updateBookingStatus = [
-                "booking_status" => 1
             ];
         }  
         if ($type['dispatch_type'] === "dt" && $type['pe_request_no'] === $requestNumber) {
@@ -1026,7 +1025,7 @@ class TransactionController extends Controller
                                     [
                                         [$bookingIds],
                                         [
-                                            "stage_id" => 5
+                                            "stage_id" => 6
                                         ]
                                     ]
                                 ]
@@ -1750,6 +1749,7 @@ class TransactionController extends Controller
     }
 
 
+
     public function uploadPOD(Request $request)
     {
         
@@ -1839,7 +1839,7 @@ class TransactionController extends Controller
                                 'pd.consol.master',
                                 'search_read',
                                 [[['id', '=', $consolMasterId]]],
-                                ['fields' => ['id', 'status','is_cancelled']]
+                                ['fields' => ['id', 'status']]
                             ]
                         ],
                         'id' => rand(1000, 9999)
@@ -1864,7 +1864,7 @@ class TransactionController extends Controller
                                 'service' => 'object',
                                 'method' => 'execute_kw',
                                 'args' => [$db, $uid, $odooPassword, 'pd.consol.master', 'write',
-                                    [[$consolMasterId], ['status' => 'completed','is_cancelled' => true]]
+                                    [[$consolMasterId], ['status' => 'completed']]
                                 ]
                             ],
                             'id' => rand(1000, 9999)
@@ -1916,6 +1916,10 @@ class TransactionController extends Controller
         $newStatus = $request->input('newStatus');
         $containerNumber = $request->input('enteredContainerNumber');
         $odooUrl = $this->odoo_url;
+
+Log::info("Request Number: $requestNumber, Dispatch Type: $dispatchType, Entered Name: $enteredName, New Status: $newStatus, Container Number: $containerNumber, Actual Time: $actualTime, UID: $uid");
+
+       
        
 
         $type = $this->handleDispatchRequest($request);
@@ -1950,19 +1954,11 @@ class TransactionController extends Controller
         if (in_array($milestoneCodeToUpdate, ['CLOT', 'CLDT'])) {
             if ($bookingRef && !empty($updateBookingStatus)) {
                 Log::info("Triggering updateBookingStatus for bookingRef {$bookingRef}", ["status" => $updateBookingStatus]);
-                $this->updateBookingStatus($bookingRef, $db, $uid, $odooPassword, $odooUrl, $updateBookingStatus, $transactionId);
+                $this->updateBookingStatus($bookingRef, $db, $uid, $odooPassword, $odooUrl, $updateBookingStatus);
             } else {
                 Log::warning("Skipped updateBookingStatus — missing bookingRef or empty updateBookingStatus");
             }
         }
-
-        if($milestoneCodeToUpdate === 'CYDT') {
-            $bookingRef = $type['booking_reference_no'] ?? null;
-            if($bookingRef) {
-                $this->updateBookingStage2($bookingRef, $db, $uid, $odooPassword, $odooUrl);
-            }
-        }
-
 
 
         if($milestoneCodeToUpdate === 'TEOT'){
@@ -1999,7 +1995,7 @@ class TransactionController extends Controller
                                 'pd.consol.master',
                                 'search_read',
                                 [[['id', '=', $consolMasterId]]],
-                                ['fields' => ['id', 'status','is_cancelled']]
+                                ['fields' => ['id', 'status']]
                             ]
                         ],
                         'id' => rand(1000, 9999)
@@ -2024,7 +2020,7 @@ class TransactionController extends Controller
                                 'service' => 'object',
                                 'method' => 'execute_kw',
                                 'args' => [$db, $uid, $odooPassword, 'pd.consol.master', 'write',
-                                    [[$consolMasterId], ['status' => 'completed','is_cancelled' => true]]
+                                    [[$consolMasterId], ['status' => 'completed']]
                                 ]
                             ],
                             'id' => rand(1000, 9999)
@@ -2043,7 +2039,6 @@ class TransactionController extends Controller
             }
         }
 
-        
         if ($milestoneCodeToUpdate) {
             return $this->updateMilestoneAndSendEmail(
                 $milestoneResult,   // ✅ use the same variable

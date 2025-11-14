@@ -351,32 +351,23 @@ void initState() {
 
                    
                    
-                    String getStatusLabel(Transaction item, String currentDriverId, String currentDriverName) {
-  final status = item.requestStatus?.trim();
-  final stage = item.stageId?.trim();
+                   String getStatusLabel(Transaction item, String currentDriverId, String currentDriverName) {
+                      final status = item.requestStatus?.trim();
+                      final stage = item.stageId?.trim();
+                     final isReassigned = item.reassigned?.any(
+                        (r) => r.driverId.toString() == currentDriverId ||
+                              r.driverName.toLowerCase().contains(currentDriverName.toLowerCase()) &&
+                              r.requestNumber == item.requestNumber,
+                      ) ?? false;
 
-  final isReassigned = item.reassigned?.any(
-        (r) =>
-            (r.driverId.toString() == currentDriverId ||
-                r.driverName.toLowerCase().contains(currentDriverName.toLowerCase())) &&
-            r.requestNumber == item.requestNumber,
-      ) ??
-      false;
 
-  // If completed or cancelled, always show those first
-  if (status == 'Completed' || status == 'Backload') return status!;
-  if (stage == 'Completed' || stage == 'Cancelled') return stage!;
 
-  // Only show Reassigned if it's not completed/cancelled
-  if ((item.isReassigned == true || isReassigned) &&
-      status != 'Completed' &&
-      stage != 'Completed' &&
-      stage != 'Cancelled') {
-    return 'Reassigned';
-  }
+                      if (item.isReassigned == true || isReassigned) return 'Reassigned';
 
-  return '—';
-}
+                      if (status == 'Completed' || status == 'Backload') return status!;
+                      if (stage == 'Completed' || stage == 'Cancelled') return stage!;
+                      return '—';
+                    }
                            
 
              

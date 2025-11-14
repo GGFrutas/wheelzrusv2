@@ -48,11 +48,14 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
     super.initState();
    
     Future.microtask(() {
-      ref.invalidate(filteredItemsProviderForTransactionScreen);
-      setState(() {
-        _futureTransactions = ref.read(filteredItemsProviderForTransactionScreen.future);
-      });
+    final authUid = ref.read(authNotifierProvider).uid;
+    setState(() {
+      uid = authUid; // ✅ store the authenticated UID here
     });
+
+    ref.invalidate(filteredItemsProviderForTransactionScreen);
+    _futureTransactions = ref.read(filteredItemsProviderForTransactionScreen.future);
+  });
   }
 
   Future<void> _refreshTransaction() async {

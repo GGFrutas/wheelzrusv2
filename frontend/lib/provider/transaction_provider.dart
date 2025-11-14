@@ -65,11 +65,9 @@ Future<List<Transaction>> fetchFilteredTransactions({
     final decoded = jsonDecode(response.body);
 
     if ((endpoint == 'history' || endpoint == 'all-history') && decoded['data']['reassigned'] != null) {
-  final reassignedJson = decoded['data']['reassigned'] as List;
-  print('🟣 Raw reassignment count from API: ${reassignedJson.length}');
-  for (final r in reassignedJson) {
-    print('🔸 raw id=${r['id']}, dispatch=${r['dispatch_id']?[1]}, request=${r['request_no']}');
-  }
+
+  
+ 
 }
 
     // Step 1: Parse normal transactions

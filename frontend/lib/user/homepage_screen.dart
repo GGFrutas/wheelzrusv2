@@ -56,8 +56,8 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
     super.initState();
 
     Future.microtask(() async {
-      ref.invalidate(bookingProvider);
-      await ref.refresh(allTransactionProvider.future); // if async
+      ref.invalidate(filteredItemsProvider);
+      await ref.refresh(filteredItemsProvider.future); // if async
     });
   }
 

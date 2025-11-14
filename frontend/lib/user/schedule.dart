@@ -597,7 +597,7 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => ConfirmationScreen(uid: widget.uid, transaction: widget.transaction, relatedFF: relatedFF,),
+                            builder: (context) => ConfirmationScreen(uid: widget.uid, transaction: widget.transaction, relatedFF: relatedFF, requestNumber: widget.transaction?.requestNumber ?? ''  ),
                           ),
                         );
                       },

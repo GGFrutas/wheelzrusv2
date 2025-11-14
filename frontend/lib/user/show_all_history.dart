@@ -55,33 +55,6 @@ class _AllHistoryPageState extends ConsumerState<AllHistoryScreen>{
     return entry.key.isEmpty ? null : entry.key;
   }
 
-  List<String> _getFclCodesForLeg(Transaction tx, String leg) {
-    final fclPrefixes = {
-      'ot': {
-        'Full Container Load': {
-          'de': ['TEOT', 'TYOT', 'EDOT'],
-          'pl': ['CLOT', 'TLOT', 'ELOT'],
-          'dl': ['FROT', 'CROT', 'ESOT'],
-          'pe': ['BPOT', 'VAOT', 'VCOT', 'BCOT'],
-        },
-        'Less-Than-Container Load': {
-          'pl': ['LCLOT', 'LTEOT'],
-        },
-      },
-      'dt': {
-        'Full Container Load': {
-          'de': ['TEOT', 'TYOT', 'EDOT'],
-          'pl': ['CLOT', 'TLOT', 'ELOT'],
-          'dl': ['CLDT', 'GYDT'],
-          'pe': ['CYDT', 'GLDT', 'EEDT'],
-        },
-        'Less-Than-Container Load': {
-          'pl': ['LCLOT', 'LTEOT'],
-        },
-      },
-    };
-    return fclPrefixes[tx.dispatchType]?[tx.serviceType]?[leg] ?? [];
-  }
 MilestoneHistoryModel? _getLatestMilestoneForLeg(Transaction tx, String leg) {
   if (tx.history == null || tx.history!.isEmpty) return null;
 
@@ -98,14 +71,14 @@ MilestoneHistoryModel? _getLatestMilestoneForLeg(Transaction tx, String leg) {
     final fallbackHistory = tx.history!
         .where((h) =>
             h.dispatchId.toString() == tx.id.toString() &&
-            h.actualDatetime?.isNotEmpty == true)
+            h.actualDatetime.isNotEmpty == true)
         .toList();
 
     if (fallbackHistory.isEmpty) return null;
 
     fallbackHistory.sort((a, b) {
-      final aTime = DateTime.tryParse(a.actualDatetime!) ?? DateTime.fromMillisecondsSinceEpoch(0);
-      final bTime = DateTime.tryParse(b.actualDatetime!) ?? DateTime.fromMillisecondsSinceEpoch(0);
+      final aTime = DateTime.tryParse(a.actualDatetime) ?? DateTime.fromMillisecondsSinceEpoch(0);
+      final bTime = DateTime.tryParse(b.actualDatetime) ?? DateTime.fromMillisecondsSinceEpoch(0);
       return bTime.compareTo(aTime);
     });
 
@@ -343,31 +316,22 @@ void initState() {
 
 
                     String getStatusLabel(Transaction item, String currentDriverId, String currentDriverName) {
-  final status = item.requestStatus?.trim();
-  final stage = item.stageId?.trim();
+                      final status = item.requestStatus?.trim();
+                      final stage = item.stageId?.trim();
+                     final isReassigned = item.reassigned?.any(
+                        (r) => r.driverId.toString() == currentDriverId ||
+                              r.driverName.toLowerCase().contains(currentDriverName.toLowerCase()) &&
+                              r.requestNumber == item.requestNumber,
+                      ) ?? false;
 
-  final isReassigned = item.reassigned?.any(
-        (r) =>
-            (r.driverId.toString() == currentDriverId ||
-                r.driverName.toLowerCase().contains(currentDriverName.toLowerCase())) &&
-            r.requestNumber == item.requestNumber,
-      ) ??
-      false;
 
-  // If completed or cancelled, always show those first
-  if (status == 'Completed' || status == 'Backload') return status!;
-  if (stage == 'Completed' || stage == 'Cancelled') return stage!;
 
-  // Only show Reassigned if it's not completed/cancelled
-  if ((item.isReassigned == true || isReassigned) &&
-      status != 'Completed' &&
-      stage != 'Completed' &&
-      stage != 'Cancelled') {
-    return 'Reassigned';
-  }
+                      if (item.isReassigned == true || isReassigned) return 'Reassigned';
 
-  return '—';
-}
+                      if (status == 'Completed' || status == 'Backload') return status!;
+                      if (stage == 'Completed' || stage == 'Cancelled') return stage!;
+                      return '—';
+                    }
                                           
                    
                   
@@ -403,8 +367,8 @@ void initState() {
                         final statusLabel = getStatusLabel(item, driverId ?? '', currentDriverName);
 
                         final dateTimeMap = getCompletedTransactionDatetime(item);
-final displayDate = dateTimeMap['date']!;
-final displayTime = dateTimeMap['time']!;
+                        final displayDate = dateTimeMap['date']!;
+                        final displayTime = dateTimeMap['time']!;
 
                         return Container(
                           margin: const EdgeInsets.only(bottom: 20),
