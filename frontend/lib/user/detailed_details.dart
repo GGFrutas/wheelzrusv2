@@ -71,10 +71,17 @@ Future<void> _fetchTransactionTransactions() async {
       final data = json.decode(response.body)['data']['transactions'];
       final transactions = data
           .map<Transaction>((t) => Transaction.fromJson(t))
+          .where((tx) => tx.bookingRefNumber != null && tx.dispatchType != null)
           .toList();
 
       // Populate provider
       ref.read(transactionListProvider.notifier).loadTransactions(transactions);
+
+       for (var tx in transactions) {
+        if (tx.dispatchType == 'ff') {
+          ref.read(completedFFsProvider.notifier).updateFF(tx);
+        }
+      }
 
       // Debug prints
       print("✅ Transactions loaded into provider:");
@@ -110,13 +117,15 @@ Future<void> _fetchTransactionTransactions() async {
     // }
 
     final relatedFF = ref.watch(relatedFFProvider(bookingNumber ?? ''));
+
+    final isLoaded = allTransactions.any((tx) => tx.bookingRefNumber == bookingNumber);
+
    
 
-    String? checkPrerequisites(Transaction transaction, String requestNumber) {
+    String? checkPrerequisites(Transaction transaction, String requestNumber, Transaction? relatedFF) {
       
       
- final relatedFF = ref.read(relatedFFProvider(transaction.bookingRefNumber ?? ''));
-   print("Related FF: ${relatedFF?.stageId}");
+   print("Related FF inside prerequisites: ${relatedFF?.stageId}");
 
       if (requestNumber == transaction.plRequestNumber &&
           transaction.deRequestStatus != "Completed" &&  transaction.deRequestStatus != "Backload") {
@@ -539,17 +548,16 @@ Future<void> _fetchTransactionTransactions() async {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () {
+                      onPressed: isLoaded ? () {
                         // Example: Replace this with your real prerequisite check
                         String? errorMessage;
                         if (widget.transaction != null) {
                           errorMessage = checkPrerequisites(
                             widget.transaction!,
-                            widget.transaction!.requestNumber ?? '', // <- pass whichever request they’re on, fallback to empty string if null
+                            widget.transaction!.requestNumber ?? '', 
+                            relatedFF// <- pass whichever request they’re on, fallback to empty string if null
                           );
-                        } else {
-                          errorMessage = "Transaction data is missing.";
-                        }
+                        };
 
 
                         if (errorMessage != null) {
@@ -608,7 +616,7 @@ Future<void> _fetchTransactionTransactions() async {
                             ),
                           );
                         }
-                      },
+                      } : null,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: mainColor,
                         padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 20),

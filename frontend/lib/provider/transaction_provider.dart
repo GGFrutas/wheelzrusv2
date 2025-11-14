@@ -22,6 +22,7 @@ import 'package:http/http.dart' as http;
 import 'package:frontend/models/transaction_model.dart';
 import 'package:frontend/notifiers/auth_notifier.dart';
 import 'package:http/http.dart';
+import 'package:collection/collection.dart';
 
 
 
@@ -303,13 +304,16 @@ final allTransactionFilteredProvider = FutureProvider<List<Transaction>>((ref) a
 
 final relatedFFProvider = Provider.family<Transaction?, String>((ref, bookingNumber) {
   final allTransactions = ref.watch(transactionListProvider);
-  return allTransactions.cast<Transaction?>().firstWhere(
-    (tx) =>
-      tx?.bookingRefNumber?.trim() == bookingNumber.trim() &&
-      tx?.dispatchType?.toLowerCase().trim() == 'ff',
-    orElse: () => null,
-  );
+
+  // Only filter transactions for this booking
+  final bookingTransactions = allTransactions
+      .where((tx) => tx.bookingRefNumber == bookingNumber)
+      .toList();
+
+  // Return FF transaction if exists
+  return bookingTransactions.firstWhereOrNull((tx) => tx.dispatchType == 'ff');
 });
+
 
 
 final combinedTransactionProvider = FutureProvider<List<Transaction>>((ref) async {
@@ -326,5 +330,21 @@ final combinedTransactionProvider = FutureProvider<List<Transaction>>((ref) asyn
   ref.read(transactionListProvider.notifier).loadTransactions(combined);
   return combined;
 });
+
+final completedFFsProvider = StateNotifierProvider<CompletedFFsNotifier, Map<String, Transaction>>((ref) {
+  return CompletedFFsNotifier();
+});
+
+class CompletedFFsNotifier extends StateNotifier<Map<String, Transaction>> {
+  CompletedFFsNotifier() : super({});
+
+  void updateFF(Transaction ffTx) {
+    if (ffTx.dispatchType == 'ff' && ffTx.bookingRefNumber != null) {
+      state = {...state, ffTx.bookingRefNumber!: ffTx};
+    }
+  }
+
+  Transaction? getFF(String bookingNumber) => state[bookingNumber];
+}
 
 

@@ -259,7 +259,7 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
                 final parsedUtc = DateTime.parse(rawDate).toUtc();
                 final localDate = parsedUtc.toLocal();
 
-                print('pickupDate: ${tx.pickupDate}, deliveryDate: ${tx.deliveryDate}, localDate: $localDate');
+                // print('pickupDate: ${tx.pickupDate}, deliveryDate: ${tx.deliveryDate}, localDate: $localDate');
 
                 if (isDelayed) {
                   return localDate.isBefore(weekStartDates.first.toLocal());

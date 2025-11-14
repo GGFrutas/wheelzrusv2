@@ -376,7 +376,7 @@ class FetchDataController extends Controller
             "id", "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
             "dispatch_type", "de_truck_driver_name", "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name",
             "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no","arrival_date", "delivery_date",
-            "container_number", "seal_number", "booking_reference_no", "freight_booking_number","freight_forwarder_name",
+            "container_number", "seal_number", "booking_reference_no", "freight_booking_number",
             "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
             "shipper_province","shipper_city","shipper_barangay","shipper_street", "service_type",
             "consignee_province","consignee_city","consignee_barangay","consignee_street","shipper_phone", "consignee_phone",
@@ -396,7 +396,7 @@ class FetchDataController extends Controller
             "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no","arrival_date", "delivery_date",
             "container_number", "seal_number", "booking_reference_no", "freight_booking_number","shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id",
             "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
-            
+            "freight_forwarder_name",
            
             "pickup_date", "departure_date","origin", "destination",
             "pl_proof_filename", "shipper_phone", "consignee_phone",
@@ -440,10 +440,7 @@ class FetchDataController extends Controller
         ->values()
         ->all();
     
-    // DEBUG LOG
-    \Log::info("FINAL RETURNED TRANSACTIONS = ", $data);
-
-
+ 
         // ✅ Final return
         return response()->json([
             'data' => [
@@ -526,6 +523,10 @@ class FetchDataController extends Controller
                     ["dl_truck_driver_name", "=", $partnerId],
                     ["pe_truck_driver_name", "=", $partnerId],
                     ["pl_truck_driver_name", "=", $partnerId],
+
+                "&",
+                    ["transport_mode", "!=", 1],
+                    ["service_type", "!=", 2]
             ];
 
              $fields = [
@@ -1060,12 +1061,20 @@ class FetchDataController extends Controller
             $offset = ($page - 1) * $limit;
 
            $domain = [
-                "|", "|", "|",
-                ["de_truck_driver_name", "=", $partnerId],
-                ["dl_truck_driver_name", "=", $partnerId],
-               
-                ["pe_truck_driver_name", "=", $partnerId],
-                ["pl_truck_driver_name", "=", $partnerId],
+                "&",
+                    "|", "|", "|", // OR: driver match
+                    ["de_truck_driver_name", "=", $partnerId],
+                    ["dl_truck_driver_name", "=", $partnerId],
+                    ["pe_truck_driver_name", "=", $partnerId],
+                    ["pl_truck_driver_name", "=", $partnerId],
+                    // "|",
+                    // ['pickup_date', ">=", $today],
+                    // ['delivery_date', ">=", $today],
+                
+                    // ["dispatch_type", "=", "ff"]
+                    "|", "|",
+                    ["transport_mode", "!=", 1],
+                    ["service_type", "!=", 2],
             ];
                         
             $fields = [
