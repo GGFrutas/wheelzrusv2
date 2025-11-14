@@ -79,11 +79,11 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
         return "Delivery Empty should be completed first.";
       }
 
-      // if (requestNumber == transaction.dlRequestNumber) {
-      //   if (relatedFF == null || relatedFF.stageId != "Completed") {
-      //     return "Associated Freight Forwarding should be completed first.";
-      //   }
-      // }
+      if (requestNumber == transaction.dlRequestNumber) {
+        if (relatedFF == null || relatedFF.stageId != "Completed") {
+          return "Associated Freight Forwarding should be completed first.";
+        }
+      }
 
       if(transaction.freightForwarderName!.isEmpty) {
         return "Associated Freight Forwarding Vendor has not yet been assigned.";
