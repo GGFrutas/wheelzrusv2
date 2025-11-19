@@ -1,4 +1,5 @@
 import 'package:frontend/models/driver_reassignment_model.dart';
+import 'package:frontend/models/milestone_history_model.dart';
 import 'package:frontend/models/transaction_model.dart';
 
 class TransactionUtils {
@@ -10,14 +11,14 @@ class TransactionUtils {
   }
 
   static String cleanAddress(List<String?> parts) {
-    return parts
-        .where((e) =>
-            e != null &&
-            e.trim().isNotEmpty &&
-            e.trim().toLowerCase() != 'ph')
-        .map((e) => removeBrackets(e!))
-        .join(', ');
-  }
+  return parts
+      .where((e) => e != null && e.trim().isNotEmpty)
+      .map((e) => removeBrackets(e!)
+          .replaceAll(RegExp(r'(^,)|(,$)'), '') // remove leading/trailing commas
+          .trim())
+      .where((e) => e.isNotEmpty && e.toLowerCase() != 'ph')
+      .join(', ');
+}
 
   static String buildConsigneeAddress(Transaction item,
       {bool cityLevel = false}) {
@@ -55,12 +56,15 @@ class TransactionUtils {
         : 'Pickup from Shipper';
   }
 
+
   /// Expands a transaction into multiple "legs" depending on dispatchType
   static List<Transaction> expandTransaction(
       Transaction item, String driverId) {
     if (item.dispatchType == "ot") {
       final shipperOrigin = buildShipperAddress(item);
       final shipperDestination = cleanAddress([item.destination]);
+
+      
 
       return [
         if (item.deTruckDriverName == driverId)
@@ -75,6 +79,7 @@ class TransactionUtils {
             freightBookingNumber: item.freightBookingNumber,
             completedTime: item.deCompletedTime,
             truckPlateNumber: item.deTruckPlateNumber,
+            reassigned: item.reassigned
           ),
         if (item.plTruckDriverName == driverId)
           item.copyWith(
@@ -88,6 +93,7 @@ class TransactionUtils {
             freightBookingNumber: item.freightBookingNumber,
             completedTime: item.plCompletedTime,
             truckPlateNumber: item.plTruckPlateNumber,
+            reassigned: item.reassigned
           ),
       ];
     } else if (item.dispatchType == "dt") {
@@ -107,6 +113,7 @@ class TransactionUtils {
             freightBookingNumber: item.freightBookingNumber,
             completedTime: item.dlCompletedTime,
             truckPlateNumber: item.dlTruckPlateNumber,
+            reassigned: item.reassigned
           ),
         if (item.peTruckDriverName == driverId)
           item.copyWith(
@@ -120,6 +127,7 @@ class TransactionUtils {
             freightBookingNumber: item.freightBookingNumber,
             completedTime: item.peCompletedTime,
             truckPlateNumber: item.peTruckPlateNumber,
+            reassigned: item.reassigned
           ),
       ];
     }
@@ -136,125 +144,329 @@ class TransactionUtils {
         .toList();
   }
 
-static List<Transaction> expandReassignments(List<DriverReassignment> reassignments, String driverId) {
-  return reassignments
-      .where((e) => e.driverId.toString() == driverId)
-      .map((e) => Transaction(
+static List<Transaction> expandReassignments(
+  List<DriverReassignment> reassignments,
+  String currentDriverId,
+  String currentDriverName,
+  List<Transaction> allTransactions,
+) {
+  final result = <Transaction>[];
 
-            id: int.tryParse(e.id.toString()) ?? 0,
-            name: 'Reassigned',
+  String getOriginAddress(String? requestType) {
+    switch (requestType) {
+      case 'DE':
+        return "Deliver Empty Container to Shipper";
+      case 'PL':
+        return "Pickup Laden Container from Shipper";
+      case 'DL':
+        return "Deliver Laden Container to Consignee";
+      case 'PE':
+        return "Pickup Empty Container from Consignee";
+      default:
+        return '';
+    }
+  }
+
+  for (final e in reassignments) {
+    final driverList = e.driverId;
+    String? driverId = (driverList.isNotEmpty && driverList[0] != null)
+        ? driverList[0].toString()
+        : null;
+
+    final isCurrentDriver = driverId != null && driverId == currentDriverId;
+
+    // Find original transaction by dispatch_id
+    final dispatchNumericId = e.dispatchId.isNotEmpty
+        ? int.tryParse(e.dispatchId[0].toString())
+        : null;
+
+    final matchingList = allTransactions.where((tx) => tx.id == dispatchNumericId);
+    final Transaction? matchingTx = matchingList.isNotEmpty ? matchingList.first : null;
+
+    // Build base transaction: either copy existing or create minimal new
+    final baseTx = matchingTx != null
+        ? matchingTx.copyWith(
+            isReassigned: isCurrentDriver,
+            originAddress: getOriginAddress(e.requestType),
+            reassigned: [e],
+          )
+        : Transaction(
+            id: int.tryParse(e.id) ?? 0,
+            name: '',
             requestStatus: 'Reassigned',
             isReassigned: true,
-
             origin: '',
             destination: '',
-            originAddress: '',
+           originAddress: getOriginAddress(e.requestType),
             destinationAddress: '',
-            arrivalDate: '',
-            deliveryDate: '',
-            pickupDate: '',
-            departureDate: '',
-            status: '',
-            isAccepted: false,
+           arrivalDate: '',
+        deliveryDate: '',
+        pickupDate: '',
+        departureDate: '',
+        status: '',
+        isAccepted: false,
+        dispatchType: '',
+        containerNumber: null,
+        freightBlNumber: null,
+        sealNumber: null,
+        bookingRefNo: e.dispatchName,
+        transportForwarderName: null,
+        freightBookingNumber: null,
+        originContainerYard: null,
+        requestNumber: e.requestNumber,
+        deRequestNumber: null,
+        plRequestNumber: null,
+        dlRequestNumber: null,
+        peRequestNumber: null,
+        deRequestStatus: null,
+        plRequestStatus: null,
+        dlRequestStatus: null,
+        peRequestStatus: null,
+        deTruckDriverName: null,
+        dlTruckDriverName: null,
+        peTruckDriverName: null,
+        plTruckDriverName: null,
+        freightForwarderName: null,
+        truckPlateNumber: null,
+        deTruckPlateNumber: null,
+        plTruckPlateNumber: null,
+        dlTruckPlateNumber: null,
+        peTruckPlateNumber: null,
+        truckType: null,
+        deTruckType: null,
+        plTruckType: null,
+        dlTruckType: null,
+        peTruckType: null,
+        contactPerson: null,
+        vehicleName: null,
+        contactNumber: null,
+        deProof: null,
+        plProof: null,
+        dlProof: null,
+        peProof: null,
+        deProofFilename: null,
+        plProofFilename: null,
+        dlProofFilename: null,
+        peProofFilename: null,
+        deSign: null,
+        plSign: null,
+        dlSign: null,
+        peSign: null,
+        login: null,
+        serviceType: null,
+        stageId: null,
+        completedTime: e.createDate,
+        deCompletedTime: null,
+        plCompletedTime: null,
+        dlCompletedTime: null,
+        peCompletedTime: null,
+        rejectedTime: null,
+        deRejectedTime: null,
+        plRejectedTime: null,
+        dlRejectedTime: null,
+        peRejectedTime: null,
+        shipperProvince: null,
+        shipperCity: null,
+        shipperBarangay: null,
+        shipperStreet: null,
+        consigneeProvince: null,
+        consigneeCity: null,
+        consigneeBarangay: null,
+        consigneeStreet: null,
+        assignedDate: null,
+        deAssignedDate: null,
+        plAssignedDate: null,
+        dlAssignedDate: null,
+        peAssignedDate: null,
+        peReleasedBy: null,
+        deReleasedBy: null,
+        dlReceivedBy: null,
+        plReceivedBy: null,
+        landTransport: null,
+        writeDate: null,
+        bookingRefNumber: null,
+        history: [],
+        backloadConsolidation: null,
+        reassigned: [e],
+        proofStock: null,
+        proofStockFilename: null,
+        hwbSigned: null,
+        hwbSignedFilename: null,
+        deliveryReceipt: null,
+        deliveryReceiptFilename: null,
+        packingList: null,
+        packingListFilename: null,
+        deliveryNote: null,
+        deliveryNoteFilename: null,
+        stockDelivery: null,
+        stockDeliveryFilename: null,
+        salesInvoice: null,
+        salesInvoiceFilename: null,
+      );
+
+    
+
+    // Expand like normal transaction (OT/DT legs)
+    final expanded = TransactionUtils.expandTransaction(baseTx, currentDriverId);
+    result.addAll(expanded);
+  }
+
+  return result;
+}
+
+static Map<String, MilestoneHistoryModel?> getScheduleForTransaction(
+  Transaction transaction,
+  String driverId,
+  String? requestNumber
+) {
+  final dispatchType = transaction.dispatchType;
+  final history = transaction.history ?? [];
+  final serviceType = transaction.serviceType;
+  final dispatchId = transaction.id;
+  final transportMode = transaction.landTransport;
+
+  // Determine which leg the driver actually belongs to
+  String? matchingLeg;
+
+// Match using both driverId and requestNumber
+if (transaction.deTruckDriverName?.trim() == driverId.trim() &&
+    transaction.deRequestNumber == requestNumber) {
+  matchingLeg = 'de';
+} else if (transaction.plTruckDriverName?.trim() == driverId.trim() &&
+    transaction.plRequestNumber == requestNumber) {
+  matchingLeg = 'pl';
+} else if (transaction.dlTruckDriverName?.trim() == driverId.trim() &&
+    transaction.dlRequestNumber == requestNumber) {
+  matchingLeg = 'dl';
+} else if (transaction.peTruckDriverName?.trim() == driverId.trim() &&
+    transaction.peRequestNumber == requestNumber) {
+  matchingLeg = 'pe';
+}
+print("Matching Leg: $matchingLeg request Number: $requestNumber");
+
+  if (matchingLeg == null) {
+    return {'pickup': null, 'delivery': null};
+  }
+
+  // Reference code map
+  final fclPrefixes = {
+    'ot': {
+      'freight':{
+        'Full Container Load': {
+          'de': {'delivery': 'TEOT', 'pickup': 'TYOT'},
+          'pl': {'delivery': 'CLOT', 'pickup': 'TLOT', 'email': 'ELOT'},
+        },
+        'Less-Than-Container Load': {
+          'pl': {'pickup': 'LTEOT'},
+        },
+      },
+      'transport':{
+         'Full Container Load': {
+          'pl': {'delivery': 'TCLOT', 'pickup': 'TTEOT'},
+        },
+        'Less-Than-Container Load': {
+          'pl': {'delivery': 'TCLOT', 'pickup': 'TTEOT'},
+        },
+      }
+
+      
+    },
+    'dt': {
+      'freight':{
+        'Full Container Load': {
+          'dl': {'delivery': 'CLDT', 'pickup': 'GYDT'},
+          'pe': {'delivery': 'CYDT', 'pickup': 'GLDT', 'email': 'EEDT'},
+        },
+        'Less-Than-Container Load': {
+          'dl': {'delivery': 'LCLDT'},
+        },
+      }
+      
+    }
+  };
+
+  final fclMap = fclPrefixes[dispatchType]?[transportMode]?[serviceType]?[matchingLeg];
+
+  print("FCL Map: $fclMap");
+  if (fclMap == null) {
+    return {'pickup': null, 'delivery': null};
+  }
+
+  final pickupFcl = fclMap['pickup'];
+  final deliveryFcl = fclMap['delivery'];
+  final emailFcl = fclMap['email'];
+
+  MilestoneHistoryModel? pickupSchedule;
+  MilestoneHistoryModel? deliverySchedule;
+  MilestoneHistoryModel? emailSchedule;
+
+  bool matchFcl(MilestoneHistoryModel h, String fclCode) {
+  final matches = h.fclCode.trim().toUpperCase() == fclCode.toUpperCase() &&
+                  h.dispatchId.toString() == dispatchId.toString() &&
+                  h.serviceType == serviceType;
+  // if (matches) {
+  //   print('Matched FCL: ${h.fclCode}, dispatchId: ${h.dispatchId}, serviceType: ${h.serviceType}');
+  // } else {
+  //   print('No match: FCL(${h.fclCode}), dispatchId(${h.dispatchId}), serviceType(${h.serviceType})');
+  // }
+  return matches;
+}
+
+  if (pickupFcl != null) {
+    pickupSchedule = history.firstWhere(
+      (h) => matchFcl(h, pickupFcl),
+      orElse: () => const MilestoneHistoryModel(
+        id: -1,
+        dispatchId: '',
+        dispatchType: '',
+        fclCode: '',
+        scheduledDatetime: '',
+        actualDatetime: '',
+        serviceType: '',
+        isBackload: '',
+      ),
+    );
+    if (pickupSchedule.id == -1) pickupSchedule = null;
+  }
+
+  if (deliveryFcl != null) {
+    deliverySchedule = history.firstWhere(
+      (h) => matchFcl(h, deliveryFcl),
+      orElse: () => const MilestoneHistoryModel(
+        id: -1,
+        dispatchId: '',
+        dispatchType: '',
+        fclCode: '',
+        scheduledDatetime: '',
+        actualDatetime: '',
+        serviceType: '',
+        isBackload: '',
+      ),
+    );
+    if (deliverySchedule.id == -1) deliverySchedule = null;
+  }
+  if(emailFcl != null) {
+        emailSchedule = history.firstWhere(
+          (h) => 
+            h.fclCode.trim().toUpperCase() == emailFcl.toUpperCase() &&
+            h.dispatchId == dispatchId.toString() &&
+            h.serviceType == serviceType,
+          orElse: () => const MilestoneHistoryModel(
+            id: -1,
+            dispatchId: '',
             dispatchType: '',
-            containerNumber: null,
-            freightBlNumber: null,
-            sealNumber: null,
-            bookingRefNo: null,
-            transportForwarderName: null,
-            freightBookingNumber: null,
-            originContainerYard: null,
-            requestNumber: null,
-            deRequestNumber: null,
-            plRequestNumber: null,
-            dlRequestNumber: null,
-            peRequestNumber: null,
-            deRequestStatus: null,
-            plRequestStatus: null,
-            dlRequestStatus: null,
-            peRequestStatus: null,
-            deTruckDriverName: null,
-            dlTruckDriverName: null,
-            peTruckDriverName: null,
-            plTruckDriverName: null,
-            freightForwarderName: null,
-            truckPlateNumber: null,
-            deTruckPlateNumber: null,
-            plTruckPlateNumber: null,
-            dlTruckPlateNumber: null,
-            peTruckPlateNumber: null,
-            truckType: null,
-            deTruckType: null,
-            plTruckType: null,
-            dlTruckType: null,
-            peTruckType: null,
-            contactPerson: null,
-            vehicleName: null,
-            contactNumber: null,
-            deProof: null,
-            plProof: null,
-            dlProof: null,
-            peProof: null,
-            deProofFilename: null,
-            plProofFilename: null,
-            dlProofFilename: null,
-            peProofFilename: null,
-            deSign: null,
-            plSign: null,
-            dlSign: null,
-            peSign: null,
-            login: null,
-            serviceType: null,
-            stageId: null,
-            completedTime: null,
-            deCompletedTime: null,
-            plCompletedTime: null,
-            dlCompletedTime: null,
-            peCompletedTime: null,
-            rejectedTime: null,
-            deRejectedTime: null,
-            plRejectedTime: null,
-            dlRejectedTime: null,
-            peRejectedTime: null,
-            shipperProvince: null,
-            shipperCity: null,
-            shipperBarangay: null,
-            shipperStreet: null,
-            consigneeProvince: null,
-            consigneeCity: null,
-            consigneeBarangay: null,
-            consigneeStreet: null,
-            assignedDate: null,
-            deAssignedDate: null,
-            plAssignedDate: null,
-            dlAssignedDate: null,
-            peAssignedDate: null,
-            peReleasedBy: null,
-            deReleasedBy: null,
-            dlReceivedBy: null,
-            plReceivedBy: null,
-            landTransport: null,
-            writeDate: null,
-            bookingRefNumber: null,
-            history: [],
-            backloadConsolidation: null,
-            reassignment: [],
-            proofStock: null,
-            proofStockFilename: null,
-            hwbSigned: null,
-            hwbSignedFilename: null,
-            deliveryReceipt: null,
-            deliveryReceiptFilename: null,
-            packingList: null,
-            packingListFilename: null,
-            deliveryNote: null,
-            deliveryNoteFilename: null,
-            stockDelivery: null,
-            stockDeliveryFilename: null,
-            salesInvoice: null,
-            salesInvoiceFilename: null,
-          ))
-      .toList();
+            fclCode: '',
+            scheduledDatetime: '',
+            actualDatetime: '',
+            serviceType: '', isBackload: '',
+           
+          ),
+        );
+        if(emailSchedule.id == -1) emailSchedule  = null;
+      }
+
+  return {'pickup': pickupSchedule, 'delivery': deliverySchedule};
 }
 
 }
+

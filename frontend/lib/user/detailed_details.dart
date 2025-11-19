@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/models/transaction_model.dart';
 import 'package:frontend/notifiers/auth_notifier.dart';
 import 'package:frontend/provider/accepted_transaction.dart' as accepted_transaction;
+import 'package:frontend/provider/base_url_provider.dart';
 import 'package:frontend/provider/theme_provider.dart';
 import 'package:frontend/provider/transaction_list_notifier.dart';
 import 'package:frontend/provider/transaction_provider.dart';
@@ -37,15 +38,64 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
   late String uid;
 
   @override
-  void initState() {
-    super.initState();
-    uid = widget.uid; // Initialize uid
+void initState() {
+  super.initState();
+  uid = widget.uid; // Initialize uid
 
-    Future.microtask(() async {
-      await ref.refresh(combinedTransactionProvider.future);
-    });
+  // Load transactions into provider
+  Future.microtask(() async {
+    await _fetchTransactionTransactions();
+  });
+}
 
+Future<void> _fetchTransactionTransactions() async {
+  if (widget.transaction?.id == null) return;
+
+  print("Fetching merged transactions for transaction ID: ${widget.transaction!.id}");
+
+  try {
+    final baseUrl = ref.read(baseUrlProvider);
+    final url = Uri.parse(
+        '$baseUrl/api/odoo/booking/transaction_details/${widget.transaction!.id}?uid=${widget.uid}');
+    final response = await http.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'password': ref.read(authNotifierProvider).password ?? '',
+        'login': ref.read(authNotifierProvider).login ?? '',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body)['data']['transactions'];
+      final transactions = data
+          .map<Transaction>((t) => Transaction.fromJson(t))
+          .where((tx) => tx.bookingRefNumber != null && tx.dispatchType != null)
+          .toList();
+
+      // Populate provider
+      ref.read(transactionListProvider.notifier).loadTransactions(transactions);
+
+       for (var tx in transactions) {
+        if (tx.dispatchType == 'ff') {
+          ref.read(completedFFsProvider.notifier).updateFF(tx);
+        }
+      }
+
+      // Debug prints
+      print("✅ Transactions loaded into provider:");
+      for (var tx in transactions) {
+        print("${tx.dispatchType} | ${tx.bookingRefNumber} | ${tx.stageId}");
+      }
+    } else {
+      print("Failed to fetch transactions: ${response.statusCode}");
+    }
+  } catch (e, st) {
+    print("Error fetching transactions: $e\n$st");
   }
+}
+
 
   String getNullableValue(String? value, {String fallback = ''}) {
     return value ?? fallback;
@@ -67,25 +117,30 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
     // }
 
     final relatedFF = ref.watch(relatedFFProvider(bookingNumber ?? ''));
+
+    final isLoaded = allTransactions.any((tx) => tx.bookingRefNumber == bookingNumber);
+
    
 
-    String? checkPrerequisites(Transaction transaction, String requestNumber) {
-      print("Related FF: ${relatedFF?.stageId}");
+    String? checkPrerequisites(Transaction transaction, String requestNumber, Transaction? relatedFF) {
       
+      
+   print("Related FF inside prerequisites: ${relatedFF?.stageId}");
 
+   print("Land Transport: ${transaction.landTransport}");
 
-      if (requestNumber == transaction.plRequestNumber &&
+      if (transaction.landTransport != "transport" && requestNumber == transaction.plRequestNumber &&
           transaction.deRequestStatus != "Completed" &&  transaction.deRequestStatus != "Backload") {
         return "Delivery Empty should be completed first.";
       }
 
-      // if (requestNumber == transaction.dlRequestNumber) {
-      //   if (relatedFF == null || relatedFF.stageId != "Completed") {
-      //     return "Associated Freight Forwarding should be completed first.";
-      //   }
-      // }
+      if (requestNumber == transaction.dlRequestNumber) {
+        if (relatedFF == null || relatedFF.stageId != "Completed") {
+          return "Associated Freight Forwarding should be completed first.";
+        }
+      }
 
-      if(transaction.freightForwarderName!.isEmpty) {
+      if(transaction.landTransport != "transport" && transaction.freightForwarderName!.isEmpty) {
         return "Associated Freight Forwarding Vendor has not yet been assigned.";
       }
 
@@ -205,8 +260,8 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
                                 Text(
                                 // (widget.transaction?.originAddress.isNotEmpty ?? false)
                                 // ? widget.transaction!.originAddress.toUpperCase() : '—',
-                                (widget.transaction?.origin.isNotEmpty ?? false)
-                                ? widget.transaction!.origin.toUpperCase() : '—',
+                                (widget.transaction?.origin!.isNotEmpty ?? false)
+                                ? widget.transaction!.origin!.toUpperCase() : '—',
                                   // Use the originPort variable here
                                   style: AppTextStyles.subtitle.copyWith(
                                     color: mainColor,
@@ -495,17 +550,16 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () {
+                      onPressed: isLoaded ? () {
                         // Example: Replace this with your real prerequisite check
                         String? errorMessage;
                         if (widget.transaction != null) {
                           errorMessage = checkPrerequisites(
                             widget.transaction!,
-                            widget.transaction!.requestNumber ?? '', // <- pass whichever request they’re on, fallback to empty string if null
+                            widget.transaction!.requestNumber ?? '', 
+                            relatedFF// <- pass whichever request they’re on, fallback to empty string if null
                           );
-                        } else {
-                          errorMessage = "Transaction data is missing.";
-                        }
+                        };
 
 
                         if (errorMessage != null) {
@@ -564,7 +618,7 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
                             ),
                           );
                         }
-                      },
+                      } : null,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: mainColor,
                         padding: const EdgeInsets.symmetric(horizontal: 100, vertical: 20),
