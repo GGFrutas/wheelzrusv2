@@ -63,7 +63,7 @@ MilestoneHistoryModel? _getLatestMilestoneForLeg(Transaction tx, String leg) {
       .where((h) =>
           h.dispatchId.toString() == tx.id.toString() &&
           h.fclCode.toUpperCase().startsWith(leg.toUpperCase()) && // optional if your FCL codes use leg prefixes
-          h.actualDatetime?.isNotEmpty == true)
+          h.actualDatetime.isNotEmpty == true)
       .toList();
 
   if (matchingHistory.isEmpty) {
@@ -87,8 +87,8 @@ MilestoneHistoryModel? _getLatestMilestoneForLeg(Transaction tx, String leg) {
 
   // Sort by latest datetime
   matchingHistory.sort((a, b) {
-    final aTime = DateTime.tryParse(a.actualDatetime!) ?? DateTime.fromMillisecondsSinceEpoch(0);
-    final bTime = DateTime.tryParse(b.actualDatetime!) ?? DateTime.fromMillisecondsSinceEpoch(0);
+    final aTime = DateTime.tryParse(a.actualDatetime) ?? DateTime.fromMillisecondsSinceEpoch(0);
+    final bTime = DateTime.tryParse(b.actualDatetime) ?? DateTime.fromMillisecondsSinceEpoch(0);
     return bTime.compareTo(aTime);
   });
 
@@ -111,7 +111,7 @@ if (tx.requestStatus == 'Completed') {
       ? tx.completedTime
       : milestone?.actualDatetime ?? tx.backloadConsolidation?.consolidatedDatetime ?? tx.writeDate;
 } else if (tx.requestStatus == 'Backload') {
-  rawDateTime = tx.backloadConsolidation?.consolidatedDatetime?.isNotEmpty == true
+  rawDateTime = tx.backloadConsolidation?.consolidatedDatetime.isNotEmpty == true
       ? tx.backloadConsolidation?.consolidatedDatetime
       : milestone?.actualDatetime ?? tx.completedTime ?? tx.writeDate;
 } else if (tx.stageId == 'Cancelled') {

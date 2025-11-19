@@ -56,6 +56,7 @@ class TransactionUtils {
         : 'Pickup from Shipper';
   }
 
+
   /// Expands a transaction into multiple "legs" depending on dispatchType
   static List<Transaction> expandTransaction(
       Transaction item, String driverId) {
@@ -322,6 +323,7 @@ static Map<String, MilestoneHistoryModel?> getScheduleForTransaction(
   final history = transaction.history ?? [];
   final serviceType = transaction.serviceType;
   final dispatchId = transaction.id;
+  final transportMode = transaction.landTransport;
 
   // Determine which leg the driver actually belongs to
   String? matchingLeg;
@@ -349,26 +351,41 @@ print("Matching Leg: $matchingLeg request Number: $requestNumber");
   // Reference code map
   final fclPrefixes = {
     'ot': {
-      'Full Container Load': {
-        'de': {'delivery': 'TEOT', 'pickup': 'TYOT'},
-        'pl': {'delivery': 'CLOT', 'pickup': 'TLOT', 'email': 'ELOT'},
+      'freight':{
+        'Full Container Load': {
+          'de': {'delivery': 'TEOT', 'pickup': 'TYOT'},
+          'pl': {'delivery': 'CLOT', 'pickup': 'TLOT', 'email': 'ELOT'},
+        },
+        'Less-Than-Container Load': {
+          'pl': {'pickup': 'LTEOT'},
+        },
       },
-      'Less-Than-Container Load': {
-        'pl': {'pickup': 'LTEOT'},
-      },
+      'transport':{
+         'Full Container Load': {
+          'pl': {'delivery': 'TCLOT', 'pickup': 'TTEOT'},
+        },
+        'Less-Than-Container Load': {
+          'pl': {'delivery': 'TCLOT', 'pickup': 'TTEOT'},
+        },
+      }
+
+      
     },
     'dt': {
-      'Full Container Load': {
-        'dl': {'delivery': 'CLDT', 'pickup': 'GYDT'},
-        'pe': {'delivery': 'CYDT', 'pickup': 'GLDT', 'email': 'EEDT'},
-      },
-      'Less-Than-Container Load': {
-        'dl': {'delivery': 'LCLDT'},
-      },
+      'freight':{
+        'Full Container Load': {
+          'dl': {'delivery': 'CLDT', 'pickup': 'GYDT'},
+          'pe': {'delivery': 'CYDT', 'pickup': 'GLDT', 'email': 'EEDT'},
+        },
+        'Less-Than-Container Load': {
+          'dl': {'delivery': 'LCLDT'},
+        },
+      }
+      
     }
   };
 
-  final fclMap = fclPrefixes[dispatchType]?[serviceType]?[matchingLeg];
+  final fclMap = fclPrefixes[dispatchType]?[transportMode]?[serviceType]?[matchingLeg];
 
   print("FCL Map: $fclMap");
   if (fclMap == null) {
@@ -429,7 +446,7 @@ print("Matching Leg: $matchingLeg request Number: $requestNumber");
     if (deliverySchedule.id == -1) deliverySchedule = null;
   }
   if(emailFcl != null) {
-        emailSchedule = history!.firstWhere(
+        emailSchedule = history.firstWhere(
           (h) => 
             h.fclCode.trim().toUpperCase() == emailFcl.toUpperCase() &&
             h.dispatchId == dispatchId.toString() &&

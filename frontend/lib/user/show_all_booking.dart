@@ -251,23 +251,25 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
               if (!isOngoing || !notCancelled) return false;
 
               // Safely parse the string to DateTime
-              try{
+              try {
                 final rawDate = tx.dispatchType == "ot" ? tx.pickupDate : tx.deliveryDate;
-                if (rawDate!.isEmpty) return false;
+                if(rawDate == null || rawDate.isEmpty) return false;
+                final isoDate = rawDate.replaceFirst(' ', 'T');
+                DateTime selectedDate = DateTime.parse(isoDate).add(const Duration(hours: 8));
 
-                // Parse and handle UTC safely
-                final parsedUtc = DateTime.parse(rawDate).toUtc();
-                final localDate = parsedUtc.toLocal();
+                selectedDate = DateTime(selectedDate.year, selectedDate.month,selectedDate.day);
 
-                // print('pickupDate: ${tx.pickupDate}, deliveryDate: ${tx.deliveryDate}, localDate: $localDate');
+                final firstWeekStart = DateTime(weekStartDates.first.year,weekStartDates.first.month,weekStartDates.first.day);
 
+                // ✅ If delayed, check if any date is before week start
                 if (isDelayed) {
-                  return localDate.isBefore(weekStartDates.first.toLocal());
+                  return selectedDate.isBefore(firstWeekStart);
                 } else {
-                  return sameWeekRange(localDate, date!);
+                  // Check if any date falls in the same week
+                  return sameWeekRange(selectedDate, DateTime(date!.year,date.month, date.day));
                 }
-              }catch(_) {
-                return false; // If parsing fails, exclude this transaction
+              } catch (_) {
+                return false;
               }
             }).toList();
 

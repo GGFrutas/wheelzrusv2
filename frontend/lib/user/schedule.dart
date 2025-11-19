@@ -57,45 +57,41 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
     final serviceType = transaction.serviceType;
     final dispatchId = transaction.id;
     final requestNumber = transaction.requestNumber;
+     final transportMode = transaction.landTransport;
 
     final fclPrefixes = {
       'ot': {
-        'Full Container Load': {
-          'de': {
-            'delivery': 'TEOT',
-            'pickup': 'TYOT'
+        'freight':{
+          'Full Container Load': {
+            'de': {'delivery': 'TEOT', 'pickup': 'TYOT'},
+            'pl': {'delivery': 'CLOT', 'pickup': 'TLOT', 'email': 'ELOT'},
           },
-          'pl': {
-            'delivery': 'CLOT',
-            'pickup': 'TLOT',
-            'email': 'ELOT'
+          'Less-Than-Container Load': {
+            'pl': {'pickup': 'LTEOT'},
           },
         },
-        'Less-Than-Container Load': {
-          'pl': {
-            'delivery': 'LCLOT',
-            'pickup': 'LTEOT'
+        'transport':{
+          'Full Container Load': {
+            'pl': {'delivery': 'TCLOT', 'pickup': 'TTEOT'},
           },
-        },
-      },
-      'dt': {
-        'Full Container Load': {
-          'dl': {
-            'delivery': 'CLDT',
-            'pickup': 'GYDT'
-          },
-          'pe': {
-            'delivery': 'CYDT',
-            'pickup': 'GLDT',
-            'email': 'EEDT'
-          },
-        },
-        'Less-Than-Container Load': {
-          'pl': {
-            'delivery': 'LCLOT',
-            'pickup': 'LTEOT'
+          'Less-Than-Container Load': {
+            'pl': {'delivery': 'TCLOT', 'pickup': 'TTEOT'},
           },
         }
+
+        
+      },
+      'dt': {
+        'freight':{
+          'Full Container Load': {
+            'dl': {'delivery': 'CLDT', 'pickup': 'GYDT'},
+            'pe': {'delivery': 'CYDT', 'pickup': 'GLDT', 'email': 'EEDT'},
+          },
+          'Less-Than-Container Load': {
+            'dl': {'delivery': 'LCLDT'},
+          },
+        }
+        
       }
     };
 
@@ -117,7 +113,7 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
     print("Matching Leg for $requestNumber: $matchingLegs");
 
     if(matchingLegs != null) {
-      final fclMap = fclPrefixes[dispatchType]?[serviceType]?[matchingLegs];
+      final fclMap = fclPrefixes[dispatchType]?[transportMode]?[serviceType]?[matchingLegs];
       final pickupFcl = fclMap?['pickup'];
       final deliveryFcl = fclMap?['delivery'];
       final emailFcl = fclMap?['email'];

@@ -468,7 +468,7 @@ Future<void> _fetchHistoryDetails() async {
     final isDT = widget.transaction?.dispatchType == 'dt';
      final String driverId = ref.watch(authNotifierProvider).partnerId ?? '';
 
-  final Map<String, dynamic> scheduleMap = TransactionUtils.getScheduleForTransaction(transaction!, driverId, widget.transaction?.requestNumber);
+  final Map<String, dynamic> scheduleMap = TransactionUtils.getScheduleForTransaction(transaction, driverId, widget.transaction?.requestNumber);
   final expandedList = TransactionUtils.expandTransaction(transaction, driverId);
   final openedRequestNumber = widget.transaction?.requestNumber;
 

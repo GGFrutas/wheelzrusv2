@@ -293,7 +293,7 @@ Future<void> _fetchTransactionDetails() async {
                       // color: Colors.green[500], // Set background color for this section
                       padding: const EdgeInsets.all(8.0),
                       child: Text(
-                        " ${getNullableValue(widget.transaction?.name).toUpperCase()}", // Section Title
+                        getNullableValue(widget.transaction?.name).toUpperCase(), // Section Title
                         style: AppTextStyles.body.copyWith(
                           fontWeight: FontWeight.bold,
                           color: mainColor,
@@ -731,7 +731,7 @@ Future<void> _fetchTransactionDetails() async {
   ],
 ),
 
-                
+                    if(transaction?.landTransport != "transport")
                     Container(
                       padding: const EdgeInsets.all(7.0),
                       child: Row(
@@ -744,6 +744,7 @@ Future<void> _fetchTransactionDetails() async {
                             size: 24,
                           ),
                           const SizedBox(width: 8), // Space between icon and text
+                          
                           Expanded(
                             child:Column(
                             crossAxisAlignment: CrossAxisAlignment.start,

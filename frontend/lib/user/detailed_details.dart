@@ -127,7 +127,9 @@ Future<void> _fetchTransactionTransactions() async {
       
    print("Related FF inside prerequisites: ${relatedFF?.stageId}");
 
-      if (requestNumber == transaction.plRequestNumber &&
+   print("Land Transport: ${transaction.landTransport}");
+
+      if (transaction.landTransport != "transport" && requestNumber == transaction.plRequestNumber &&
           transaction.deRequestStatus != "Completed" &&  transaction.deRequestStatus != "Backload") {
         return "Delivery Empty should be completed first.";
       }
@@ -138,7 +140,7 @@ Future<void> _fetchTransactionTransactions() async {
         }
       }
 
-      if(transaction.freightForwarderName!.isEmpty) {
+      if(transaction.landTransport != "transport" && transaction.freightForwarderName!.isEmpty) {
         return "Associated Freight Forwarding Vendor has not yet been assigned.";
       }
 

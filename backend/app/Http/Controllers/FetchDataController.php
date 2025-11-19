@@ -144,42 +144,6 @@ class FetchDataController extends Controller
         $login = request()->header('login');
         $password = request()->header('password');
 
-        
-
-        // $fields = [
-        //     "id", "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
-        //     "dispatch_type", "de_truck_driver_name", "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name",
-        //     "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", "origin_port_terminal_address", "destination_port_terminal_address", "arrival_date", "delivery_date",
-        //     "container_number", "seal_number", "booking_reference_no", "origin_forwarder_name", "destination_forwarder_name", "freight_booking_number",
-        //     "origin_container_location", "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
-        //     "freight_forwarder_name", "shipper_phone", "consignee_phone", "dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", "pl_truck_plate_no",
-        //     "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
-        //     "pickup_date", "departure_date","origin", "destination", "de_completion_time", "booking_status",
-        //     "pl_completion_time", "dl_completion_time", "pe_completion_time", "shipper_province","shipper_city","shipper_barangay","shipper_street", 
-        //     "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime", "service_type", "booking_service", "pl_proof_filename", 
-        //     "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time", "name", "stage_id", "pe_release_by", "de_release_by","pl_receive_by","dl_receive_by",
-        //     "pl_proof_stock", "pl_proof_filename_stock","dl_hwb_signed","dl_hwb_signed_filename", "dl_delivery_receipt", "dl_delivery_receipt_filename","dl_packing_list", "dl_packing_list_filename",
-        //     "dl_delivery_note","dl_delivery_note_filename","dl_stock_delivery_receipt","dl_stock_delivery_receipt_filename","dl_sales_invoice","dl_sales_invoice_filename", "dl_proof_filename",
-        //     "pe_proof_filename","de_proof_filename",
-        // ];
-
-        // $fieldsToString =[
-        //     "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
-        //     "dispatch_type", 
-        //     "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", "origin_port_terminal_address", "destination_port_terminal_address", "arrival_date", "delivery_date",
-        //     "container_number", "seal_number", "booking_reference_no", "origin_forwarder_name", "destination_forwarder_name", "freight_booking_number",
-        //     "origin_container_location", "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
-        //     "freight_forwarder_name", "shipper_phone", "consignee_phone", "dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", "pl_truck_plate_no",
-        //     "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
-        //     "pickup_date", "departure_date","origin", "destination", "de_completion_time", "booking_status",
-        //     "pl_completion_time", "dl_completion_time", "pe_completion_time","shipper_province","shipper_city","shipper_barangay","shipper_street",
-        //     "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime",  "service_type","booking_service","pl_proof_filename", 
-        //     "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time","stage_id", "pe_release_by", "de_release_by","pl_receive_by","dl_receive_by",
-        //     "pl_proof_stock", "pl_proof_filename_stock","dl_hwb_signed","dl_hwb_signed_filename", "dl_delivery_receipt", "dl_delivery_receipt_filename","dl_packing_list", "dl_packing_list_filename",
-        //     "dl_delivery_note","dl_delivery_note_filename","dl_stock_delivery_receipt","dl_stock_delivery_receipt_filename","dl_sales_invoice","dl_sales_invoice_filename","dl_proof_filename",
-        //     "pe_proof_filename","de_proof_filename",
-        // ];
-
        
        
 
@@ -354,8 +318,7 @@ class FetchDataController extends Controller
 
     public function getSecondScreenData(Request $request, $id)
     {
-      
-       $user = $this->authenticateDriver($request);
+        $user = $this->authenticateDriver($request);
         if(!is_array($user)) return $user;
 
         $url = $this->url;
@@ -367,7 +330,7 @@ class FetchDataController extends Controller
         $partnerId = $user['partner_id'];
         $partnerName = $user['partner_name'];
 
-       $domain = [
+        $domain = [
             ['id', '=', intval($id)],
             ['dispatch_type', '!=', 'ff'] // exclude forwarder records
         ];
@@ -376,13 +339,12 @@ class FetchDataController extends Controller
             "id", "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
             "dispatch_type", "de_truck_driver_name", "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name",
             "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no","arrival_date", "delivery_date",
-            "container_number", "seal_number", "booking_reference_no", "freight_booking_number",
+            "container_number", "seal_number", "booking_reference_no", "freight_booking_number","freight_forwarder_name",
             "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
             "shipper_province","shipper_city","shipper_barangay","shipper_street", "service_type",
             "consignee_province","consignee_city","consignee_barangay","consignee_street","shipper_phone", "consignee_phone",
-           
-            "pickup_date", "departure_date","origin", "destination",
-            "pl_proof_filename", "freight_forwarder_name", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id",
+            "pickup_date", "departure_date","origin", "destination", "booking_service",
+            "pl_proof_filename", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id",
             "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time", "name", "stage_id", "pe_release_by", "de_release_by","pl_receive_by","dl_receive_by",
             "pl_proof_stock", "pl_proof_filename_stock","dl_hwb_signed","dl_hwb_signed_filename", "dl_delivery_receipt", "dl_delivery_receipt_filename","dl_packing_list", "dl_packing_list_filename",
             "dl_delivery_note","dl_delivery_note_filename","dl_stock_delivery_receipt","dl_stock_delivery_receipt_filename","dl_sales_invoice","dl_sales_invoice_filename", "dl_proof_filename",
@@ -390,15 +352,15 @@ class FetchDataController extends Controller
         ];
 
         $fieldsToString =[
-            "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
+            "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status","freight_forwarder_name",
             "dispatch_type", "shipper_province","shipper_city","shipper_barangay","shipper_street", 
             "consignee_province","consignee_city","consignee_barangay","consignee_street","service_type",
             "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no","arrival_date", "delivery_date",
             "container_number", "seal_number", "booking_reference_no", "freight_booking_number","shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id",
             "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
-            "freight_forwarder_name",
+            
            
-            "pickup_date", "departure_date","origin", "destination",
+            "pickup_date", "departure_date","origin", "destination", "booking_service",
             "pl_proof_filename", "shipper_phone", "consignee_phone",
             "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time", "name", "stage_id", "pe_release_by", "de_release_by","pl_receive_by","dl_receive_by",
             "pl_proof_stock", "pl_proof_filename_stock","dl_hwb_signed","dl_hwb_signed_filename", "dl_delivery_receipt", "dl_delivery_receipt_filename","dl_packing_list", "dl_packing_list_filename",
@@ -410,37 +372,31 @@ class FetchDataController extends Controller
         $driverData = $this->processDispatchManagers($domain, $fields, $fieldsToString, $partnerName);
 
         // 🔹 Step 2: collect booking refs from driverData
-       
         $bookingRefs = collect($driverData)
-        ->pluck('booking_reference_no')
-        ->filter()
-        ->unique()
-        ->toArray();
+            ->pluck('booking_reference_no') // ⚠️ ensure this matches Odoo field
+            ->filter()
+            ->unique()
+            ->toArray();
 
-        // Step 3: ensure at least the requested booking id is included
-        if (empty($bookingRefs) && !empty($id)) {
-            // fetch booking_reference_no from Odoo using $id
-            $bookingRefs = [$id];
-        }
+        // \Log::info("Booking Refs collected:", $bookingRefs);
 
-        // Step 4: fetch FF data
+        // 🔹 Step 3: fetch FF by those booking refs
         $ffData = [];
         if (!empty($bookingRefs)) {
             $ffDomain = [
-                ["dispatch_type", "=", "ff"],
-                ["booking_reference_no", "in", $bookingRefs],
+                ["dispatch_type", "ilike", "ff"], // case-insensitive match
+                ["booking_reference_no", "in", array_values($bookingRefs)],
             ];
+            // \Log::info("FF Domain:", $ffDomain);
+
             $ffData = $this->processDispatchManagers($ffDomain, $fields, $fieldsToString, $partnerName, false);
+            // \Log::info("FF Data fetched:", $ffData);
         }
 
         // 🔹 Step 4: merge driver + FF results
-        $data = collect($driverData)
-        ->merge($ffData)
-        ->unique('id')   // prevent duplicates
-        ->values()
-        ->all();
-    
- 
+        $data = array_merge($driverData, $ffData);
+
+
         // ✅ Final return
         return response()->json([
             'data' => [
@@ -461,6 +417,7 @@ class FetchDataController extends Controller
         ];
 
         $fields = ['id','status','driver_id', 'dispatch_id', 'request_no', 'create_date', 'request_type']; // only fetch what you need
+
 
         $response = jsonRpcRequest($odooUrl, [
             'jsonrpc' => '2.0',
@@ -503,37 +460,40 @@ class FetchDataController extends Controller
         $partnerName = $user['partner_name'];
 
         // 🧠 Cache key unique per driver & per date
-        $cacheKey = "today_booking_driver_{$partnerId}_" . date('Y-m-d');
+        // $cacheKey = "today_booking_driver_{$partnerId}_" . date('Y-m-d');
 
-        // Cache for 10 minutes (you can tweak this)
-        $ttl = now()->addMinutes(1);
+        // // Cache for 10 minutes (you can tweak this)
+        // $ttl = now()->addMinutes(1);
 
-        $data = Cache::remember($cacheKey, $ttl, function () use ($partnerId, $partnerName) {
+        // $data = Cache::remember($cacheKey, $ttl, function () use ($partnerId, $partnerName) {
             // Your existing Odoo fetching logic here
             $today = date('Y-m-d');
             $tomorrow = date('Y-m-d', strtotime('+1 day'));
 
             $domain = [
-                "&",
-                "|",
-                    "&", ["pickup_date", ">=", $today], ["pickup_date", "<=", $tomorrow],
-                    "&", ["delivery_date", ">=", $today], ["delivery_date", "<=", $tomorrow],
-                "|", "|", "|",
+                "|",  // AND all of the following
+                    // ["dispatch_type", "!=", "ff"],
+    
+                    "|",  // OR: date range match
+                        "&", 
+                            [ "pickup_date", ">=", $today ],
+                            [ "pickup_date", "<=", $tomorrow ],
+                        "&", 
+                            [ "delivery_date", ">=", $today ],
+                            [ "delivery_date", "<=", $tomorrow ],
+    
+                    "|", "|", "|",  // OR: driver match
                     ["de_truck_driver_name", "=", $partnerId],
                     ["dl_truck_driver_name", "=", $partnerId],
                     ["pe_truck_driver_name", "=", $partnerId],
                     ["pl_truck_driver_name", "=", $partnerId],
-
-                "&",
-                    ["transport_mode", "!=", 1],
-                    ["service_type", "!=", 2]
             ];
 
              $fields = [
                 "id", "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
                 "dispatch_type", "de_truck_driver_name", "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name",
                 "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", "origin_port_terminal_address", "destination_port_terminal_address", "arrival_date", "delivery_date",
-                "freight_booking_number",
+                "freight_booking_number", "booking_service",
                 
                 "pickup_date", "departure_date",
                 
@@ -568,8 +528,22 @@ class FetchDataController extends Controller
                 $ffData = $this->processDispatchManagers($ffDomain, $fields, $fieldsToString, $partnerName, false);
             }
 
-            return array_merge($driverData, $ffData);
-        });
+            $data = array_merge($driverData, $ffData);
+            foreach ($data as &$row) {
+                foreach ([
+                    'pickup_date',
+                    'delivery_date',
+                ] as $field) {
+    
+                    if (!empty($row[$field])) {
+                        $row[$field] = date('Y-m-d H:i:s', strtotime($row[$field] . ' +8 hours'));
+                    }
+                }
+            }
+            unset($row);
+
+            // return array_merge($driverData, $ffData);
+        // });
 
         return response()->json(['data' => ['transactions' => $data]]);
     }
@@ -698,19 +672,14 @@ class FetchDataController extends Controller
         ];
 
         $fields = [
-            "id", "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
-            "dispatch_type", "de_truck_driver_name", "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name",
-            "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no",
-            "de_completion_time", "pl_completion_time", "dl_completion_time", "pe_completion_time",  
-            "name", "stage_id", "write_date"
+            "id", "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status", "dispatch_type", "de_truck_driver_name", 
+            "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name","de_request_no", "pl_request_no", "dl_request_no", "pe_request_no",
+            "de_completion_time", "pl_completion_time", "dl_completion_time", "pe_completion_time", "name", "stage_id", "write_date"
         ];
 
         $fieldsToString =[
-            "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
-            "dispatch_type", 
-            "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no",
-            "de_completion_time","pl_completion_time", "dl_completion_time", "pe_completion_time",
-            "stage_id", "write_date"
+            "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status", "dispatch_type", "de_request_no", "pl_request_no", 
+            "dl_request_no", "pe_request_no", "de_completion_time","pl_completion_time", "dl_completion_time", "pe_completion_time","stage_id", "write_date"
         ];
         $data = $this->processDispatchManagers($domain, $fields, $fieldsToString, $partnerName);
 
@@ -792,36 +761,37 @@ class FetchDataController extends Controller
         ];
 
         $fields = [
-            "id", "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
-            "dispatch_type", "de_truck_driver_name", "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name",
-            "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", "origin_port_terminal_address", "destination_port_terminal_address", "arrival_date", "delivery_date",
-            "container_number", "seal_number", "booking_reference_no", "origin_forwarder_name", "destination_forwarder_name", "freight_booking_number",
-            "origin_container_location", "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
+            "id", "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status","dispatch_type", "de_truck_driver_name", 
+            "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name","de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", 
+            "origin_port_terminal_address", "destination_port_terminal_address", "arrival_date", "delivery_date","container_number", "seal_number", 
+            "booking_reference_no", "origin_forwarder_name", "destination_forwarder_name", "freight_booking_number","origin_container_location", 
+            "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
             "freight_forwarder_name", "shipper_phone", "consignee_phone", "dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", "pl_truck_plate_no",
-            "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
-            "pickup_date", "departure_date","origin", "destination", "de_completion_time", "booking_status",
-            "pl_completion_time", "dl_completion_time", "pe_completion_time", "shipper_province","shipper_city","shipper_barangay","shipper_street", 
-            "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime", "service_type", "booking_service", "pl_proof_filename", 
-            "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time", "name", "stage_id", "pe_release_by", "de_release_by","pl_receive_by","dl_receive_by",
-            "pl_proof_stock", "pl_proof_filename_stock","dl_hwb_signed","dl_hwb_signed_filename", "dl_delivery_receipt", "dl_delivery_receipt_filename","dl_packing_list", "dl_packing_list_filename",
-            "dl_delivery_note","dl_delivery_note_filename","dl_stock_delivery_receipt","dl_stock_delivery_receipt_filename","dl_sales_invoice","dl_sales_invoice_filename", "dl_proof_filename",
+            "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id",
+            "vehicle_name", "pickup_date", "departure_date","origin", "destination", "de_completion_time", "booking_status", "pl_completion_time", 
+            "dl_completion_time", "pe_completion_time", "shipper_province","shipper_city","shipper_barangay","shipper_street", "consignee_province",
+            "consignee_city","consignee_barangay","consignee_street", "foas_datetime", "service_type", "booking_service", "pl_proof_filename", 
+            "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time", "name", "stage_id", "pe_release_by", "de_release_by",
+            "pl_receive_by","dl_receive_by", "pl_proof_stock", "pl_proof_filename_stock","dl_hwb_signed","dl_hwb_signed_filename", "dl_delivery_receipt", 
+            "dl_delivery_receipt_filename","dl_packing_list", "dl_packing_list_filename", "dl_delivery_note","dl_delivery_note_filename",
+            "dl_stock_delivery_receipt","dl_stock_delivery_receipt_filename","dl_sales_invoice","dl_sales_invoice_filename", "dl_proof_filename", 
             "pe_proof_filename","de_proof_filename", "write_date"
         ];
 
         $fieldsToString =[
-            "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
-            "dispatch_type", 
-            "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", "origin_port_terminal_address", "destination_port_terminal_address", "arrival_date", "delivery_date",
+            "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status", "dispatch_type",  "de_request_no", "pl_request_no", 
+            "dl_request_no", "pe_request_no", "origin_port_terminal_address", "destination_port_terminal_address", "arrival_date", "delivery_date", 
             "container_number", "seal_number", "booking_reference_no", "origin_forwarder_name", "destination_forwarder_name", "freight_booking_number",
-            "origin_container_location", "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
-            "freight_forwarder_name", "shipper_phone", "consignee_phone", "dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", "pl_truck_plate_no",
-            "de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id", "vehicle_name",
-            "pickup_date", "departure_date","origin", "destination", "de_completion_time", "booking_status",
+            "origin_container_location", "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", 
+            "pe_signature", "freight_forwarder_name", "shipper_phone", "consignee_phone", "dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", 
+            "pl_truck_plate_no","de_truck_type", "dl_truck_type", "pe_truck_type", "pl_truck_type", "shipper_id", "consignee_id", "shipper_contact_id", 
+            "consignee_contact_id", "vehicle_name","pickup_date", "departure_date","origin", "destination", "de_completion_time", "booking_status",
             "pl_completion_time", "dl_completion_time", "pe_completion_time","shipper_province","shipper_city","shipper_barangay","shipper_street",
             "consignee_province","consignee_city","consignee_barangay","consignee_street", "foas_datetime",  "service_type","booking_service","pl_proof_filename", 
-            "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time","stage_id", "pe_release_by", "de_release_by","pl_receive_by","dl_receive_by",
-            "pl_proof_stock", "pl_proof_filename_stock","dl_hwb_signed","dl_hwb_signed_filename", "dl_delivery_receipt", "dl_delivery_receipt_filename","dl_packing_list", "dl_packing_list_filename",
-            "dl_delivery_note","dl_delivery_note_filename","dl_stock_delivery_receipt","dl_stock_delivery_receipt_filename","dl_sales_invoice","dl_sales_invoice_filename","dl_proof_filename",
+            "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time","stage_id", "pe_release_by", "de_release_by",
+            "pl_receive_by","dl_receive_by","pl_proof_stock", "pl_proof_filename_stock","dl_hwb_signed","dl_hwb_signed_filename", "dl_delivery_receipt", 
+            "dl_delivery_receipt_filename","dl_packing_list", "dl_packing_list_filename", "dl_delivery_note","dl_delivery_note_filename",
+            "dl_stock_delivery_receipt","dl_stock_delivery_receipt_filename","dl_sales_invoice","dl_sales_invoice_filename","dl_proof_filename",
             "pe_proof_filename","de_proof_filename", "write_date"
         ];
         $data = $this->processDispatchManagers($domain, $fields, $fieldsToString, $partnerName);
@@ -910,13 +880,13 @@ class FetchDataController extends Controller
                             ["pe_request_status", "=", "Completed"],
 
                 "|",
-                        // Group 1: Completed statuses
-                        "|", 
-                            ["de_request_status", "=", "Backload"],
+                    // Group 1: Completed statuses
+                    "|", 
+                        ["de_request_status", "=", "Backload"],
+                        "|",
+                            ["pl_request_status", "=", "Backload"],
                             "|",
-                                ["pl_request_status", "=", "Backload"],
-                                "|",
-                                    ["dl_request_status", "=", "Backload"],
+                                ["dl_request_status", "=", "Backload"],
                                 ["pe_request_status", "=", "Backload"],
 
                 // Group 2: Rejected statuses
@@ -929,30 +899,23 @@ class FetchDataController extends Controller
                     ["pl_truck_driver_name", "=", $partnerId]
         ];
 
-        
         $fields = [
-            "id", "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
-            "dispatch_type", "de_truck_driver_name", "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name",
-            "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no",
-            "de_completion_time", "pl_completion_time", "dl_completion_time", "pe_completion_time",  
-            "name", "stage_id", "write_date"
+            "id", "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status", "dispatch_type", "de_truck_driver_name", 
+            "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name","de_request_no", "pl_request_no", "dl_request_no", "pe_request_no",
+            "de_completion_time", "pl_completion_time", "dl_completion_time", "pe_completion_time", "name", "stage_id", "write_date"
         ];
 
         $fieldsToString =[
-            "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
-            "dispatch_type", 
-            "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no",
-            "de_completion_time","pl_completion_time", "dl_completion_time", "pe_completion_time",
-            "stage_id",  "write_date"
+            "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status", "dispatch_type", "de_request_no", "pl_request_no", 
+            "dl_request_no", "pe_request_no", "de_completion_time","pl_completion_time", "dl_completion_time", "pe_completion_time","stage_id", "write_date"
         ];
-
         $data = $this->processDispatchManagers($domain, $fields, $fieldsToString, $partnerName);
 
         $reassigned = $this->fetchReassignedData($db, $uid, $odooPassword, $partnerId);
 
        
       
-        foreach ($data as &$tx) {
+       foreach ($data as &$tx) {
             // Collect all possible driver IDs in this transaction
             $txDriverIds = [];
 
@@ -988,40 +951,9 @@ class FetchDataController extends Controller
         }
         unset($tx);
 
-        // // Exclude transactions older than 30 days
-        // $thirtyDaysAgo = strtotime('-30 days');
-
-        // $data = array_filter($data, function ($tx) use ($thirtyDaysAgo) {
-        //     $dateFields = ['de_completion_time', 'pl_completion_time', 'dl_completion_time', 'pe_completion_time'];
-        //     $latestDate = null;
-
-        //     foreach ($dateFields as $field) {
-        //         if (!empty($tx[$field])) {
-        //             $timestamp = strtotime($tx[$field]);
-        //             if ($timestamp && ($latestDate === null || $timestamp > $latestDate)) {
-        //                 $latestDate = $timestamp;
-        //             }
-        //         }
-        //     }
-
-        //     // If no valid completion date, exclude it
-        //     if (!$latestDate) {
-        //         return false;
-        //     }
-
-        //     // Keep only if completed within the last 30 days
-        //     return $latestDate >= $thirtyDaysAgo;
-        // });
-
-        // // Reindex array
-        // $data = array_values($data);
-
-
+      
         return response()->json([
             'data' => [
-                'transactions' => $data,
-                'reassigned' => $reassigned,
-                
                 'transactions' => $data,
                 'reassigned' => $reassigned,
                 
@@ -1029,8 +961,7 @@ class FetchDataController extends Controller
         ]);
     }
 
-
-    public function getAllBooking(Request $request)
+   public function getAllBooking(Request $request)
     {
         $user = $this->authenticateDriver($request);
         if(!is_array($user)) return $user;
@@ -1046,11 +977,11 @@ class FetchDataController extends Controller
         $today = date('Y-m-d');
         $partnerId = $user['partner_id'];
         
-        $cacheKey = "today_booking_driver_{$partnerId}_{$today}";
+        // $cacheKey = "today_booking_driver_{$partnerId}_{$today}";
 
-        // Step 5: Queue a job for each dispatch.manager record
-        $data = Cache::remember($cacheKey, now()->addMinutes(2), function () use ($user, $request, $partnerId, $partnerName) {
-            \Log::info("Cache MISS: fetching fresh Odoo data for driver {$partnerName}");
+       
+        // $data = Cache::remember($cacheKey, now()->addMinutes(1), function () use ($user, $request, $partnerId, $partnerName) {
+        //     \Log::info("Cache MISS: fetching fresh Odoo data for driver {$partnerName}");
             $odooUrl = $this->odoo_url;  
             $db = $this->db;
             $uid = $user['uid'];
@@ -1060,43 +991,30 @@ class FetchDataController extends Controller
             $limit = (int) request()->query('limit', 5);
             $offset = ($page - 1) * $limit;
 
-           $domain = [
-                "&",
+            $domain = [
+                
                     "|", "|", "|", // OR: driver match
                     ["de_truck_driver_name", "=", $partnerId],
                     ["dl_truck_driver_name", "=", $partnerId],
                     ["pe_truck_driver_name", "=", $partnerId],
                     ["pl_truck_driver_name", "=", $partnerId],
-                    // "|",
-                    // ['pickup_date', ">=", $today],
-                    // ['delivery_date', ">=", $today],
-                
-                    // ["dispatch_type", "=", "ff"]
-                    "|", "|",
-                    ["transport_mode", "!=", 1],
-                    ["service_type", "!=", 2],
+                   
+                    // "&",
+                    // ["transport_mode", "!=", 1],
+                    // ["service_type", "!=", 2],
             ];
                         
             $fields = [
-                "id", "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
-                "dispatch_type", "de_truck_driver_name", "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name",
-                "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no",   "delivery_date",
-                "freight_booking_number",
-                
-                "pickup_date", 
-                
-                "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time", "name", 
+                "id", "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status", "dispatch_type", "de_truck_driver_name", 
+                "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name", "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", 
+                "delivery_date", "freight_booking_number", "pickup_date",  "de_assignation_time", "pl_assignation_time", "dl_assignation_time", 
+                "pe_assignation_time", "name", "transport_mode", "service_type", "booking_service",
             ];
 
             $fieldsToString =[
-                "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
-                "dispatch_type", 
-                "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no",  "delivery_date",
-                "freight_booking_number",
-            
-                "pickup_date", 
-            
-                "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time", 
+                "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status", "dispatch_type", "de_request_no", "pl_request_no", 
+                "dl_request_no", "pe_request_no",  "delivery_date", "freight_booking_number", "pickup_date",  "de_assignation_time", "pl_assignation_time", 
+                "dl_assignation_time", "pe_assignation_time", 
             ];
             
 
@@ -1156,12 +1074,12 @@ class FetchDataController extends Controller
                 return []; // This avoids caching an empty dataset
             }
 
-            return $data;
-        });
+        //     return $data;
+        // });
 
-        if (Cache::has($cacheKey)) {
-            \Log::info("Cache HIT for driver {$partnerName}");
-        }
+        // if (Cache::has($cacheKey)) {
+        //     \Log::info("Cache HIT for driver {$partnerName}");
+        // }
 
         $sizeInBytes = strlen(json_encode($data));
         $sizeInMB = round($sizeInBytes / 1024 / 1024, 3); // Convert bytes → MB (3 decimals)
