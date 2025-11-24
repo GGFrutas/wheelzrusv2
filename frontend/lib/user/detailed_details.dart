@@ -626,16 +626,34 @@ Future<void> _fetchTransactionTransactions() async {
                           borderRadius: BorderRadius.circular(30.0),
                         ),
                       ),
-                      child: Text(
-                        "Next",
-                        style: AppTextStyles.body.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
-                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            "Next",
+                            style: AppTextStyles.body.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                          const SizedBox(width: 8),
+                          if(!isLoaded)...[
+                            const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation(Colors.white),
+                              ),
+                            ),
+                          ]
+                        ],
+                      )
+                      
                     ),
                   ),
                 ],

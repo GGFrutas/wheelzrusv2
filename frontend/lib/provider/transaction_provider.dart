@@ -91,6 +91,12 @@ Future<List<Transaction>> fetchFilteredTransactions({
 
     // Default: return normal transactions
     return transactions;
+  } on SocketException {
+    throw Exception("No internet connection. Pleas check your network.");
+  } on TimeoutException {
+    throw Exception("Netwokr timeout. Connection is unstable.");
+  } on ClientException {
+    throw Exception ("Network unstable. Please try again.");
   } catch (e) {
     throw Exception("Error fetching transactions: $e");
   }
