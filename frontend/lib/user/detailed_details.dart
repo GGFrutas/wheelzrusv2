@@ -27,147 +27,169 @@ import 'package:signature/signature.dart';
 class DetailedDetailScreen extends ConsumerStatefulWidget {
   final String uid;
   final Transaction? transaction;
+  final Transaction? relatedFF;
 
-  const DetailedDetailScreen({super.key, required this.uid, required this.transaction, required relatedFF});
+  const DetailedDetailScreen({
+    super.key,
+    required this.uid,
+    required this.transaction,
+    required this.relatedFF,
+  });
 
   @override
-  ConsumerState<DetailedDetailScreen> createState() => _DetailedDetailState();
+  ConsumerState<DetailedDetailScreen> createState() =>
+      _DetailedDetailState();
 }
 
 class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
   late String uid;
 
+  String? prerequisiteMsg;
+  bool prerequisitesChecked = false;
+
   @override
-void initState() {
-  super.initState();
-  uid = widget.uid; // Initialize uid
+  void initState() {
+    super.initState();
+    uid = widget.uid;
 
-  // Load transactions into provider
-  Future.microtask(() async {
-    await _fetchTransactionTransactions();
-  });
-}
+    Future.microtask(() async {
+      await _fetchTransactionTransactions();
+      _evaluatePrerequisites(); // 👈 compute once after load
+    });
+  }
 
-Future<void> _fetchTransactionTransactions() async {
-  if (widget.transaction?.id == null) return;
+  Future<void> _fetchTransactionTransactions() async {
+    if (widget.transaction?.id == null) return;
 
-  print("Fetching merged transactions for transaction ID: ${widget.transaction!.id}");
+    print("Fetching merged transactions for transaction ID: ${widget.transaction!.id}");
 
-  try {
-    final baseUrl = ref.read(baseUrlProvider);
-    final url = Uri.parse(
-        '$baseUrl/api/odoo/booking/transaction_details/${widget.transaction!.id}?uid=${widget.uid}');
-    final response = await http.get(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'password': ref.read(authNotifierProvider).password ?? '',
-        'login': ref.read(authNotifierProvider).login ?? '',
-      },
+    try {
+      final baseUrl = ref.read(baseUrlProvider);
+      final url = Uri.parse(
+          '$baseUrl/api/odoo/booking/transaction_details/${widget.transaction!.id}?uid=${widget.uid}');
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'password': ref.read(authNotifierProvider).password ?? '',
+          'login': ref.read(authNotifierProvider).login ?? '',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body)['data']['transactions'];
+        final transactions = data
+            .map<Transaction>((t) => Transaction.fromJson(t))
+            .where((tx) =>
+                tx.bookingRefNumber != null && tx.dispatchType != null)
+            .toList();
+
+        ref.read(transactionListProvider.notifier).loadTransactions(transactions);
+
+        // update FFs
+        for (var tx in transactions) {
+          if (tx.dispatchType == 'ff') {
+            ref.read(completedFFsProvider.notifier).updateFF(tx);
+          }
+        }
+
+        print("Transactions loaded:");
+        for (var tx in transactions) {
+          print("${tx.dispatchType} | ${tx.bookingRefNumber} | ${tx.stageId}");
+        }
+      } else {
+        print("Failed to fetch transactions: ${response.statusCode}");
+      }
+    } catch (e, st) {
+      print("Error fetching transactions: $e\n$st");
+    }
+  }
+
+  /// -------------------------------------------------
+  /// 📌 Evaluate prerequisites ONCE (fixes disappearing)
+  /// -------------------------------------------------
+  void _evaluatePrerequisites() {
+    final transaction = widget.transaction;
+    if (transaction == null) return;
+
+    final bookingNumber = transaction.bookingRefNumber;
+    final requestNumber = transaction.requestNumber;
+
+    final relatedFF =
+        ref.read(relatedFFProvider(bookingNumber ?? ''));
+
+    prerequisiteMsg = checkPrerequisites(
+      transaction,
+      requestNumber!,
+      relatedFF,
     );
 
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body)['data']['transactions'];
-      final transactions = data
-          .map<Transaction>((t) => Transaction.fromJson(t))
-          .where((tx) => tx.bookingRefNumber != null && tx.dispatchType != null)
-          .toList();
-
-      // Populate provider
-      ref.read(transactionListProvider.notifier).loadTransactions(transactions);
-
-       for (var tx in transactions) {
-        if (tx.dispatchType == 'ff') {
-          ref.read(completedFFsProvider.notifier).updateFF(tx);
-        }
-      }
-
-      // Debug prints
-      print("✅ Transactions loaded into provider:");
-      for (var tx in transactions) {
-        print("${tx.dispatchType} | ${tx.bookingRefNumber} | ${tx.stageId}");
-      }
-    } else {
-      print("Failed to fetch transactions: ${response.statusCode}");
-    }
-  } catch (e, st) {
-    print("Error fetching transactions: $e\n$st");
+    setState(() {
+      prerequisitesChecked = true;
+    });
   }
-}
 
+  /// -------------------------------------------------
+  /// 📌 Prerequisite check logic
+  /// -------------------------------------------------
+  String? checkPrerequisites(
+      Transaction transaction, String requestNumber, Transaction? relatedFF) {
+    print("Related FF inside prerequisites: ${relatedFF?.stageId}");
+    print("Land Transport: ${transaction.landTransport}");
+
+    if (transaction.landTransport != "transport" &&
+        requestNumber == transaction.plRequestNumber &&
+        transaction.deRequestStatus != "Completed" &&
+        transaction.deRequestStatus != "Backload") {
+      return "Delivery Empty should be completed first.";
+    }
+
+    if (requestNumber == transaction.dlRequestNumber) {
+      if (relatedFF == null || relatedFF.stageId != "Completed") {
+        return "Associated Freight Forwarding should be completed first.";
+      }
+    }
+
+    if (transaction.landTransport != "transport" &&
+        transaction.freightForwarderName!.isEmpty) {
+      return "Associated Freight Forwarding Vendor has not yet been assigned.";
+    }
+    
+    if (requestNumber == transaction.peRequestNumber &&
+        transaction.dlRequestStatus != "Completed") {
+      return "Delivery Laden should be completed first.";
+    }
+
+    
+
+    return null;
+  }
 
   String getNullableValue(String? value, {String fallback = ''}) {
     return value ?? fallback;
   }
 
-  
   @override
   Widget build(BuildContext context) {
-  
     final transaction = widget.transaction;
-    final bookingNumber = transaction?.bookingRefNumber;
-    int currentStep = 1; // Assuming Detailed Details is step 1 (0-based index)
+    if (transaction == null) return const SizedBox.shrink();
 
+    int currentStep = 1;
+    final bookingNumber = transaction.bookingRefNumber;
     final allTransactions = ref.watch(transactionListProvider);
-    print("All Transaction: $allTransactions");
-
-    // for (var tx in allTransactions) {
-    //   print("🔍 TX → bookingRefNumber: '${tx.bookingRefNumber}', dispatchType: '${tx.dispatchType}'");
-    // }
-
+    final isLoaded =  allTransactions.any((tx) => tx.bookingRefNumber == bookingNumber);
     final relatedFF = ref.watch(relatedFFProvider(bookingNumber ?? ''));
-
-    final isLoaded = allTransactions.any((tx) => tx.bookingRefNumber == bookingNumber);
-
-   
-
-    String? checkPrerequisites(Transaction transaction, String requestNumber, Transaction? relatedFF) {
-      
-      
-   print("Related FF inside prerequisites: ${relatedFF?.stageId}");
-
-   print("Land Transport: ${transaction.landTransport}");
-
-      if (transaction.landTransport != "transport" && requestNumber == transaction.plRequestNumber &&
-          transaction.deRequestStatus != "Completed" &&  transaction.deRequestStatus != "Backload") {
-        return "Delivery Empty should be completed first.";
-      }
-
-      if (requestNumber == transaction.dlRequestNumber) {
-        if (relatedFF == null || relatedFF.stageId != "Completed") {
-          return "Associated Freight Forwarding should be completed first.";
-        }
-      }
-
-      if(transaction.landTransport != "transport" && transaction.freightForwarderName!.isEmpty) {
-        return "Associated Freight Forwarding Vendor has not yet been assigned.";
-      }
-
-      // if (requestNumber == transaction.deRequestNumber) {
-      //   if (relatedFF == null || relatedFF.stageId?.trim() != "Vendor Accepted") {
-      //     return "Associated Freight Forwarding Vendor has not yet been assigned.";
-      //   }
-      // }
-    
-      if (requestNumber == transaction.peRequestNumber &&
-          transaction.dlRequestStatus != "Completed") {
-        return "Delivery Laden should be completed first.";
-      }
-
-      return null; // ✅ All good
-    }
-
-
-        
+     bool hideForOngoing =  (widget.transaction?.requestNumber == transaction.peRequestNumber &&
+     (transaction.dlRequestStatus == "Ongoing" || relatedFF?.stageId == "Completed"));
     return PopScope(
       canPop: true,
       onPopInvokedWithResult: (didPop, result) {
-        if(didPop) {
+        if (didPop) {
           ref.invalidate(pendingTransactionProvider);
-            ref.invalidate(acceptedTransactionProvider);
-            ref.invalidate(bookingProvider);
-            ref.invalidate(filteredItemsProvider);
+          ref.invalidate(acceptedTransactionProvider);
+          ref.invalidate(bookingProvider);
+          ref.invalidate(filteredItemsProvider);
         }
       },
       child: Scaffold(
@@ -192,16 +214,44 @@ Future<void> _fetchTransactionTransactions() async {
                 Container(
                   padding: const EdgeInsets.all(8.0),
                   child: Text(
-                    getNullableValue(widget.transaction?.name).toUpperCase(),
-                    style:AppTextStyles.body.copyWith(
+                    getNullableValue(transaction.name).toUpperCase(),
+                    style: AppTextStyles.body.copyWith(
                       fontWeight: FontWeight.bold,
                       color: mainColor,
                     ),
                   ),
                 ),
                 const SizedBox(height: 20),
-                ProgressRow(currentStep: currentStep, uid: uid, transaction: transaction, relatedFF: relatedFF,),
-                const SizedBox(height: 20),
+
+                ProgressRow(
+                  currentStep: currentStep,
+                  uid: uid,
+                  transaction: transaction,
+                  relatedFF: relatedFF,
+                ),
+
+                const SizedBox(height: 10),
+
+                /// ---------------------------------------------------------
+                /// 📌 SHOW MESSAGE ONLY AFTER FINAL EVALUATION (NO FLICKER)
+                /// ---------------------------------------------------------
+                /// 
+                
+                if (prerequisitesChecked && prerequisiteMsg != null && !hideForOngoing)
+                  Container(
+                     padding: const EdgeInsets.all(8.0),
+    color: Colors.yellow.shade100, // <-- background color here
+                    child: Text(
+                      "This action requires the container to arrive at the discharge port.",
+                      style: AppTextStyles.caption.copyWith(
+                        fontWeight: FontWeight.w600,
+                        fontStyle: FontStyle.italic,
+                        color: const Color.fromARGB(255, 218, 161, 3),
+                      ),
+                    ),
+                  ),
+
+                const SizedBox(height: 10),
                 Container(
                   padding: const EdgeInsets.all(16.0), // Add padding inside the container
                   
@@ -257,16 +307,19 @@ Future<void> _fetchTransactionTransactions() async {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 // Space between label and value
-                                Text(
-                                // (widget.transaction?.originAddress.isNotEmpty ?? false)
-                                // ? widget.transaction!.originAddress.toUpperCase() : '—',
-                                (widget.transaction?.origin!.isNotEmpty ?? false)
-                                ? widget.transaction!.origin!.toUpperCase() : '—',
-                                  // Use the originPort variable here
-                                  style: AppTextStyles.subtitle.copyWith(
-                                    color: mainColor,
-                                  ),
+                               Text(
+                  (widget.transaction != null) 
+                  ? (() {
+                    final isOT = widget.transaction!.dispatchType == "ot";
+                    final rawValue = isOT ? widget.transaction!.rawOrigin : widget.transaction!.rawDestination;
+
+                    if (rawValue == null || rawValue.isEmpty) return '—';
+                    return rawValue.toUpperCase();
+                  }) () : '—',
+                                style: AppTextStyles.subtitle.copyWith(
+                                  color: mainColor,
                                 ),
+                              ),
                                 Text(
                                   "Port of Origin",
                                   style: AppTextStyles.caption.copyWith(

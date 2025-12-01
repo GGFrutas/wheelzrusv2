@@ -814,6 +814,15 @@ Future<void> _fetchHistoryDetails() async {
           color: Colors.grey,
           thickness: 1,
         ),
+        Text(
+            //  isDT ? 'Consignee' : 'Shipper',
+            title!,
+            style: AppTextStyles.body.copyWith(
+              color: mainColor,
+              fontWeight: FontWeight.bold, 
+            )
+          ),
+          const SizedBox(height: 20),
 
         // SHIPPER CONSIGNEE
         if(isDiverted && transaction.peRequestNumber == reqNo   && consolStatus != 'draft') ... [
@@ -832,15 +841,7 @@ Future<void> _fetchHistoryDetails() async {
             )
           ),
         ] else ...[
-          Text(
-            //  isDT ? 'Consignee' : 'Shipper',
-            title!,
-            style: AppTextStyles.body.copyWith(
-              color: mainColor,
-              fontWeight: FontWeight.bold, 
-            )
-          ),
-          const SizedBox(height: 20),
+          
           Text(
           'Proof of Delivery',
             style: AppTextStyles.body.copyWith(
@@ -1012,7 +1013,17 @@ Future<void> _fetchHistoryDetails() async {
 
   Widget  _buildFreightTab(){
     final isDiverted = widget.transaction?.backloadConsolidation?.isDiverted == "true";
+    final isBackload = widget.transaction?.backloadConsolidation?.isBackload == "true";
     final consolStatus = widget.transaction?.backloadConsolidation?.status;
+
+    final isDivertOrBackload = isDiverted || isBackload;
+    final isConsolidated = consolStatus == "consolidated";
+
+    final isDT = widget.transaction?.dispatchType == 'dt' &&
+                widget.transaction?.requestNumber == widget.transaction?.peRequestNumber;
+
+    final isOT = widget.transaction?.dispatchType == 'ot' &&
+                widget.transaction?.requestNumber == widget.transaction?.deRequestNumber;
 
 
   
@@ -1021,10 +1032,11 @@ Future<void> _fetchHistoryDetails() async {
     ? (widget.transaction?.backloadConsolidation?.originName ?? '—')
     : (widget.transaction?.backloadConsolidation?.destinationName ?? '—');
 
+  
     return  Column( // Use a Column to arrange the widgets vertically
       crossAxisAlignment: CrossAxisAlignment.start, // Align text to the left
       children: [
-        if(isDiverted && consolStatus == 'consolidated') ... [
+        if ((isDT || isOT) && isDivertOrBackload && isConsolidated)... [
       
         Row(
           children: [
@@ -1057,7 +1069,7 @@ Future<void> _fetchHistoryDetails() async {
           ],
         
         ),
-       
+        ],
         const SizedBox(height: 20),
         Row(
           children: [
@@ -1073,8 +1085,12 @@ Future<void> _fetchHistoryDetails() async {
                   ),
                 ),
                 Text(
-                  (widget.transaction?.origin?.isNotEmpty ?? false)
-                  ? widget.transaction!.origin! : '—',
+                  (widget.transaction != null)
+                  ? ((widget.transaction!.dispatchType == 'ot'
+                          ? widget.transaction!.rawOrigin
+                          : widget.transaction!.rawDestination) ??
+                      '—')
+                  : '—',
                   style: AppTextStyles.body.copyWith(
                     color: Colors.black,
                   ),
@@ -1084,7 +1100,7 @@ Future<void> _fetchHistoryDetails() async {
             ),
           ],
         ),
-         ],
+        
         const SizedBox(height: 20),
         
         Row(

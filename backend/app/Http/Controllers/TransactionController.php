@@ -20,7 +20,7 @@ use Carbon\Carbon;
 class TransactionController extends Controller
 {
     protected $url = "https://jralejandria-alpha-dev-yxe.odoo.com";
-    protected $db = 'jralejandria-alpha-dev-yxe1-production-alpha-24944074';
+    protected $db = 'jralejandria-alpha-dev-yxe-production-alpha-25870232';
     // protected $odoo_url = "http://192.168.76.205:8080/odoo/jsonrpc";
     protected $odoo_url = "https://jralejandria-alpha-dev-yxe.odoo.com/jsonrpc";
 
@@ -898,7 +898,11 @@ class TransactionController extends Controller
                 'method' => 'execute_kw',
                 'args' => [$db, $uid, $odooPassword, 'consol.type.notebook', 'search_read',
                     [[['consol_destination', '=', $transactionId]]],
-                    ['fields' => ['id', 'consolidation_id', 'consol_origin','consol_destination','type_consol']]
+                    [
+                        'fields' => ['id', 'consolidation_id', 'consol_origin','consol_destination','type_consol'],
+                        'order' => 'id desc',  // <--- get latest row first
+                        'limit' => 1           // <--- only fetch the latest row
+                    ]
                 ]
             ],
             'id' => rand(1000, 9999)
@@ -941,7 +945,7 @@ class TransactionController extends Controller
             $master = $masterRes['result'][0] ?? null;
             $status = strtolower($master['status'] ?? '');
 
-            if ($status === 'draft') {
+            if (in_array($status, ['draft', 'cancelled']) && $consolType !== 1) {
                 Log::info('⏩ Skipping backload — status not consolidated', [
                     'consolMasterId' => $consolMasterId,
                     'status' => $status
@@ -1116,7 +1120,11 @@ class TransactionController extends Controller
                     $db, $uid, $odooPassword,
                     'consol.type.notebook', 'search_read',
                     [[['consol_destination', '=', $transactionId]]],
-                    ['fields' => ['id', 'consolidation_id', 'consol_origin', 'consol_destination', 'type_consol']]
+                    [
+                        'fields' => ['id', 'consolidation_id', 'consol_origin','consol_destination','type_consol'],
+                        'order' => 'id desc',  // <--- get latest row first
+                        'limit' => 1           // <--- only fetch the latest row
+                    ]
                 ]
             ],
             'id' => rand(1000, 9999)
@@ -1169,7 +1177,7 @@ class TransactionController extends Controller
             $master = $masterRes['result'][0] ?? null;
             $status = strtolower($master['status'] ?? '');
 
-            if ($status === 'draft') {
+            if (in_array($status, ['draft', 'cancelled']) && $consolType !== 2) {
                 Log::info("divertedConsol: consol master not consolidated, skipping this notebook row", [
                     'consolMasterId' => $consolMasterId,
                     'status' => $status
