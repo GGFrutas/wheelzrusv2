@@ -79,7 +79,9 @@ class TransactionUtils {
             freightBookingNumber: item.freightBookingNumber,
             completedTime: item.deCompletedTime,
             truckPlateNumber: item.deTruckPlateNumber,
-            reassigned: item.reassigned
+            reassigned: item.reassigned,
+            rawOrigin: item.rawOrigin,
+  rawDestination: item.rawDestination,
           ),
         if (item.plTruckDriverName == driverId)
           item.copyWith(
@@ -93,7 +95,9 @@ class TransactionUtils {
             freightBookingNumber: item.freightBookingNumber,
             completedTime: item.plCompletedTime,
             truckPlateNumber: item.plTruckPlateNumber,
-            reassigned: item.reassigned
+            reassigned: item.reassigned,
+            rawOrigin: item.rawOrigin,
+  rawDestination: item.rawDestination,
           ),
       ];
     } else if (item.dispatchType == "dt") {
@@ -113,7 +117,9 @@ class TransactionUtils {
             freightBookingNumber: item.freightBookingNumber,
             completedTime: item.dlCompletedTime,
             truckPlateNumber: item.dlTruckPlateNumber,
-            reassigned: item.reassigned
+            reassigned: item.reassigned,
+           rawOrigin: item.rawOrigin,
+  rawDestination: item.rawDestination,
           ),
         if (item.peTruckDriverName == driverId)
           item.copyWith(
@@ -127,7 +133,9 @@ class TransactionUtils {
             freightBookingNumber: item.freightBookingNumber,
             completedTime: item.peCompletedTime,
             truckPlateNumber: item.peTruckPlateNumber,
-            reassigned: item.reassigned
+            reassigned: item.reassigned,
+            rawOrigin: item.rawOrigin,
+  rawDestination: item.rawDestination,
           ),
       ];
     }

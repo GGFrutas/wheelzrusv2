@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\Cache;
 class FetchDataController extends Controller
 {
     protected $url = "https://alpha-yxe.odoo.com";
-    protected $db = 'jralejandria-alpha-dev-yxe1-production-alpha-24944074';
+    protected $db = 'jralejandria-alpha-dev-yxe-production-alpha-25870232';
     // protected $odoo_url = "http://192.168.76.205:8080/odoo/jsonrpc";
     protected $odoo_url = "https://alpha-yxe.odoo.com/jsonrpc";
 
@@ -268,7 +268,11 @@ class FetchDataController extends Controller
                     'method' => 'execute_kw',
                     'args' => [$db, $uid, $password, 'consol.type.notebook', 'search_read',
                         [['|', ['consol_origin', '=', $manager['id']], ['consol_destination', '=', $manager['id']]]],
-                        ['fields' => ['id', 'consolidation_id','consol_origin', 'consol_destination','type_consol']]
+                        [
+                            'fields' => ['id', 'consolidation_id', 'consol_origin','consol_destination','type_consol'],
+                            'order' => 'id desc',  // <--- get latest row first
+                            'limit' => 1           // <--- only fetch the latest row
+                        ]
                     ]
                 ],
                 'id' => rand(1000, 9999)
@@ -341,9 +345,9 @@ class FetchDataController extends Controller
             "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no","arrival_date", "delivery_date",
             "container_number", "seal_number", "booking_reference_no", "freight_booking_number","freight_forwarder_name",
             "freight_bl_number", "de_proof", "de_signature", "pl_proof", "pl_signature", "dl_proof", "dl_signature", "pe_proof", "pe_signature",
-            "shipper_province","shipper_city","shipper_barangay","shipper_street", "service_type",
+            "shipper_province","shipper_city","shipper_barangay","shipper_street", "service_type", 
             "consignee_province","consignee_city","consignee_barangay","consignee_street","shipper_phone", "consignee_phone",
-            "pickup_date", "departure_date","origin", "destination", "booking_service",
+            "pickup_date", "departure_date","origin", "destination", "booking_service", "origin_port", "destination_port",
             "pl_proof_filename", "shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id",
             "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time", "name", "stage_id", "pe_release_by", "de_release_by","pl_receive_by","dl_receive_by",
             "pl_proof_stock", "pl_proof_filename_stock","dl_hwb_signed","dl_hwb_signed_filename", "dl_delivery_receipt", "dl_delivery_receipt_filename","dl_packing_list", "dl_packing_list_filename",
@@ -353,7 +357,7 @@ class FetchDataController extends Controller
 
         $fieldsToString =[
             "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status","freight_forwarder_name",
-            "dispatch_type", "shipper_province","shipper_city","shipper_barangay","shipper_street", 
+            "dispatch_type", "shipper_province","shipper_city","shipper_barangay","shipper_street",  "origin_port", "destination_port",
             "consignee_province","consignee_city","consignee_barangay","consignee_street","service_type",
             "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no","arrival_date", "delivery_date",
             "container_number", "seal_number", "booking_reference_no", "freight_booking_number","shipper_id", "consignee_id", "shipper_contact_id", "consignee_contact_id",
@@ -487,13 +491,14 @@ class FetchDataController extends Controller
                     ["dl_truck_driver_name", "=", $partnerId],
                     ["pe_truck_driver_name", "=", $partnerId],
                     ["pl_truck_driver_name", "=", $partnerId],
+                    
             ];
 
              $fields = [
                 "id", "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
                 "dispatch_type", "de_truck_driver_name", "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name",
                 "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", "origin_port_terminal_address", "destination_port_terminal_address", "arrival_date", "delivery_date",
-                "freight_booking_number", "booking_service",
+                "freight_booking_number", "booking_service", "stage_id",
                 
                 "pickup_date", "departure_date",
                 
@@ -504,7 +509,7 @@ class FetchDataController extends Controller
                 "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
                 "dispatch_type", 
                 "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", "origin_port_terminal_address", "destination_port_terminal_address", "arrival_date", "delivery_date",
-                "freight_booking_number",
+                "freight_booking_number", "stage_id",
             
                 "pickup_date", "departure_date",
             
@@ -674,12 +679,12 @@ class FetchDataController extends Controller
         $fields = [
             "id", "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status", "dispatch_type", "de_truck_driver_name", 
             "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name","de_request_no", "pl_request_no", "dl_request_no", "pe_request_no",
-            "de_completion_time", "pl_completion_time", "dl_completion_time", "pe_completion_time", "name", "stage_id", "write_date"
+            "de_completion_time", "pl_completion_time", "dl_completion_time", "pe_completion_time", "name", "stage_id", "write_date","origin_port", "destination_port"
         ];
 
         $fieldsToString =[
             "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status", "dispatch_type", "de_request_no", "pl_request_no", 
-            "dl_request_no", "pe_request_no", "de_completion_time","pl_completion_time", "dl_completion_time", "pe_completion_time","stage_id", "write_date"
+            "dl_request_no", "pe_request_no", "de_completion_time","pl_completion_time", "dl_completion_time", "pe_completion_time","stage_id", "write_date","origin_port", "destination_port"
         ];
         $data = $this->processDispatchManagers($domain, $fields, $fieldsToString, $partnerName);
 
@@ -775,7 +780,7 @@ class FetchDataController extends Controller
             "pl_receive_by","dl_receive_by", "pl_proof_stock", "pl_proof_filename_stock","dl_hwb_signed","dl_hwb_signed_filename", "dl_delivery_receipt", 
             "dl_delivery_receipt_filename","dl_packing_list", "dl_packing_list_filename", "dl_delivery_note","dl_delivery_note_filename",
             "dl_stock_delivery_receipt","dl_stock_delivery_receipt_filename","dl_sales_invoice","dl_sales_invoice_filename", "dl_proof_filename", 
-            "pe_proof_filename","de_proof_filename", "write_date"
+            "pe_proof_filename","de_proof_filename", "write_date", "origin_port", "destination_port"
         ];
 
         $fieldsToString =[
@@ -792,7 +797,7 @@ class FetchDataController extends Controller
             "pl_receive_by","dl_receive_by","pl_proof_stock", "pl_proof_filename_stock","dl_hwb_signed","dl_hwb_signed_filename", "dl_delivery_receipt", 
             "dl_delivery_receipt_filename","dl_packing_list", "dl_packing_list_filename", "dl_delivery_note","dl_delivery_note_filename",
             "dl_stock_delivery_receipt","dl_stock_delivery_receipt_filename","dl_sales_invoice","dl_sales_invoice_filename","dl_proof_filename",
-            "pe_proof_filename","de_proof_filename", "write_date"
+            "pe_proof_filename","de_proof_filename", "write_date", "origin_port", "destination_port"
         ];
         $data = $this->processDispatchManagers($domain, $fields, $fieldsToString, $partnerName);
 
@@ -902,12 +907,12 @@ class FetchDataController extends Controller
         $fields = [
             "id", "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status", "dispatch_type", "de_truck_driver_name", 
             "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name","de_request_no", "pl_request_no", "dl_request_no", "pe_request_no",
-            "de_completion_time", "pl_completion_time", "dl_completion_time", "pe_completion_time", "name", "stage_id", "write_date"
+            "de_completion_time", "pl_completion_time", "dl_completion_time", "pe_completion_time", "name", "stage_id", "write_date","origin_port", "destination_port"
         ];
 
         $fieldsToString =[
             "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status", "dispatch_type", "de_request_no", "pl_request_no", 
-            "dl_request_no", "pe_request_no", "de_completion_time","pl_completion_time", "dl_completion_time", "pe_completion_time","stage_id", "write_date"
+            "dl_request_no", "pe_request_no", "de_completion_time","pl_completion_time", "dl_completion_time", "pe_completion_time","stage_id", "write_date", "origin_port", "destination_port"
         ];
         $data = $this->processDispatchManagers($domain, $fields, $fieldsToString, $partnerName);
 
@@ -1008,13 +1013,13 @@ class FetchDataController extends Controller
                 "id", "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status", "dispatch_type", "de_truck_driver_name", 
                 "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name", "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", 
                 "delivery_date", "freight_booking_number", "pickup_date",  "de_assignation_time", "pl_assignation_time", "dl_assignation_time", 
-                "pe_assignation_time", "name", "transport_mode", "service_type", "booking_service",
+                "pe_assignation_time", "name", "transport_mode", "service_type", "booking_service","stage_id",
             ];
 
             $fieldsToString =[
                 "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status", "dispatch_type", "de_request_no", "pl_request_no", 
                 "dl_request_no", "pe_request_no",  "delivery_date", "freight_booking_number", "pickup_date",  "de_assignation_time", "pl_assignation_time", 
-                "dl_assignation_time", "pe_assignation_time", 
+                "dl_assignation_time", "pe_assignation_time", "stage_id",
             ];
             
 
