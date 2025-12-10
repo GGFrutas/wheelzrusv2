@@ -5,8 +5,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:frontend/models/pod_offline_model.dart';
 import 'package:frontend/models/reject_reason_model.dart';
 import 'package:frontend/models/transaction_model.dart';
 import 'package:frontend/notifiers/auth_notifier.dart';
@@ -21,6 +23,7 @@ import 'package:frontend/user/show_all_booking.dart';
 import 'package:frontend/util/transaction_utils.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:frontend/user/transaction_details.dart';
+import 'package:hive/hive.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
@@ -51,6 +54,46 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
     }
    }
 
+   late StreamSubscription<List<ConnectivityResult>> _connectivitySubscription;
+
+   Future<bool> hasInternetConnection() async {
+    try {
+      final response = await http.get(Uri.parse("https://www.google.com"));
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> uploadPendingPods() async {
+    final box = await Hive.openBox<PodModel>('pendingPods');
+    if (box.isEmpty) return;
+
+    final pods = box.values.toList();
+
+    print("🔄 Attempting to upload ${pods.length} pending POD(s)...");
+
+    for (var pod in pods) {
+      try {
+        final response = await http.post(
+          Uri.parse(pod.uri),
+          headers: pod.headers,
+          body: jsonEncode(pod.body),
+        );
+
+        if (response.statusCode == 200) {
+          print("✅ Uploaded pending POD: ${pod.key}");
+          await box.delete(pod.key);
+        } else {
+          print("⚠ Failed to upload pending POD: ${response.statusCode}");
+        }
+      } catch (e) {
+        print("❌ Error uploading pending POD: $e");
+      }
+    }
+  }
+
+
   @override
   void initState() {
     super.initState();
@@ -59,6 +102,28 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
       ref.invalidate(filteredItemsProvider);
       await ref.refresh(filteredItemsProvider.future); // if async
     });
+    _connectivitySubscription = Connectivity()
+      .onConnectivityChanged
+      .listen((List<ConnectivityResult> result) async {
+        if (!result.contains(ConnectivityResult.none)) {
+          print("Internet is back! Uploading pending PODs...");
+          await uploadPendingPods();
+        }
+      });
+
+      // Try upload once on startup
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await Future.delayed(const Duration(seconds: 1)); // small delay so network settles
+      if (await hasInternetConnection()) {
+        await uploadPendingPods();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _connectivitySubscription.cancel();
+    super.dispose();
   }
 
 

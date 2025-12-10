@@ -847,7 +847,7 @@ class TransactionController extends Controller
     private function resolveMilestoneCode2($type, $requestNumber, $serviceType)
     {
         $transportMode = is_array($type['transport_mode']) ? $type['transport_mode'][0] : $type['transport_mode'];
-         if ($type['dispatch_type'] == "ot" && $type['pl_request_no'] == $requestNumber && $transportMode == 1) {
+        if ($type['dispatch_type'] == "ot" && $type['pl_request_no'] == $requestNumber && $transportMode == 1) {
              Log::info("🚚 Entered TCLOT branch for land transport");
             return "TCLOT";
         }

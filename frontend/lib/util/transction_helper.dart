@@ -67,8 +67,8 @@ class TransactionHelpers {
 
   static String newName(Transaction item) {
     return item.landTransport == 'transport'
-        ? 'Deliver to Consignee'
-        : 'Pickup from Shipper';
+        ? 'Deliver Laden'
+        : 'Pickup Laden';
   }
 
   /// Expands a transaction into multiple "legs" depending on dispatchType
@@ -81,7 +81,7 @@ class TransactionHelpers {
       return [
         if (item.deTruckDriverName == driverId)
           item.copyWith(
-            name: "Deliver to Shipper",
+            name: "Deliver Empty",
             origin: shipperDestination,
             destination: shipperOrigin,
             requestNumber: item.deRequestNumber,
@@ -119,7 +119,7 @@ class TransactionHelpers {
       return [
         if (item.dlTruckDriverName == driverId)
           item.copyWith(
-            name: "Deliver to Consignee",
+            name: "Deliver Laden",
             origin: consigneeDestination,
             destination: consigneeOrigin,
             requestNumber: item.dlRequestNumber,
@@ -136,7 +136,7 @@ class TransactionHelpers {
           ),
         if (item.peTruckDriverName == driverId)
           item.copyWith(
-            name: "Pickup from Consignee",
+            name: "Pickup Empty",
             origin: consigneeOrigin,
             destination: consigneeDestination,
             requestNumber: item.peRequestNumber,

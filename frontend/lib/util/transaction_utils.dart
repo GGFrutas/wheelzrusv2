@@ -52,8 +52,8 @@ class TransactionUtils {
 
   static String newName(Transaction item) {
     return item.landTransport == 'transport'
-        ? 'Deliver to Consignee'
-        : 'Pickup from Shipper';
+        ? 'Deliver Laden'
+        : 'Pickup Laden';
   }
 
 
@@ -69,7 +69,7 @@ class TransactionUtils {
       return [
         if (item.deTruckDriverName == driverId)
           item.copyWith(
-            name: "Deliver to Shipper",
+            name: "Deliver Empty",
             origin: shipperDestination,
             destination: shipperOrigin,
             requestNumber: item.deRequestNumber,
@@ -107,7 +107,7 @@ class TransactionUtils {
       return [
         if (item.dlTruckDriverName == driverId)
           item.copyWith(
-            name: "Deliver to Consignee",
+            name: "Deliver Laden",
             origin: consigneeDestination,
             destination: consigneeOrigin,
             requestNumber: item.dlRequestNumber,
@@ -123,7 +123,7 @@ class TransactionUtils {
           ),
         if (item.peTruckDriverName == driverId)
           item.copyWith(
-            name: "Pickup from Consignee",
+            name: "Pickup Empty",
             origin: consigneeOrigin,
             destination: consigneeDestination,
             requestNumber: item.peRequestNumber,

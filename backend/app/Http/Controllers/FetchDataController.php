@@ -20,10 +20,10 @@ use Illuminate\Support\Facades\Cache;
 
 class FetchDataController extends Controller
 {
-    protected $url = "https://alpha-yxe.odoo.com";
+    protected $url = "https://jralejandria-alpha-dev-yxe.odoo.com";
     protected $db = 'jralejandria-alpha-dev-yxe-production-alpha-25870232';
     // protected $odoo_url = "http://192.168.76.205:8080/odoo/jsonrpc";
-    protected $odoo_url = "https://alpha-yxe.odoo.com/jsonrpc";
+    protected $odoo_url = "https://jralejandria-alpha-dev-yxe.odoo.com/jsonrpc";
 
     private function authenticateDriver(Request $request)
     {
