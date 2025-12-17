@@ -28,7 +28,7 @@ class ConfirmationScreen extends ConsumerStatefulWidget {
   final String uid;
   final Transaction? transaction;
 
-  const ConfirmationScreen({super.key, required this.uid, required this.transaction, required relatedFF, required requestNumber});
+  const ConfirmationScreen({super.key, required this.uid, required this.transaction, required relatedFF, required requestNumber, required int id});
 
   @override
   ConsumerState<ConfirmationScreen> createState() => _ConfirmationState();
@@ -615,7 +615,7 @@ List<String> getUploadLimit(){
             onItemTap: (index) async {
               // Intercept menu taps
               final shouldLeave = await _showConfirmationDialog(context);
-              if (shouldLeave ?? false) {
+              if (shouldLeave) {
                 switch (index) {
                   case 0:
                     Navigator.of(context).popUntil((route) => route.isFirst);

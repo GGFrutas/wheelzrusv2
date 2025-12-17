@@ -30,7 +30,7 @@ class ProgressRow extends StatelessWidget {
     final stepPage = [
       DetailedDetailScreen(uid: uid, transaction: transaction, relatedFF: relatedFF),
       ScheduleScreen(uid: uid, transaction: transaction, relatedFF: relatedFF),
-      ConfirmationScreen(uid: uid, transaction: transaction, relatedFF: relatedFF, requestNumber: transaction?.requestNumber ?? ''),
+      ConfirmationScreen(uid: uid, transaction: transaction, relatedFF: relatedFF, requestNumber: transaction?.requestNumber ?? '', id: transaction?.id ?? 0,),
     ];
 
     return Row(

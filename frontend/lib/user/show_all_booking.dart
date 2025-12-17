@@ -18,9 +18,11 @@ import 'package:frontend/provider/transaction_provider.dart';
 import 'package:frontend/screen/navigation_menu.dart';
 import 'package:frontend/theme/colors.dart';
 import 'package:frontend/theme/text_styles.dart';
+import 'package:frontend/user/confirmation.dart';
 import 'package:frontend/user/transaction_details.dart';
 import 'package:frontend/util/transaction_utils.dart';
 import 'package:intl/intl.dart';
+import 'package:http/http.dart' as http;
 
 class AllBookingScreen extends ConsumerStatefulWidget{
   final String uid;
@@ -88,6 +90,14 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
       return "Invalid Date"; // Handle errors gracefully
     }
   } 
+  Future<bool> hasInternetConnection() async {
+    try {
+      final response = await http.get(Uri.parse("https://www.google.com"));
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
   Future<void> _refreshTransaction() async {
     print("Refreshing transactions");
     try {
@@ -310,17 +320,33 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
                     
                   ),
                   child: InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => TransactionDetails(
-                            transaction: item,
-                            id: item.id,
-                            uid: widget.uid,
+                    onTap: () async {
+                      final hasInternet = await hasInternetConnection();
+                      if (hasInternet) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => TransactionDetails(
+                              transaction: item,
+                              id: item.id,
+                              uid: widget.uid,
+                            ),
                           ),
-                        ),
-                      );
+                        );
+                      } else {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ConfirmationScreen(
+                              transaction: item,
+                              id: item.id,
+                              uid: widget.uid, relatedFF: null, requestNumber: null,
+                            ),
+                          ),
+                        );
+                      }
+
+                      
                     },
                     child: Container(
                       padding: const EdgeInsets.all(16),

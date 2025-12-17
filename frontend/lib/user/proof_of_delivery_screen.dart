@@ -28,6 +28,8 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:signature/signature.dart';
+import 'package:uuid/uuid.dart';
+
 
 class ProofOfDeliveryScreen extends ConsumerStatefulWidget{
   final String uid;
@@ -78,7 +80,13 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
     required Map<String, dynamic> body,
   }) async {
     final box = await Hive.openBox<PodModel>('pendingPods');
-    final pod = PodModel(uri: uri, headers: headers, body: body);
+    final pod = PodModel(
+    uri: uri,
+    headers: headers,
+    body: body,
+    isUploading: false,
+    uuid: const Uuid().v4(), // unique per POD
+  );
     await box.add(pod);
 
     print("📦 POD saved locally (offline mode)");
@@ -483,7 +491,7 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
             onItemTap: (index) async {
               // Intercept menu taps
               final shouldLeave = await _showConfirmationDialog(context);
-              if (shouldLeave ?? false) {
+              if (shouldLeave) {
                 switch (index) {
                   case 0:
                     Navigator.of(context).popUntil((route) => route.isFirst);

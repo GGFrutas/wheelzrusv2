@@ -51,7 +51,7 @@ class Transaction {
   final String? peTruckType;
   final String? contactPerson;
   final String? vehicleName;
-  final bool? isReassigned;
+  final bool isReassigned;
 
 
   final String? contactNumber;
@@ -454,7 +454,7 @@ class Transaction {
 
 
   Transaction copyWith({String? name, String? destination,String? requestNumber,String? origin,String? requestStatus,status, bool? isAccepted, String? truckPlateNumber, String? destinationAddress, String? originAddress, String? rejectedTime, String? completedTime, String? assignedDate, String? freightBookingNumber,
-   List<DriverReassignment>? reassigned,  bool? isReassigned, String? rawOrigin, String? rawDestination}) {
+   List<DriverReassignment>? reassigned,  bool? isReassigned, String? rawOrigin, String? rawDestination, String? stageId, String? writeDate}) {
     return Transaction(
       id: id,
       name: name ?? this.name,
@@ -581,7 +581,7 @@ class Transaction {
       salesInvoice: salesInvoice,
       salesInvoiceFilename: salesInvoiceFilename,
 
-      isReassigned: isReassigned
+      isReassigned: isReassigned ?? this.isReassigned
       
     );
   }

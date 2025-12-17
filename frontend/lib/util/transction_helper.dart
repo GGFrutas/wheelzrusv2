@@ -1,9 +1,4 @@
-import 'package:frontend/models/milestone_history_model.dart';
 import 'package:frontend/models/transaction_model.dart';
-
-import 'transaction_utils.dart'; // make sure you import your existing utils
-
-
 class TransactionHelpers {
   // /// Returns the expanded leg for the current driver, or the original transaction if none found
   // static Transaction getCurrentLeg(Transaction transaction, String driverId) {

@@ -500,7 +500,7 @@ class FetchDataController extends Controller
                 "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", "origin_port_terminal_address", "destination_port_terminal_address", "arrival_date", "delivery_date",
                 "freight_booking_number", "booking_service", "stage_id",
                 
-                "pickup_date", "departure_date",
+                "pickup_date", "departure_date","container_number",
                 
                 "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time", "name", 
             ];
@@ -511,7 +511,7 @@ class FetchDataController extends Controller
                 "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", "origin_port_terminal_address", "destination_port_terminal_address", "arrival_date", "delivery_date",
                 "freight_booking_number", "stage_id",
             
-                "pickup_date", "departure_date",
+                "pickup_date", "departure_date","container_number",
             
                 "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time", 
             ];
@@ -593,14 +593,14 @@ class FetchDataController extends Controller
             "dispatch_type", "de_truck_driver_name", "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name",
             "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", "booking_reference_no", "freight_booking_number",
             "freight_bl_number","name", "origin_port_terminal_address","dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", "pl_truck_plate_no",
-           "delivery_date", "pickup_date","service_type",
+           "delivery_date", "pickup_date","service_type","container_number",
             "shipper_province","shipper_city","shipper_barangay","shipper_street", 
             "consignee_province","consignee_city","consignee_barangay","consignee_street", "destination","origin"
         ];
 
         $fieldsToString =[
             "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status",
-            "dispatch_type", "service_type",
+            "dispatch_type", "service_type","container_number",
             "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", "booking_reference_no", "freight_booking_number",
             "freight_bl_number","name","origin_port_terminal_address","dl_truck_plate_no", "pe_truck_plate_no", "de_truck_plate_no", "pl_truck_plate_no",
             "de_assignation_time", "pl_assignation_time", "dl_assignation_time", "pe_assignation_time", "delivery_date", "pickup_date",
@@ -1013,13 +1013,13 @@ class FetchDataController extends Controller
                 "id", "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status", "dispatch_type", "de_truck_driver_name", 
                 "dl_truck_driver_name", "pe_truck_driver_name", "pl_truck_driver_name", "de_request_no", "pl_request_no", "dl_request_no", "pe_request_no", 
                 "delivery_date", "freight_booking_number", "pickup_date",  "de_assignation_time", "pl_assignation_time", "dl_assignation_time", 
-                "pe_assignation_time", "name", "transport_mode", "service_type", "booking_service","stage_id",
+                "pe_assignation_time", "name", "transport_mode", "service_type", "booking_service","stage_id","container_number",
             ];
 
             $fieldsToString =[
                 "de_request_status", "pl_request_status", "dl_request_status", "pe_request_status", "dispatch_type", "de_request_no", "pl_request_no", 
                 "dl_request_no", "pe_request_no",  "delivery_date", "freight_booking_number", "pickup_date",  "de_assignation_time", "pl_assignation_time", 
-                "dl_assignation_time", "pe_assignation_time", "stage_id",
+                "dl_assignation_time", "pe_assignation_time", "stage_id","container_number",
             ];
             
 

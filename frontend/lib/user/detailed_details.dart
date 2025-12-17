@@ -237,10 +237,10 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
                 /// ---------------------------------------------------------
                 /// 
                 
-                if (prerequisitesChecked && prerequisiteMsg != null && !hideForOngoing)
+                if (prerequisitesChecked && prerequisiteMsg != null && !hideForOngoing && transaction.dispatchType == "dt")
                   Container(
                      padding: const EdgeInsets.all(8.0),
-    color: Colors.yellow.shade100, // <-- background color here
+                      color: Colors.yellow.shade100, // <-- background color here
                     child: Text(
                       "This action requires the container to arrive at the discharge port.",
                       style: AppTextStyles.caption.copyWith(

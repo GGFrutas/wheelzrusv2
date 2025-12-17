@@ -19,6 +19,7 @@ import 'package:frontend/provider/transaction_provider.dart';
 import 'package:frontend/provider/reject_provider.dart';
 import 'package:frontend/theme/colors.dart';
 import 'package:frontend/theme/text_styles.dart';
+import 'package:frontend/user/confirmation.dart';
 import 'package:frontend/user/show_all_booking.dart';
 import 'package:frontend/util/transaction_utils.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -45,6 +46,11 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
   //  final Map<String, bool> _loadingStates = {};
   Future<void> _refreshTransaction() async {
     print("Refreshing transactions");
+    final hasInternet = await hasInternetConnection();
+    if (!hasInternet) {
+      print("No internet connection. Cannot refresh.");
+      return;
+    }
     try {
       final future = ref.refresh(filteredItemsProvider.future);
       await future; // Wait for the future to complete
@@ -410,17 +416,33 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                                   child: Material(
                                     color: Colors.transparent,
                                     child: InkWell(
-                                      onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) => TransactionDetails(
-                                              transaction: item,
-                                              id: item.id,
-                                              uid: uid ?? '',
+                                      onTap: () async {
+                                        final hasInternet = await hasInternetConnection();
+                                        if (hasInternet) {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => TransactionDetails(
+                                                transaction: item,
+                                                id: item.id,
+                                                uid: uid ?? '',
+                                              ),
                                             ),
-                                          ),
-                                        );
+                                          );
+                                        } else {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => ConfirmationScreen(
+                                                transaction: item,
+                                                id: item.id,
+                                                uid: uid ?? '', relatedFF: null, requestNumber: null,
+                                              ),
+                                            ),
+                                          );
+                                        }
+
+                                        
                                       },
                                       child: Padding(
                                         padding: const EdgeInsets.symmetric(horizontal: 14),

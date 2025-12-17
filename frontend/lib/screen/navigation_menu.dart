@@ -26,8 +26,8 @@ class NavigationMenu extends ConsumerWidget {
         data: Theme.of(context).copyWith(
           navigationBarTheme: NavigationBarThemeData(
             indicatorColor: mainColor,
-            iconTheme: MaterialStateProperty.resolveWith<IconThemeData>((states) {
-              if (states.contains(MaterialState.selected)) {
+            iconTheme: WidgetStateProperty.resolveWith<IconThemeData>((states) {
+              if (states.contains(WidgetState.selected)) {
                 return const IconThemeData(
                   color: Colors.white,
                   size: 30,

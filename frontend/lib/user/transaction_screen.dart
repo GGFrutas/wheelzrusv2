@@ -1,9 +1,13 @@
 // ignore_for_file: avoid_print, use_build_context_synchronously, unused_import
 
+import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'package:carousel_slider/carousel_slider.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:frontend/models/pod_offline_model.dart';
 import 'package:frontend/models/transaction_model.dart';
 import 'package:frontend/notifiers/auth_notifier.dart';
 import 'package:frontend/notifiers/transaction_notifier.dart';
@@ -11,6 +15,7 @@ import 'package:frontend/provider/accepted_transaction.dart' as accepted_transac
 import 'package:frontend/provider/transaction_provider.dart';
 import 'package:frontend/theme/colors.dart';
 import 'package:frontend/theme/text_styles.dart';
+import 'package:frontend/user/confirmation.dart';
 import 'package:frontend/user/transaction_details.dart';
 import 'package:frontend/util/transaction_utils.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -18,6 +23,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/provider/accepted_transaction.dart';
+import 'package:hive/hive.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 // import 'package:latlong2/latlong.dart';
 import 'package:location/location.dart';
@@ -42,6 +49,53 @@ class TransactionScreen extends ConsumerStatefulWidget {
 class _TransactionScreenState extends ConsumerState<TransactionScreen> {
   String? uid;
   Future<List<Transaction>>? _futureTransactions;
+  late StreamSubscription<List<ConnectivityResult>> _connectivitySubscription;
+  bool _hasInternet = true;
+  bool _isUploadingPendingPods = false;
+
+  Future<void> uploadPendingPods() async {
+    if (_isUploadingPendingPods) return;
+  _isUploadingPendingPods = true;
+  try{
+    final box = await Hive.openBox<PodModel>('pendingPods');
+    if (box.isEmpty) return;
+
+    final pods = box.values.toList();
+
+    print("🔄 Attempting to upload ${pods.length} pending POD(s)...");
+
+    for (var pod in pods) {
+      if (pod.isUploading) continue; // skip PODs already in progress
+
+      pod.isUploading = true;
+      await pod.save();
+      try {
+        final response = await http.post(
+          Uri.parse(pod.uri),
+          headers: pod.headers,
+          body: jsonEncode(pod.body),
+        );
+
+        if (response.statusCode == 200) {
+          print("✅ Uploaded pending POD: ${pod.key}");
+          await box.delete(pod.key);
+        } else {
+          print("⚠ Failed to upload pending POD: ${response.statusCode}");
+          pod.isUploading = false;
+          await pod.save();
+        }
+      } catch (e) {
+        print("❌ Error uploading pending POD: $e");
+        pod.isUploading = false;
+          await pod.save();
+      }
+    }
+  } finally {
+    _isUploadingPendingPods = false;
+  }
+    
+  }
+
 
   @override
   void initState() {
@@ -56,10 +110,51 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
     ref.invalidate(filteredItemsProviderForTransactionScreen);
     _futureTransactions = ref.read(filteredItemsProviderForTransactionScreen.future);
   });
+  _connectivitySubscription = Connectivity()
+      .onConnectivityChanged
+      .listen((List<ConnectivityResult> result) async {
+      //   if (!result.contains(ConnectivityResult.none)) {
+      //     print("Internet is back! Uploading pending PODs...");
+      //     await uploadPendingPods();
+      //   }
+      // });
+      final connected =
+          !result.contains(ConnectivityResult.none);
+
+      if (!mounted) return;
+
+      setState(() => _hasInternet = connected);
+
+      if (connected) {
+        await uploadPendingPods();
+      }
+    });
+
+      // Try upload once on startup
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await Future.delayed(const Duration(seconds: 1)); // small delay so network settles
+      if (await hasInternetConnection()) {
+        await uploadPendingPods();
+      }
+    });
+  }
+
+  Future<bool> hasInternetConnection() async {
+    try {
+      final response = await http.get(Uri.parse("https://www.google.com"));
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<void> _refreshTransaction() async {
     print("Refreshing transactions");
+   
+    if(!_hasInternet){
+      print("Disabled refresh");
+     return;
+    }
     try {
       ref.invalidate(bookingProvider);
       final freshFuture = ref.refresh(filteredItemsProviderForTransactionScreen.future);
@@ -118,8 +213,12 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
     // final transactionold = ref.watch(filteredItemsProviderForTransactionScreen);
     
     final acceptedTransaction = ref.watch(accepted_transaction.acceptedTransactionProvider);
+    
 
-    final asyncTx = ref.watch(filteredItemsProviderForTransactionScreen.future);
+    final asyncTx = _hasInternet
+        ? ref.watch(
+            filteredItemsProviderForTransactionScreen.future)
+        : null;
 
      return Scaffold(
       body: SafeArea(
@@ -285,17 +384,33 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                           ),
                             
                           child: InkWell(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => TransactionDetails(
-                                    transaction: item,
-                                    id: item.id,
-                                    uid: uid ?? '',
+                            onTap:  () async {
+                              final hasInternet = await hasInternetConnection();
+                              if (hasInternet) {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => TransactionDetails(
+                                      transaction: item,
+                                      id: item.id,
+                                      uid: uid ?? '',
+                                    ),
                                   ),
-                                ),
-                              );
+                                );
+                              } else {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => ConfirmationScreen(
+                                      transaction: item,
+                                      id: item.id,
+                                      uid: uid ?? '', relatedFF: null, requestNumber: null,
+                                    ),
+                                  ),
+                                );
+                              }
+
+                              
                             },
                             child: Container(
                               padding: const EdgeInsets.all(16),

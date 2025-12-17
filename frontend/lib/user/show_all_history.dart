@@ -21,6 +21,7 @@ import 'package:frontend/theme/text_styles.dart';
 import 'package:frontend/user/history_details.dart';
 import 'package:frontend/user/transaction_details.dart';
 import 'package:frontend/util/transaction_utils.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
 class AllHistoryScreen extends ConsumerStatefulWidget{
@@ -106,7 +107,9 @@ Map<String, String> getCompletedTransactionDatetime(Transaction tx) {
 
   String? rawDateTime;
 
-if (tx.requestStatus == 'Completed') {
+if (tx.isReassigned == true) {
+  rawDateTime = tx.completedTime ; // always use reassignment's create_date
+} else if (tx.requestStatus == 'Completed') {
   rawDateTime = tx.completedTime?.isNotEmpty == true
       ? tx.completedTime
       : milestone?.actualDatetime ?? tx.backloadConsolidation?.consolidatedDatetime ?? tx.writeDate;
@@ -143,9 +146,22 @@ void initState() {
       }
     });
 }
+Future<bool> hasInternetConnection() async {
+    try {
+      final response = await http.get(Uri.parse("https://www.google.com"));
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+}
 
   Future<void> _refreshTransaction() async {
     print("Refreshing transactions");
+    final hasInternet = await hasInternetConnection();
+    if(!hasInternet){
+      print("disabled refresh");
+      return;
+    }
     try {
       ref.invalidate(allHistoryProvider);
       setState(() {
@@ -296,6 +312,7 @@ void initState() {
                         t.id == tx.id && t.requestNumber == tx.requestNumber)) {
                       dedupedTransactions.add(tx);
                     }
+                    
                   }
 
                   final ongoingTransactions = dedupedTransactions.where((tx) {
@@ -305,11 +322,16 @@ void initState() {
                   }).toList()
                     ..sort((a, b) {
                       DateTime getRecentDate(Transaction t) {
-                        final completed = DateTime.tryParse(t.completedTime ?? '');
-                        final cancelled = DateTime.tryParse(t.writeDate ?? '');
-                        final backload = DateTime.tryParse(t.backloadConsolidation?.consolidatedDatetime ?? '');
-                        return completed ?? backload ?? cancelled ?? DateTime.fromMillisecondsSinceEpoch(0);
-                      }
+                      final completed = DateTime.tryParse(t.completedTime ?? '');
+                      final cancelled = DateTime.tryParse(t.writeDate ?? '');
+                      final backload = DateTime.tryParse(t.backloadConsolidation?.consolidatedDatetime ?? '');
+                      final reassigned = (t.isReassigned == true && (t.reassigned?.isNotEmpty ?? false))
+                          ? DateTime.tryParse(t.reassigned!.first.createDate)
+                          : null;
+
+                      // prioritize reassignment first, then completed/backload/cancelled
+                      return reassigned ?? completed ?? backload ?? cancelled ?? DateTime.fromMillisecondsSinceEpoch(0);
+                    }
                       return getRecentDate(b).compareTo(getRecentDate(a));
                     });
 

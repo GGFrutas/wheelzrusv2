@@ -20,19 +20,25 @@ class PodModelAdapter extends TypeAdapter<PodModel> {
       uri: fields[0] as String,
       headers: (fields[1] as Map).cast<String, String>(),
       body: (fields[2] as Map).cast<String, dynamic>(),
+      isUploading: fields[3] as bool,
+      uuid: fields[4] as String,
     );
   }
 
   @override
   void write(BinaryWriter writer, PodModel obj) {
     writer
-      ..writeByte(3)
+      ..writeByte(5)
       ..writeByte(0)
       ..write(obj.uri)
       ..writeByte(1)
       ..write(obj.headers)
       ..writeByte(2)
-      ..write(obj.body);
+      ..write(obj.body)
+      ..writeByte(3)
+      ..write(obj.isUploading)
+      ..writeByte(4)
+      ..write(obj.uuid);
   }
 
   @override
