@@ -22,6 +22,7 @@ import 'package:frontend/screen/navigation_menu.dart';
 import 'package:frontend/theme/colors.dart';
 import 'package:frontend/theme/text_styles.dart';
 import 'package:frontend/user/schedule.dart';
+import 'package:frontend/util/network_utils.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hive/hive.dart';
 import 'package:http/http.dart' as http;
@@ -59,17 +60,6 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
   late TextEditingController _containerController;
   late String _originalContainerNumber;
 
-  // ---------------------------------------------------------------------------
-  // CHECK REAL INTERNET
-  // ---------------------------------------------------------------------------
-  Future<bool> hasInternetConnection() async {
-    try {
-      final response = await http.get(Uri.parse("https://www.google.com"));
-      return response.statusCode == 200;
-    } catch (_) {
-      return false;
-    }
-  }
 
   // ---------------------------------------------------------------------------
   // SAVE OFFLINE

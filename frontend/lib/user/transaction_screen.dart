@@ -17,6 +17,7 @@ import 'package:frontend/theme/colors.dart';
 import 'package:frontend/theme/text_styles.dart';
 import 'package:frontend/user/confirmation.dart';
 import 'package:frontend/user/transaction_details.dart';
+import 'package:frontend/util/network_utils.dart';
 import 'package:frontend/util/transaction_utils.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/material.dart';
@@ -139,14 +140,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
     });
   }
 
-  Future<bool> hasInternetConnection() async {
-    try {
-      final response = await http.get(Uri.parse("https://www.google.com"));
-      return response.statusCode == 200;
-    } catch (_) {
-      return false;
-    }
-  }
+  
 
   Future<void> _refreshTransaction() async {
     print("Refreshing transactions");

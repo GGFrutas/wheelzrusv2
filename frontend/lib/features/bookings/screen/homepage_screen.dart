@@ -8,6 +8,7 @@ import 'dart:math';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:frontend/features/bookings/widgets/booking_list.dart';
 import 'package:frontend/models/pod_offline_model.dart';
 import 'package:frontend/models/reject_reason_model.dart';
 import 'package:frontend/models/transaction_model.dart';
@@ -20,7 +21,8 @@ import 'package:frontend/provider/reject_provider.dart';
 import 'package:frontend/theme/colors.dart';
 import 'package:frontend/theme/text_styles.dart';
 import 'package:frontend/user/confirmation.dart';
-import 'package:frontend/user/show_all_booking.dart';
+import 'package:frontend/features/bookings/screen/show_all_booking.dart';
+import 'package:frontend/util/network_utils.dart';
 import 'package:frontend/util/transaction_utils.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:frontend/user/transaction_details.dart';
@@ -62,14 +64,7 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
 
    late StreamSubscription<List<ConnectivityResult>> _connectivitySubscription;
 
-   Future<bool> hasInternetConnection() async {
-    try {
-      final response = await http.get(Uri.parse("https://www.google.com"));
-      return response.statusCode == 200;
-    } catch (_) {
-      return false;
-    }
-  }
+ 
 
   Future<void> uploadPendingPods() async {
     final box = await Hive.openBox<PodModel>('pendingPods');
@@ -106,7 +101,7 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
 
     Future.microtask(() async {
       ref.invalidate(filteredItemsProvider);
-      await ref.refresh(filteredItemsProvider.future); // if async
+      // await ref.refresh(filteredItemsProvider.future); // if async
     });
     _connectivitySubscription = Connectivity()
       .onConnectivityChanged
@@ -407,168 +402,27 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                           else
                           
                           
-                          SliverList(
-                            delegate: SliverChildBuilderDelegate(
-                              (context, index) {
-                                final item = ongoingTransactions[index];
-                                return Container(
-                                  margin: const EdgeInsets.only(bottom: 20),
-                                  child: Material(
-                                    color: Colors.transparent,
-                                    child: InkWell(
-                                      onTap: () async {
-                                        final hasInternet = await hasInternetConnection();
-                                        if (hasInternet) {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) => TransactionDetails(
-                                                transaction: item,
-                                                id: item.id,
-                                                uid: uid ?? '',
-                                              ),
-                                            ),
-                                          );
-                                        } else {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) => ConfirmationScreen(
-                                                transaction: item,
-                                                id: item.id,
-                                                uid: uid ?? '', relatedFF: null, requestNumber: null,
-                                              ),
-                                            ),
-                                          );
-                                        }
-
-                                        
-                                      },
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 14),
-                                        child: Container(
-                                          padding: const EdgeInsets.all(16),
-                                          decoration: BoxDecoration(
-                                            borderRadius: BorderRadius.circular(15),
-                                            boxShadow: const [
-                                              BoxShadow(
-                                                color: mainColor,
-                                                spreadRadius: 2,
-                                                offset: Offset(0, 3),
-                                              ),
-                                            ],
-                                          ),
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Row(
-                                                crossAxisAlignment: CrossAxisAlignment.center,
-                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                children: [
-                                                  Expanded(
-                                                    child: Column(
-                                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                                      children: [
-                                                        Text (
-                                                          item.name!,
-                                                          style: AppTextStyles.body.copyWith(
-                                                            fontSize: 14,
-                                                            fontWeight: FontWeight.bold,
-                                                            letterSpacing: 0.9,
-                                                            color: Colors.white,
-                                                          ),
-                                                          overflow: TextOverflow.ellipsis,
-                                                          maxLines: 2,
-                                                        ),
-                                                        const SizedBox(height: 8),
-                                                        Row(
-                                                          children: [
-                                                            Text(
-                                                              "Bkg Ref. No.: ",
-                                                              style: AppTextStyles.caption.copyWith(
-                                                                fontWeight: FontWeight.bold,
-                                                                fontSize: 12,
-                                                                color: Colors.white,
-                                                              ),
-                                                            ),
-                                                            Flexible(
-                                                              child: Text(
-                                                               (item.freightBookingNumber?.toString() ?? 'N/A'),
-                                                                style: AppTextStyles.caption.copyWith(
-                                                                  color: Colors.white
-                                                                ),
-                                                                softWrap: true, // Text will wrap if it's too long
-                                                              ),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                       
-                                                        Row(
-                                                          children: [
-                                                            Text(
-                                                              "Request No.: ",
-                                                              style: AppTextStyles.caption.copyWith(
-                                                                fontWeight: FontWeight.bold,
-                                                                fontSize: 12,
-                                                                color: Colors.white,
-                                                              ),
-                                                            ),
-                                                            Flexible(
-                                                              child: Text(
-                                                                (item.requestNumber?.toString() ?? 'No Request Number Available'),
-                                                                style: AppTextStyles.caption.copyWith(
-                                                                  color: Colors.white
-                                                                ),
-                                                                softWrap: true, // Text will wrap if it's too long
-                                                              ),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                        Row(
-                                                          children: [
-                                                            Text(
-                                                              "Date Assigned: ",
-                                                              style: AppTextStyles.caption.copyWith(
-                                                                fontWeight: FontWeight.bold,
-                                                                fontSize: 12,
-                                                                color: Colors.white,
-                                                              ),
-                                                              
-                                                            ),
-                                                            Flexible(
-                                                              child: Text(
-                                                                formatDateTime(item.assignedDate),
-                                                                style: AppTextStyles.caption.copyWith(
-                                                                  color: Colors.white
-                                                                ),
-                                                                softWrap: true, // Text will wrap if it's too long
-                                                              ),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                
-                                                  const SizedBox(width: 8),
-                                                  const Icon(
-                                                    Icons.chevron_right,
-                                                    color: Color.fromARGB(255, 255, 255, 255),
-                                                    size: 40,
-                                                  ),
-                                                ],
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      )
-                                    ),
-                                  ),
-                                );
-                              },
-                              childCount: ongoingTransactions.length,
-                            ),
-                          ),
+                           BookingList(
+  transactions: ongoingTransactions,
+  onTap: (tx) async {
+    final hasInternet = await hasInternetConnection();
+    if (hasInternet) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => TransactionDetails(transaction: tx, uid: uid ?? '', id:tx.id,),
+        ),
+      );
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ConfirmationScreen(transaction: tx, uid:  uid ?? '', id:tx.id, relatedFF: null, requestNumber: null,),
+        ),
+      );
+    }
+  },
+)
                         ],
                       );
                     }, 

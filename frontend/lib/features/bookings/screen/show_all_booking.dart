@@ -7,6 +7,7 @@ import 'package:animated_toggle_switch/animated_toggle_switch.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:frontend/features/bookings/widgets/booking_list.dart';
 import 'package:frontend/models/transaction_model.dart';
 import 'package:frontend/models/week_query.dart';
 import 'package:frontend/notifiers/auth_notifier.dart';
@@ -20,6 +21,7 @@ import 'package:frontend/theme/colors.dart';
 import 'package:frontend/theme/text_styles.dart';
 import 'package:frontend/user/confirmation.dart';
 import 'package:frontend/user/transaction_details.dart';
+import 'package:frontend/util/network_utils.dart';
 import 'package:frontend/util/transaction_utils.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
@@ -90,16 +92,13 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
       return "Invalid Date"; // Handle errors gracefully
     }
   } 
-  Future<bool> hasInternetConnection() async {
-    try {
-      final response = await http.get(Uri.parse("https://www.google.com"));
-      return response.statusCode == 200;
-    } catch (_) {
-      return false;
-    }
-  }
+
   Future<void> _refreshTransaction() async {
     print("Refreshing transactions");
+    final hasInternet = await hasInternetConnection();
+    if(!hasInternet){
+      return;
+    }
     try {
       await Future.delayed(const Duration(seconds: 3));
       ref.invalidate(bookingProvider);
@@ -307,156 +306,27 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
               );
               
             }
-            return ListView.builder(
-              // controller: _scrollableController,
-              itemCount: ongoingTransactions.length,
-              itemBuilder: (context, index) {
-                final item = ongoingTransactions[index];
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 20),
-                  decoration: BoxDecoration(
-                    color: mainColor,
-                    borderRadius: BorderRadius.circular(12),
-                    
-                  ),
-                  child: InkWell(
-                    onTap: () async {
-                      final hasInternet = await hasInternetConnection();
-                      if (hasInternet) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => TransactionDetails(
-                              transaction: item,
-                              id: item.id,
-                              uid: widget.uid,
-                            ),
-                          ),
-                        );
-                      } else {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ConfirmationScreen(
-                              transaction: item,
-                              id: item.id,
-                              uid: widget.uid, relatedFF: null, requestNumber: null,
-                            ),
-                          ),
-                        );
-                      }
-
-                      
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text (
-                                      item.name!,
-                                      style: AppTextStyles.body.copyWith(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 0.9,
-                                        color: Colors.white,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                      maxLines: 2,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Row(
-                                      children: [
-                                        Text(
-                                          "Bkg Ref. No.: ",
-                                          style: AppTextStyles.caption.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 12,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                        Flexible(
-                                          child: Text(
-                                            (item.freightBookingNumber?.toString() ?? 'N/A'),
-                                            style: AppTextStyles.caption.copyWith(
-                                              color: Colors.white
-                                            ),
-                                            softWrap: true, // Text will wrap if it's too long
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    Row(
-                                      children: [
-                                        Text(
-                                          "Request Number: ",
-                                          style: AppTextStyles.caption.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 12,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                        Flexible(
-                                          child: Text(
-                                            (item.requestNumber?.toString() ?? 'No Request Number Available'),
-                                            style: AppTextStyles.caption.copyWith(
-                                              color: Colors.white
-                                            ),
-                                            softWrap: true, // Text will wrap if it's too long
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    Row(
-                                      children: [
-                                        Text(
-                                          "Date Assigned: ",
-                                          style: AppTextStyles.caption.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 12,
-                                            color: Colors.white,
-                                          ),
-                                          
-                                        ),
-                                        Flexible(
-                                          child: Text(
-                                            formatDateTime(item.assignedDate),
-                                            style: AppTextStyles.caption.copyWith(
-                                              color: Colors.white
-                                            ),
-                                            softWrap: true, // Text will wrap if it's too long
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            
-                              const SizedBox(width: 8),
-                              const Icon(
-                                Icons.chevron_right,
-                                color: Color.fromARGB(255, 255, 255, 255),
-                                size: 40,
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    
-                  ),
-                );
-              },
-            );
+            return BookingList(
+  transactions: ongoingTransactions,
+  onTap: (tx) async {
+    final hasInternet = await hasInternetConnection();
+    if (hasInternet) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => TransactionDetails(transaction: tx, uid: widget.uid, id:tx.id,),
+        ),
+      );
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ConfirmationScreen(transaction: tx, uid: widget.uid, id:tx.id, relatedFF: null, requestNumber: null,),
+        ),
+      );
+    }
+  },
+);
           }, 
           loading: () => const Center(child: CircularProgressIndicator()),  // Show loading spinner while fetching data
           error: (err, stack) => RefreshIndicator (

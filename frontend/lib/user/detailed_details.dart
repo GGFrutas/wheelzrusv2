@@ -604,15 +604,15 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: isLoaded ? () {
-                        // Example: Replace this with your real prerequisite check
+                       
                         String? errorMessage;
-                        if (widget.transaction != null) {
+                        // if (widget.transaction != null) {
                           errorMessage = checkPrerequisites(
                             widget.transaction!,
                             widget.transaction!.requestNumber ?? '', 
                             relatedFF// <- pass whichever request they’re on, fallback to empty string if null
                           );
-                        };
+                        // };
 
 
                         if (errorMessage != null) {
