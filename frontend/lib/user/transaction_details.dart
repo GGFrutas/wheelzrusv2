@@ -24,8 +24,8 @@ import 'package:frontend/theme/colors.dart';
 import 'package:frontend/theme/text_styles.dart';
 import 'package:frontend/user/confirmation.dart';
 import 'package:frontend/user/detailed_details.dart';
-import 'package:frontend/user/history_screen.dart';
-import 'package:frontend/user/homepage_screen.dart';
+import 'package:frontend/features/history/screens/history_screen.dart';
+import 'package:frontend/features/bookings/screen/homepage_screen.dart';
 import 'package:frontend/user/proof_of_delivery_screen.dart';
 import 'package:frontend/util/transaction_utils.dart';
 import 'package:frontend/util/transction_helper.dart';
@@ -834,7 +834,7 @@ Future<void> _fetchTransactionDetails() async {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => ConfirmationScreen(uid: widget.uid, transaction:leg, relatedFF:relatedFF, requestNumber: leg!.requestNumber,),
+                              builder: (context) => ConfirmationScreen(uid: widget.uid, transaction:leg, relatedFF:relatedFF, requestNumber: leg!.requestNumber, id: widget.transaction?.id ?? 0,),
                             ),
                           );
                         }else {

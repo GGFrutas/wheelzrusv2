@@ -1,6 +1,9 @@
 import 'package:frontend/models/driver_reassignment_model.dart';
 import 'package:frontend/models/milestone_history_model.dart';
 import 'package:frontend/models/transaction_model.dart';
+import 'package:collection/collection.dart';
+
+
 
 class TransactionUtils {
   static String removeBrackets(String input) {
@@ -53,7 +56,7 @@ class TransactionUtils {
   static String newName(Transaction item) {
     return item.landTransport == 'transport'
         ? 'Deliver to Consignee'
-        : 'Pickup from Shipper';
+        : 'Pickup Laden';
   }
 
 
@@ -69,7 +72,7 @@ class TransactionUtils {
       return [
         if (item.deTruckDriverName == driverId)
           item.copyWith(
-            name: "Deliver to Shipper",
+            name: "Deliver Empty",
             origin: shipperDestination,
             destination: shipperOrigin,
             requestNumber: item.deRequestNumber,
@@ -82,6 +85,8 @@ class TransactionUtils {
             reassigned: item.reassigned,
             rawOrigin: item.rawOrigin,
   rawDestination: item.rawDestination,
+  stageId: item.stageId,
+  writeDate: item.writeDate
           ),
         if (item.plTruckDriverName == driverId)
           item.copyWith(
@@ -98,6 +103,8 @@ class TransactionUtils {
             reassigned: item.reassigned,
             rawOrigin: item.rawOrigin,
   rawDestination: item.rawDestination,
+   stageId: item.stageId,
+  writeDate: item.writeDate
           ),
       ];
     } else if (item.dispatchType == "dt") {
@@ -120,10 +127,12 @@ class TransactionUtils {
             reassigned: item.reassigned,
            rawOrigin: item.rawOrigin,
   rawDestination: item.rawDestination,
+   stageId: item.stageId,
+  writeDate: item.writeDate
           ),
         if (item.peTruckDriverName == driverId)
           item.copyWith(
-            name: "Pickup from Consignee",
+            name: "Pickup Empty",
             origin: consigneeOrigin,
             destination: consigneeDestination,
             requestNumber: item.peRequestNumber,
@@ -136,6 +145,8 @@ class TransactionUtils {
             reassigned: item.reassigned,
             rawOrigin: item.rawOrigin,
   rawDestination: item.rawDestination,
+   stageId: item.stageId,
+  writeDate: item.writeDate
           ),
       ];
     }
@@ -176,28 +187,31 @@ static List<Transaction> expandReassignments(
   }
 
   for (final e in reassignments) {
-    final driverList = e.driverId;
-    String? driverId = (driverList.isNotEmpty && driverList[0] != null)
-        ? driverList[0].toString()
-        : null;
+    final driverId = e.driverId.isNotEmpty ? e.driverId[0]?.toString() : null;
+    if (driverId != currentDriverId) continue;
 
-    final isCurrentDriver = driverId != null && driverId == currentDriverId;
-
-    // Find original transaction by dispatch_id
-    final dispatchNumericId = e.dispatchId.isNotEmpty
+    final dispatchId = e.dispatchId.isNotEmpty
         ? int.tryParse(e.dispatchId[0].toString())
         : null;
 
-    final matchingList = allTransactions.where((tx) => tx.id == dispatchNumericId);
-    final Transaction? matchingTx = matchingList.isNotEmpty ? matchingList.first : null;
+    final Transaction? parent =
+  allTransactions.firstWhereOrNull((t) => t.id == dispatchId);
 
-    // Build base transaction: either copy existing or create minimal new
-    final baseTx = matchingTx != null
-        ? matchingTx.copyWith(
-            isReassigned: isCurrentDriver,
-            originAddress: getOriginAddress(e.requestType),
-            reassigned: [e],
-          )
+    final tx = parent != null
+      ? parent.copyWith(
+          requestNumber: e.requestNumber,
+          requestStatus: 'Reassigned',
+          // ❌ clear lifecycle fields
+          stageId: null,
+          completedTime: e.createDate,
+          writeDate: null,
+
+          // ✅ reassignment timestamp
+          assignedDate: e.createDate,
+          isReassigned: true,
+          originAddress: getOriginAddress(e.requestType),
+          reassigned: [e],
+        )
         : Transaction(
             id: int.tryParse(e.id) ?? 0,
             name: '',
@@ -310,17 +324,15 @@ static List<Transaction> expandReassignments(
         stockDeliveryFilename: null,
         salesInvoice: null,
         salesInvoiceFilename: null,
-      );
+            );
 
-    
+      // ✅ DO NOT expand reassigned transactions
+      result.add(tx);
+    }
 
-    // Expand like normal transaction (OT/DT legs)
-    final expanded = TransactionUtils.expandTransaction(baseTx, currentDriverId);
-    result.addAll(expanded);
+    return result;
   }
 
-  return result;
-}
 
 static Map<String, MilestoneHistoryModel?> getScheduleForTransaction(
   Transaction transaction,
@@ -350,7 +362,7 @@ if (transaction.deTruckDriverName?.trim() == driverId.trim() &&
     transaction.peRequestNumber == requestNumber) {
   matchingLeg = 'pe';
 }
-print("Matching Leg: $matchingLeg request Number: $requestNumber");
+// print("Matching Leg: $matchingLeg request Number: $requestNumber");
 
   if (matchingLeg == null) {
     return {'pickup': null, 'delivery': null};
@@ -395,7 +407,7 @@ print("Matching Leg: $matchingLeg request Number: $requestNumber");
 
   final fclMap = fclPrefixes[dispatchType]?[transportMode]?[serviceType]?[matchingLeg];
 
-  print("FCL Map: $fclMap");
+  // print("FCL Map: $fclMap");
   if (fclMap == null) {
     return {'pickup': null, 'delivery': null};
   }

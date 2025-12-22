@@ -21,7 +21,7 @@
         android:requestLegacyExternalStorage="true"
         android:label="Alpha: YXE Driver App"
         android:name="${applicationName}"
-        android:icon="@mipmap/xlogo"
+        android:icon="@mipmap/yxmas2"
         
         >
         <!-- android:enableOnBackInvokeCallback="true" -->

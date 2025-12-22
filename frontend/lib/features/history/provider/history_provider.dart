@@ -110,19 +110,19 @@ final filteredHistory = FutureProvider<List<Transaction>>((ref) async {
   final filtered = transactions.where((t) {
     
     final isHistory = 
-                          t.deRequestStatus == 'Rejected' || t.deRequestStatus == 'Completed' || 
-                          // t.deTruckDriverName == authPartnerId || 
+      t.deRequestStatus == 'Rejected' || t.deRequestStatus == 'Completed' || 
+      // t.deTruckDriverName == authPartnerId || 
 
-                      
-                          t.plRequestStatus == 'Rejected' || t.plRequestStatus == 'Completed' ||
-                          // t.plTruckDriverName == authPartnerId ||
+  
+      t.plRequestStatus == 'Rejected' || t.plRequestStatus == 'Completed' ||
+      // t.plTruckDriverName == authPartnerId ||
 
-                     
-                          t.dlRequestStatus == 'Rejected' || t.dlRequestStatus == 'Completed' || 
-                          // t.dlTruckDriverName == authPartnerId ||
+  
+      t.dlRequestStatus == 'Rejected' || t.dlRequestStatus == 'Completed' || 
+      // t.dlTruckDriverName == authPartnerId ||
 
-                         
-                          t.peRequestStatus == 'Rejected' || t.peRequestStatus == 'Completed' ;
+      
+      t.peRequestStatus == 'Rejected' || t.peRequestStatus == 'Completed' ;
                          
 
     final isNotFFDispatch = t.dispatchType != "ff";

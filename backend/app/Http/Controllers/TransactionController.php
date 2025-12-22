@@ -355,7 +355,7 @@ class TransactionController extends Controller
                 "de_signature" => $signature,
                 "de_release_by" => $enteredName,
                 "de_completion_time" => $actualTime,
-                // "de_request_status" => $newStatus,
+                "de_request_status" => $newStatus,
             ];
 
             
@@ -373,7 +373,7 @@ class TransactionController extends Controller
                 "pl_receive_by" => $enteredName,
                 "stage_id" => 7,
                 "pl_completion_time" => $actualTime,
-                // "pl_request_status" => $newStatus,
+                "pl_request_status" => $newStatus,
                 "container_number" => $containerNumber,
                 
             ];
@@ -396,7 +396,7 @@ class TransactionController extends Controller
                 "de_release_by" => $enteredName,
                 "dl_completion_time" => $actualTime,
                 "stage_id" => 7,
-                // "dl_request_status" => $newStatus,
+                "dl_request_status" => $newStatus,
                 "container_number" => $containerNumber,
                 
             ];
@@ -847,7 +847,7 @@ class TransactionController extends Controller
     private function resolveMilestoneCode2($type, $requestNumber, $serviceType)
     {
         $transportMode = is_array($type['transport_mode']) ? $type['transport_mode'][0] : $type['transport_mode'];
-         if ($type['dispatch_type'] == "ot" && $type['pl_request_no'] == $requestNumber && $transportMode == 1) {
+        if ($type['dispatch_type'] == "ot" && $type['pl_request_no'] == $requestNumber && $transportMode == 1) {
              Log::info("🚚 Entered TCLOT branch for land transport");
             return "TCLOT";
         }

@@ -33,21 +33,23 @@ Future<List<Transaction>> fetchFilteredTransactions({
   String? driverId,
   String? currentDriverName,
 }) async {
-  final baseUrl = ref.watch(baseUrlProvider);
-  final auth = ref.watch(authNotifierProvider);
-  final uid = auth.uid;
-  final password = auth.password ?? '';
-  final login = auth.login ?? '';
-
-  if (uid == null || uid.isEmpty) {
-    throw Exception('UID is missing. Please log in.');
-  }
-
-  final url = '$baseUrl/api/odoo/booking/$endpoint?uid=$uid';
-
-  
+  final cache = ref.read(transactionListProvider);
+  final hasCache = cache.isNotEmpty;
 
   try {
+    final baseUrl = ref.watch(baseUrlProvider);
+    final auth = ref.watch(authNotifierProvider);
+
+    final uid = auth.uid;
+    final password = auth.password ?? '';
+    final login = auth.login ?? '';
+
+    if (uid == null || uid.isEmpty) {
+      throw Exception('UID is missing. Please log in.');
+    }
+
+    final url = '$baseUrl/api/odoo/booking/$endpoint?uid=$uid';
+
     final response = await http.get(
       Uri.parse(url),
       headers: {
@@ -56,51 +58,82 @@ Future<List<Transaction>> fetchFilteredTransactions({
         'password': password,
         'login': login,
       },
-    );
+    ).timeout(const Duration(seconds: 60));
 
     if (response.statusCode != 200) {
-      throw Exception("Server error. Status code: ${response.statusCode}");
+      throw Exception("Server error: ${response.statusCode}");
     }
 
     final decoded = jsonDecode(response.body);
 
-    if ((endpoint == 'history' || endpoint == 'all-history') && decoded['data']['reassigned'] != null) {
+    // -------------------------------
+    // Parse transactions
+    // -------------------------------
+    final transactionsJson =
+        decoded['data']['transactions'] as List? ?? [];
 
-  
- 
-}
+    final transactions = transactionsJson
+        .map((json) => Transaction.fromJson(json))
+        .toList();
 
-    // Step 1: Parse normal transactions
-    final transactionsJson = decoded['data']['transactions'] as List? ?? [];
-    final transactions = transactionsJson.map((json) => Transaction.fromJson(json)).toList();
-
-    // Step 2: Only for history endpoints, parse reassigned
+    // -------------------------------
+    // History / reassigned handling
+    // -------------------------------
     if ((endpoint == 'history' || endpoint == 'all-history') && decoded['data']['reassigned'] != null) {
       final reassignedJson = decoded['data']['reassigned'] as List;
-      final reassignedItems = reassignedJson.map((e) => DriverReassignment.fromJson(e)).toList();
 
-      final reassignedTransactions = TransactionUtils.expandReassignments(
+      final reassignedItems = reassignedJson
+        .map((e) => DriverReassignment.fromJson(e))
+        .toList();
+
+      final reassignedTransactions =
+          TransactionUtils.expandReassignments(
         reassignedItems,
         driverId ?? '',
-        currentDriverName ?? '', transactions
+        currentDriverName ?? '',
+        transactions,
       );
 
-      // Step 3: Merge normal + reassigned
-      return [...transactions, ...reassignedTransactions];
+      final combined = [...transactions, ...reassignedTransactions];
+
+      /// Save to cache
+      ref
+          .read(transactionListProvider.notifier)
+          .loadTransactions(combined);
+
+      return combined;
     }
 
-    // Default: return normal transactions
+    /// Save normal response to cache
+    ref.read(transactionListProvider.notifier).loadTransactions(transactions);
     return transactions;
-  } on SocketException {
+  }
+
+  // -------------------------------
+  // NETWORK ERRORS → USE CACHE
+  // -------------------------------
+  
+
+  on SocketException catch (_) {
+    if (hasCache) return cache;
     throw Exception("No internet connection. Please check your network.");
-  } on TimeoutException {
-    throw Exception("Netwokr timeout. Connection is unstable.");
-  } on ClientException {
-    throw Exception ("Network unstable. Please try again.");
-  } catch (e) {
+  } on TimeoutException catch (_) {
+    if (hasCache) return cache;
+    throw Exception("Network timeout. Connection is unstable.");
+  } on ClientException catch (_) {
+    if (hasCache) return cache;
+    throw Exception("Network unstable. Please try again.");
+  }
+
+  // -------------------------------
+  // UNKNOWN ERROR
+  // -------------------------------
+  catch (e) {
+    if (hasCache) return cache;
     throw Exception("Error fetching transactions: $e");
   }
 }
+
 
 // Future<Transaction> fetchTransactionDetails(FutureProviderRef<List<Transaction>> ref, {required uid, required bookingId}) async {
 final transactionDetailProvider = FutureProvider.family<Transaction, Map<String, dynamic>>((ref, args) async {
@@ -111,10 +144,7 @@ final transactionDetailProvider = FutureProvider.family<Transaction, Map<String,
   final uid = args['uid'];
   final bookingId = args['bookingId'];
 
-  // print('📤 Calling API with UID: $uid, BookingID: $bookingId');
-  // print('🔐 Headers -> login: $login | password: $password');
-  // print('🌐 URL: $baseUrl/api/odoo/booking_details?uid=$uid&booking_id=$bookingId');
-
+  
   try {
     final response = await http
         .get(
@@ -126,7 +156,7 @@ final transactionDetailProvider = FutureProvider.family<Transaction, Map<String,
             'login': login,
           },
         )
-        .timeout(const Duration(seconds: 15));
+        .timeout(const Duration(seconds: 60));
 
     if (response.statusCode == 200) {
       try {
@@ -287,13 +317,21 @@ final paginatedTransactionProvider = StateNotifierProvider.family<PaginatedNotif
   return PaginatedNotifier(ref, endpoint);
 });
 
+// final allTransactionProvider = FutureProvider<List<Transaction>>((ref) async {
+//   final transactions = await fetchFilteredTransactions(ref: ref, endpoint: 'all-bookings', queryParams: {});
+//   // final filtered = transactions
+//   //     .where((tx) => tx.dispatchType.toLowerCase() != 'ff')
+//   //     .toList();
+//   ref.read(transactionListProvider.notifier).loadTransactions(transactions);
+//   return transactions;
+// });
+
 final allTransactionProvider = FutureProvider<List<Transaction>>((ref) async {
-  final transactions = await fetchFilteredTransactions(ref: ref, endpoint: 'all-bookings', queryParams: {});
-  // final filtered = transactions
-  //     .where((tx) => tx.dispatchType.toLowerCase() != 'ff')
-  //     .toList();
-  ref.read(transactionListProvider.notifier).loadTransactions(transactions);
-  return transactions;
+  return await fetchFilteredTransactions(
+    ref: ref,
+    endpoint: 'all-bookings',
+    queryParams: {},
+  );
 });
 
 final allTransactionFilteredProvider = FutureProvider<List<Transaction>>((ref) async {
@@ -319,8 +357,8 @@ final relatedFFProvider = Provider.family<Transaction?, String>((ref, bookingNum
 
 
 final combinedTransactionProvider = FutureProvider<List<Transaction>>((ref) async {
-  final todayTx = await ref.refresh(filteredItemsProvider.future);
-  final allTx = await ref.refresh(allTransactionProvider.future);
+  final todayTx = await ref.watch(filteredItemsProvider.future);
+  final allTx = await ref.watch(allTransactionProvider.future);
 
   // Combine and deduplicate by bookingRefNumber
   final combined = [

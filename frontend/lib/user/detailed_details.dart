@@ -237,10 +237,10 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
                 /// ---------------------------------------------------------
                 /// 
                 
-                if (prerequisitesChecked && prerequisiteMsg != null && !hideForOngoing)
+                if (prerequisitesChecked && prerequisiteMsg != null && !hideForOngoing && transaction.dispatchType == "dt")
                   Container(
                      padding: const EdgeInsets.all(8.0),
-    color: Colors.yellow.shade100, // <-- background color here
+                      color: Colors.yellow.shade100, // <-- background color here
                     child: Text(
                       "This action requires the container to arrive at the discharge port.",
                       style: AppTextStyles.caption.copyWith(
@@ -604,15 +604,15 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: isLoaded ? () {
-                        // Example: Replace this with your real prerequisite check
+                       
                         String? errorMessage;
-                        if (widget.transaction != null) {
+                        // if (widget.transaction != null) {
                           errorMessage = checkPrerequisites(
                             widget.transaction!,
                             widget.transaction!.requestNumber ?? '', 
                             relatedFF// <- pass whichever request they’re on, fallback to empty string if null
                           );
-                        };
+                        // };
 
 
                         if (errorMessage != null) {

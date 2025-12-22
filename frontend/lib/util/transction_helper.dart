@@ -1,9 +1,4 @@
-import 'package:frontend/models/milestone_history_model.dart';
 import 'package:frontend/models/transaction_model.dart';
-
-import 'transaction_utils.dart'; // make sure you import your existing utils
-
-
 class TransactionHelpers {
   // /// Returns the expanded leg for the current driver, or the original transaction if none found
   // static Transaction getCurrentLeg(Transaction transaction, String driverId) {
@@ -67,8 +62,8 @@ class TransactionHelpers {
 
   static String newName(Transaction item) {
     return item.landTransport == 'transport'
-        ? 'Deliver to Consignee'
-        : 'Pickup from Shipper';
+        ? 'Deliver Laden'
+        : 'Pickup Laden';
   }
 
   /// Expands a transaction into multiple "legs" depending on dispatchType
@@ -81,7 +76,7 @@ class TransactionHelpers {
       return [
         if (item.deTruckDriverName == driverId)
           item.copyWith(
-            name: "Deliver to Shipper",
+            name: "Deliver Empty",
             origin: shipperDestination,
             destination: shipperOrigin,
             requestNumber: item.deRequestNumber,
@@ -119,7 +114,7 @@ class TransactionHelpers {
       return [
         if (item.dlTruckDriverName == driverId)
           item.copyWith(
-            name: "Deliver to Consignee",
+            name: "Deliver Laden",
             origin: consigneeDestination,
             destination: consigneeOrigin,
             requestNumber: item.dlRequestNumber,
@@ -136,7 +131,7 @@ class TransactionHelpers {
           ),
         if (item.peTruckDriverName == driverId)
           item.copyWith(
-            name: "Pickup from Consignee",
+            name: "Pickup Empty",
             origin: consigneeOrigin,
             destination: consigneeDestination,
             requestNumber: item.peRequestNumber,

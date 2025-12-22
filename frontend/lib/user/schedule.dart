@@ -301,9 +301,9 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
   final email = scheduleMap['email'];
 
   
-  bool isAlreadyNotified = email?.actualDatetime != null ;
+  // bool isAlreadyNotified = email?.actualDatetime != null ;
   final hasActualDatetime = email?.actualDatetime != null &&
-    email!.actualDatetime!.trim().isNotEmpty;
+    email!.actualDatetime.trim().isNotEmpty;
 
   int currentStep = 2; // Assuming Schedule is step 2 (0-based index)
   final bookingNumber = widget.transaction?.bookingRefNumber;
@@ -593,7 +593,7 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => ConfirmationScreen(uid: widget.uid, transaction: widget.transaction, relatedFF: relatedFF, requestNumber: widget.transaction?.requestNumber ?? ''  ),
+                            builder: (context) => ConfirmationScreen(uid: widget.uid, transaction: widget.transaction, relatedFF: relatedFF, requestNumber: widget.transaction?.requestNumber ?? '', id: widget.transaction?.id ?? 0,  ),
                           ),
                         );
                       },
