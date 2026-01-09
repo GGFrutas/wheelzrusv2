@@ -98,17 +98,24 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
       return false;
     }
   }
-  Future<void> _refreshTransaction() async {
+ Future<void> _refreshTransaction() async {
     print("Refreshing transactions");
+    final hasInternet = await hasInternetConnection();
+    if (!hasInternet) {
+      print("No internet connection. Cannot refresh.");
+      return;
+    }
     try {
-      await Future.delayed(const Duration(seconds: 3));
       ref.invalidate(bookingProvider);
-      ref.invalidate(allTransactionProvider);
+   
+      final future = ref.refresh(allTransactionProvider.future);
+
+      await future;
       print("REFRESHED!");
     }catch (e){
       print('DID NOT REFRESHED!');
     }
-   }
+  }
 
    bool sameWeekRange(DateTime? target, DateTime weekStart) {
     // Get the start of the week for both dates

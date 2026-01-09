@@ -43,6 +43,8 @@ class HomepageScreen extends ConsumerStatefulWidget {
 
 class _HomepageScreenState extends ConsumerState<HomepageScreen> {
   String? uid;
+
+
   //  final Map<String, bool> _loadingStates = {};
   Future<void> _refreshTransaction() async {
     print("Refreshing transactions");
@@ -71,33 +73,28 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
     }
   }
 
-  Future<void> uploadPendingPods() async {
-    final box = await Hive.openBox<PodModel>('pendingPods');
-    if (box.isEmpty) return;
+  
+  List<Transaction>? lastFetchedTransactions;
 
-    final pods = box.values.toList();
+  Future<void> _fetchLoadedTransactions() async {
+  final hasInternet = await hasInternetConnection();
+  if (!hasInternet) return; // do nothing if offline
 
-    print("🔄 Attempting to upload ${pods.length} pending POD(s)...");
-
-    for (var pod in pods) {
-      try {
-        final response = await http.post(
-          Uri.parse(pod.uri),
-          headers: pod.headers,
-          body: jsonEncode(pod.body),
-        );
-
-        if (response.statusCode == 200) {
-          print("✅ Uploaded pending POD: ${pod.key}");
-          await box.delete(pod.key);
-        } else {
-          print("⚠ Failed to upload pending POD: ${response.statusCode}");
-        }
-      } catch (e) {
-        print("❌ Error uploading pending POD: $e");
-      }
-    }
+  try {
+    final transactions = await ref.read(filteredItemsProvider.future);
+    if (!mounted) return;
+    setState(() {
+      lastFetchedTransactions = transactions;
+    });
+  } catch (e) {
+    print("Error fetching transactions: $e");
+    // fallback to previous data
+    setState(() {
+      lastFetchedTransactions = lastFetchedTransactions ?? [];
+    });
   }
+}
+  
 
 
   @override
@@ -105,15 +102,15 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
     super.initState();
 
     Future.microtask(() async {
-      ref.invalidate(filteredItemsProvider);
-      await ref.refresh(filteredItemsProvider.future); // if async
+      
+      await _fetchLoadedTransactions(); // if async
     });
     _connectivitySubscription = Connectivity()
       .onConnectivityChanged
       .listen((List<ConnectivityResult> result) async {
         if (!result.contains(ConnectivityResult.none)) {
           print("Internet is back! Uploading pending PODs...");
-          await uploadPendingPods();
+          await ref.read(pendingPodUploaderProvider).uploadPendingPods() ;
         }
       });
 
@@ -121,7 +118,7 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await Future.delayed(const Duration(seconds: 1)); // small delay so network settles
       if (await hasInternetConnection()) {
-        await uploadPendingPods();
+        await ref.read(pendingPodUploaderProvider).uploadPendingPods() ;
       }
     });
   }

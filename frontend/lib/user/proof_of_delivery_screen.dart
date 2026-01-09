@@ -121,7 +121,7 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
       url = Uri.parse('$baseUrl/api/odoo/pod-ongoing-to-complete?uid=$uid');
     } else {
       if (!mounted) return;
-      showSuccessDialog(context, "Invalid transaction!", icon: Icons.cancel_outlined, iconColor: Colors.red);
+      showSuccessDialog(context, "Invalid transaction!", icon: Icons.cancel_outlined, iconColor: Colors.red, invalidateProviders: false);
       return;
     }
 
@@ -158,7 +158,7 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
         if (response.statusCode == 200) {
           print("🚀 POD uploaded successfully!");
           showSuccessDialog(
-              context, "Success!", icon: Icons.check_rounded, iconColor: mainColor);
+              context, "Success!", icon: Icons.check_rounded, iconColor: mainColor, invalidateProviders: true);
           return;
         } else {
           print("⚠ Upload failed: ${response.statusCode}");
@@ -177,6 +177,7 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
       "No Internet. POD saved locally.",
       icon: Icons.wifi_off,
       iconColor: Colors.orange,
+      invalidateProviders: false
     );
   }
  
@@ -459,7 +460,7 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
                         } catch (e) {
                           print("Error: $e");
                           Navigator.of(context).pop(); // Close the loading dialog
-                          showSuccessDialog(context, "An error occurred while uploading the files.", icon: Icons.cancel_outlined, iconColor: Colors.red);
+                          showSuccessDialog(context, "An error occurred while uploading the files.", icon: Icons.cancel_outlined, iconColor: Colors.red, invalidateProviders: false);
                         }
                       }
                     },
@@ -512,7 +513,7 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
   )
     );
   }  
-  void showSuccessDialog(BuildContext context, String message, { IconData icon = Icons.check_circle, Color? iconColor}) {
+  void showSuccessDialog(BuildContext context, String message, { IconData icon = Icons.check_circle, Color? iconColor, bool invalidateProviders = true}) {
     
     showDialog(
       context: context, 
@@ -523,13 +524,9 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
             canPop: false, // Prevent default pop behavior
             onPopInvokedWithResult: (didPop, result) {
               if (!didPop) {
-                // Navigate to home if system back button is pressed
-                ref.invalidate(bookingProvider);
-                ref.invalidate(filteredItemsProvider);
-                ref.invalidate(ongoingTransactionProvider);
-                ref.invalidate(filteredItemsProviderForTransactionScreen);
-                ref.invalidate(filteredItemsProviderForHistoryScreen);
-                ref.invalidate(allTransactionProvider);
+                if(invalidateProviders) {
+                  _invalidateAllProviders(ref);
+                }
                 Navigator.of(context).popUntil((route) => route.isFirst);
                 ref.read(navigationNotifierProvider.notifier).setSelectedIndex(0);
               }
@@ -574,12 +571,9 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
                             ),
                           ),
                           onPressed: () {
-                            ref.invalidate(bookingProvider);
-                            ref.invalidate(filteredItemsProvider);
-                            ref.invalidate(ongoingTransactionProvider);
-                            ref.invalidate(filteredItemsProviderForTransactionScreen);
-                            ref.invalidate(filteredItemsProviderForHistoryScreen);
-                            ref.invalidate(allTransactionProvider);
+                            if(invalidateProviders) {
+                              _invalidateAllProviders(ref);
+                            }
                             Navigator.of(context).popUntil((route) => route.isFirst);
                             ref.read(navigationNotifierProvider.notifier).setSelectedIndex(0);
                           },
@@ -595,6 +589,15 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
         },
       ),
     );
+  }
+
+  void _invalidateAllProviders(WidgetRef ref) {
+    ref.invalidate(bookingProvider);
+    ref.invalidate(filteredItemsProvider);
+    ref.invalidate(ongoingTransactionProvider);
+    ref.invalidate(filteredItemsProviderForTransactionScreen);
+    ref.invalidate(filteredItemsProviderForHistoryScreen);
+    ref.invalidate(allTransactionProvider);
   }
 }
 Future<bool> _showConfirmationDialog(BuildContext context) async {
