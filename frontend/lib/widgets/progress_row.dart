@@ -174,7 +174,7 @@ class ProgressRow extends StatelessWidget {
 
   String? _checkPrerequisites(dynamic transaction, String requestNumber, dynamic relatedFF) {
   
-   
+    // print('Related FF Stage ID from Progress Roww: ${relatedFF?.stageId}');
 
  
     if (requestNumber == transaction.plRequestNumber &&

@@ -20,7 +20,7 @@ use Carbon\Carbon;
 class TransactionController extends Controller
 {
     protected $url = "https://jralejandria-alpha-dev-yxe.odoo.com";
-    protected $db = 'jralejandria-alpha-dev-yxe-production-alpha-25870232';
+    protected $db = 'jralejandria-alpha-dev-yxe1-production-alpha-26901548';
     // protected $odoo_url = "http://192.168.76.205:8080/odoo/jsonrpc";
     protected $odoo_url = "https://jralejandria-alpha-dev-yxe.odoo.com/jsonrpc";
 
@@ -454,7 +454,7 @@ class TransactionController extends Controller
                 "dl_signature" => $signature,
                 "de_release_by" => $enteredName,
                 "dl_completion_time" => $actualTime,
-                // "dl_request_status" => $newStatus,
+                "dl_request_status" => $newStatus,
                 "container_number" => $containerNumber,
                 "dl_hwb_signed" => $hwb_signed,
                 "dl_hwb_signed_filename" => $hwb_signed_filename,
@@ -486,7 +486,7 @@ class TransactionController extends Controller
                 "pl_receive_by" => $enteredName,
                 "stage_id" => 7,
                 "pe_completion_time" => $actualTime,
-                // "pe_request_status" => $newStatus,
+                "pe_request_status" => $newStatus,
                 "container_number" => $containerNumber
             ];
         }

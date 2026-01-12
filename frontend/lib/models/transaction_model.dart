@@ -253,7 +253,11 @@ class Transaction {
   });
 
   factory Transaction.fromJson(Map<String, dynamic> json) {
+    // print('knii Raw transaction JSON: $json');
     final rawConsolidation = json['backload_consolidation'];
+    // print("this is raw origin: ${json['origin_port']}"); // Likely null or empty
+
+
     return Transaction(
       id: json['id'] ?? 0,
       name: json['name'] ?? 'No Name Provided',  // Provide a default value

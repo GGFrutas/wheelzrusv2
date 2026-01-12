@@ -86,9 +86,4 @@ final historyTransactionProvider =
   (ref) => TransactionListNotifier(),
 );
 
-// final allTransactionProvider =
-//     StateNotifierProvider<TransactionListNotifier, List<Transaction>>(
-//   (ref) => TransactionListNotifier(),
-// );
-
 
