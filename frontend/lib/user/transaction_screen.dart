@@ -17,7 +17,6 @@ import 'package:frontend/theme/colors.dart';
 import 'package:frontend/theme/text_styles.dart';
 import 'package:frontend/user/confirmation.dart';
 import 'package:frontend/user/transaction_details.dart';
-import 'package:frontend/util/network_utils.dart';
 import 'package:frontend/util/transaction_utils.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/material.dart';
@@ -49,52 +48,29 @@ class TransactionScreen extends ConsumerStatefulWidget {
 
 class _TransactionScreenState extends ConsumerState<TransactionScreen> {
   String? uid;
-  Future<List<Transaction>>? _futureTransactions;
+  // Future<List<Transaction>>? _futureTransactions;
   late StreamSubscription<List<ConnectivityResult>> _connectivitySubscription;
   bool _hasInternet = true;
-  bool _isUploadingPendingPods = false;
 
-  Future<void> uploadPendingPods() async {
-    if (_isUploadingPendingPods) return;
-  _isUploadingPendingPods = true;
-  try{
-    final box = await Hive.openBox<PodModel>('pendingPods');
-    if (box.isEmpty) return;
+  List<Transaction>? lastFetchedTransactions;
 
-    final pods = box.values.toList();
+  
 
-    print("🔄 Attempting to upload ${pods.length} pending POD(s)...");
-
-    for (var pod in pods) {
-      if (pod.isUploading) continue; // skip PODs already in progress
-
-      pod.isUploading = true;
-      await pod.save();
-      try {
-        final response = await http.post(
-          Uri.parse(pod.uri),
-          headers: pod.headers,
-          body: jsonEncode(pod.body),
-        );
-
-        if (response.statusCode == 200) {
-          print("✅ Uploaded pending POD: ${pod.key}");
-          await box.delete(pod.key);
-        } else {
-          print("⚠ Failed to upload pending POD: ${response.statusCode}");
-          pod.isUploading = false;
-          await pod.save();
-        }
-      } catch (e) {
-        print("❌ Error uploading pending POD: $e");
-        pod.isUploading = false;
-          await pod.save();
+  Future<List<Transaction>> _fetchLoadedTransactions() async {
+    final hasInternet = await hasInternetConnection();
+    if (!hasInternet) {
+      if (lastFetchedTransactions != null &&
+          lastFetchedTransactions!.isNotEmpty) {
+        return lastFetchedTransactions!;
       }
+      
     }
-  } finally {
-    _isUploadingPendingPods = false;
-  }
-    
+
+    final transactions =
+        await ref.read(filteredItemsProviderForTransactionScreen.future);
+
+    lastFetchedTransactions = transactions;
+    return transactions;
   }
 
 
@@ -103,31 +79,25 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
     super.initState();
    
     Future.microtask(() {
-    final authUid = ref.read(authNotifierProvider).uid;
-    setState(() {
-      uid = authUid; // ✅ store the authenticated UID here
-    });
+      final authUid = ref.read(authNotifierProvider).uid;
+      setState(() {
+        uid = authUid; // ✅ store the authenticated UID here
+      });
 
-    ref.invalidate(filteredItemsProviderForTransactionScreen);
-    _futureTransactions = ref.read(filteredItemsProviderForTransactionScreen.future);
-  });
-  _connectivitySubscription = Connectivity()
+      // ref.invalidate(filteredItemsProviderForTransactionScreen);
+      // _futureTransactions = ref.read(filteredItemsProviderForTransactionScreen.future);
+    });
+    _connectivitySubscription = Connectivity()
       .onConnectivityChanged
       .listen((List<ConnectivityResult> result) async {
-      //   if (!result.contains(ConnectivityResult.none)) {
-      //     print("Internet is back! Uploading pending PODs...");
-      //     await uploadPendingPods();
-      //   }
-      // });
-      final connected =
-          !result.contains(ConnectivityResult.none);
-
+      final connected = !result.contains(ConnectivityResult.none);
       if (!mounted) return;
 
       setState(() => _hasInternet = connected);
 
       if (connected) {
-        await uploadPendingPods();
+        await ref.read(pendingPodUploaderProvider).uploadPendingPods();
+        ref.invalidate(filteredItemsProviderForTransactionScreen); // refresh when back online
       }
     });
 
@@ -135,33 +105,30 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await Future.delayed(const Duration(seconds: 1)); // small delay so network settles
       if (await hasInternetConnection()) {
-        await uploadPendingPods();
+        await ref.read(pendingPodUploaderProvider).uploadPendingPods();
+        // ref.invalidate(filteredItemsProviderForTransactionScreen); // refresh when back online
       }
     });
+  }
+
+  Future<bool> hasInternetConnection() async {
+    try {
+      final response = await http.get(Uri.parse("https://www.google.com"));
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
   }
 
   
 
   Future<void> _refreshTransaction() async {
-    print("Refreshing transactions");
-   
-    if(!_hasInternet){
-      print("Disabled refresh");
-     return;
-    }
-    try {
-      ref.invalidate(bookingProvider);
-      final freshFuture = ref.refresh(filteredItemsProviderForTransactionScreen.future);
-    setState(() {
-      _futureTransactions = freshFuture;
-    });
-      print("REFRESHED!");
-    } catch (e) {
-      print('DID NOT REFRESH!');
+    if (await hasInternetConnection()) {
+      ref.invalidate(filteredItemsProviderForTransactionScreen);
     }
   }
 
-   String formatDateTime(String? dateString) {
+  String formatDateTime(String? dateString) {
     if (dateString == null || dateString.isEmpty) return "N/A"; // Handle null values
     
     try {
@@ -210,8 +177,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
     
 
     final asyncTx = _hasInternet
-        ? ref.watch(
-            filteredItemsProviderForTransactionScreen.future)
+        ? ref.watch(filteredItemsProviderForTransactionScreen.future)
         : null;
 
      return Scaffold(
@@ -274,7 +240,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
               child: RefreshIndicator(
                 onRefresh: _refreshTransaction,
                 child: FutureBuilder<List<Transaction>>(
-                  future: asyncTx,
+                  future: _fetchLoadedTransactions(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
@@ -318,17 +284,17 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
                     final driverId = authPartnerId?.toString();
 
                    
-                  final expandedTransactions = TransactionUtils.expandTransactions(
-                    transaction,
-                    driverId ?? '',
-                  );
+                    final expandedTransactions = TransactionUtils.expandTransactions(
+                      transaction,
+                      driverId ?? '',
+                    );
 
 
                     expandedTransactions.sort((a,b){
-            DateTime dateA = DateTime.tryParse(a.deliveryDate!) ?? DateTime(0);
-            DateTime dateB = DateTime.tryParse(b.deliveryDate!) ?? DateTime(0);
-            return dateB.compareTo(dateA);
-          });
+                      DateTime dateA = DateTime.tryParse(a.deliveryDate!) ?? DateTime(0);
+                      DateTime dateB = DateTime.tryParse(b.deliveryDate!) ?? DateTime(0);
+                      return dateB.compareTo(dateA);
+                    });
                     
 
                     final ongoingTransactions = expandedTransactions
@@ -537,58 +503,5 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
     );
     
   }
-
-  Widget _buildDownloadButton(String fileName, Uint8List bytes) {
-    return SizedBox(
-      child: Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: TextButton.icon(
-            onPressed: () async {
-              try {
-                if (Platform.isAndroid) {
-                  int sdk = (await DeviceInfoPlugin().androidInfo).version.sdkInt;
-
-                  if (sdk <= 29) {
-                    // ✅ Android 9 & 10
-                    await Permission.storage.request();
-                  } else {
-                    // ✅ Android 11+
-                    if (await Permission.manageExternalStorage.isDenied) {
-                      await Permission.manageExternalStorage.request();
-                    }
-                  }
-                }
-
-                Directory dir = Platform.isAndroid
-                    ? Directory('/storage/emulated/0/Download')
-                    : await getApplicationDocumentsDirectory();
-
-                if (!await dir.exists()) {
-                  dir = await getExternalStorageDirectory() ?? dir;
-                }
-
-            final file = File('${dir.path}/$fileName');
-            await file.writeAsBytes(bytes);
-
-            print('✅ File saved: ${file.path}');
-          } catch (e) {
-            print('❌ Save failed: $e');
-          }
-                },
-            icon: const Icon(Icons.download),
-            label:Text(
-              'Download $fileName',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              softWrap: false, // ✅ Force no wrapping!
-              style: AppTextStyles.caption,
-            )
-          ),
-        )
-     
-    );
-  }
-
- 
 
 }

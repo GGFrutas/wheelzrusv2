@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\Cache;
 class FetchDataController extends Controller
 {
     protected $url = "https://jralejandria-alpha-dev-yxe.odoo.com";
-    protected $db = 'jralejandria-alpha-dev-yxe-production-alpha-25870232';
+    protected $db = 'jralejandria-alpha-dev-yxe1-production-alpha-26901548';
     // protected $odoo_url = "http://192.168.76.205:8080/odoo/jsonrpc";
     protected $odoo_url = "https://jralejandria-alpha-dev-yxe.odoo.com/jsonrpc";
 
