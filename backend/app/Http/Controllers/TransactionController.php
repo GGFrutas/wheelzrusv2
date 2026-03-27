@@ -19,10 +19,10 @@ use Carbon\Carbon;
 
 class TransactionController extends Controller
 {
-    protected $url = "https://jralejandria-alpha-dev-yxe.odoo.com";
-    protected $db = 'jralejandria-alpha-dev-yxe1-production-alpha-26901548';
+    protected $url = "https://yxtechdev-beta-dev-yxe1-main-29885483.dev.odoo.com";
+    protected $db = 'yxtechdev-beta-dev-yxe1-main-29885483';
     // protected $odoo_url = "http://192.168.76.205:8080/odoo/jsonrpc";
-    protected $odoo_url = "https://jralejandria-alpha-dev-yxe.odoo.com/jsonrpc";
+    protected $odoo_url = "https://yxtechdev-beta-dev-yxe1-main-29885483.dev.odoo.com/jsonrpc";
 
 
 
@@ -254,7 +254,7 @@ class TransactionController extends Controller
     {
         $updateField = [];
         if ($type['dispatch_type'] == "ot" && $type['de_request_no'] == $requestNumber) {
-            Log::info("Updating PE proof and signature for request number: {$requestNumber}");
+            Log::info("Updating PE proof and signature for request number: {$requestNumber} with container number {$containerNumber}");
             $pod = isset($images['POD']['content']) && $images['POD']['content'] !== null 
                 ? $images['POD']['content'] 
                 : null;
@@ -266,6 +266,7 @@ class TransactionController extends Controller
                 "pe_release_by" => $enteredName,
                 "stage_id" => 5,
                 "de_request_status" => $newStatus,
+                "container_number" => $containerNumber,
             ];
             
             
@@ -356,6 +357,7 @@ class TransactionController extends Controller
                 "de_release_by" => $enteredName,
                 "de_completion_time" => $actualTime,
                 "de_request_status" => $newStatus,
+                "container_number" => $containerNumber,
             ];
 
             
@@ -486,7 +488,7 @@ class TransactionController extends Controller
                 "pl_receive_by" => $enteredName,
                 "stage_id" => 7,
                 "pe_completion_time" => $actualTime,
-                "pe_request_status" => $newStatus,
+                // "pe_request_status" => $newStatus,
                 "container_number" => $containerNumber
             ];
         }
@@ -549,7 +551,7 @@ class TransactionController extends Controller
                     "id" => 102
                 ];
                 $ffUpdateRes = jsonRpcRequest($odooUrl, $updateFFContainer);
-                Log::info("Updated container_number in FF for bookingRef {$bookingRef}, ffIds: " . json_encode($ffIds));
+                Log::info("Updated container number {$containerNumber} in FF for bookingRef {$bookingRef}, ffIds: " . json_encode($ffIds));
             } else {
                 Log::warning("No FF found for bookingRef {$bookingRef}");
             }

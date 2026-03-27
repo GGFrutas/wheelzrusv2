@@ -98,9 +98,12 @@ Future<List<Transaction>> fetchFilteredTransactions({
     throw Exception("Netwokr timeout. Connection is unstable.");
   } on ClientException {
     throw Exception ("Network unstable. Please try again.");
-  } catch (e) {
+  } catch (e, stackTrace) {
+    print('=== REAL ERROR ===');
+    print(e);
+    print(stackTrace);
     throw Exception("Error fetching transactions: $e");
-  }
+}
 }
 
 // Future<Transaction> fetchTransactionDetails(FutureProviderRef<List<Transaction>> ref, {required uid, required bookingId}) async {

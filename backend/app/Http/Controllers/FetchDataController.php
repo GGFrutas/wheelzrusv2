@@ -20,10 +20,10 @@ use Illuminate\Support\Facades\Cache;
 
 class FetchDataController extends Controller
 {
-    protected $url = "https://jralejandria-alpha-dev-yxe.odoo.com";
-    protected $db = 'jralejandria-alpha-dev-yxe1-production-alpha-26901548';
+    protected $url = "https://yxtechdev-beta-dev-yxe1-main-29885483.dev.odoo.com";
+    protected $db = 'yxtechdev-beta-dev-yxe1-main-29885483';
     // protected $odoo_url = "http://192.168.76.205:8080/odoo/jsonrpc";
-    protected $odoo_url = "https://jralejandria-alpha-dev-yxe.odoo.com/jsonrpc";
+    protected $odoo_url = "https://yxtechdev-beta-dev-yxe1-main-29885483.dev.odoo.com/jsonrpc";
 
     private function authenticateDriver(Request $request)
     {
@@ -987,7 +987,7 @@ class FetchDataController extends Controller
        
         // $data = Cache::remember($cacheKey, now()->addMinutes(1), function () use ($user, $request, $partnerId, $partnerName) {
         //     \Log::info("Cache MISS: fetching fresh Odoo data for driver {$partnerName}");
-            $odooUrl = $this->odoo_url;  
+          
             $db = $this->db;
             $uid = $user['uid'];
             $odooPassword = $request->header('password');
@@ -1046,6 +1046,8 @@ class FetchDataController extends Controller
 
             $driverData = $this->processDispatchManagers($domain, $fields, $fieldsToString, $partnerName);
 
+            
+
             // 🔹 Step 2: collect booking refs from driverData
             $bookingRefs = collect($driverData)
                 ->pluck('booking_reference_no') // ⚠️ ensure this matches Odoo field
@@ -1076,7 +1078,11 @@ class FetchDataController extends Controller
             \Log::info("Response size when cached for driver {$partnerName}: {$sizeInMB} MB");
             if (empty($data)) {
                 \Log::warning("No data fetched for driver {$partnerName}, skipping cache.");
-                return []; // This avoids caching an empty dataset
+                return response()->json([
+                    'data' => [
+                        'transactions' => []
+                    ]
+                ]); // This avoids caching an empty dataset
             }
 
         //     return $data;
