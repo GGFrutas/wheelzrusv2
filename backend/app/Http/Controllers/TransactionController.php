@@ -19,10 +19,10 @@ use Carbon\Carbon;
 
 class TransactionController extends Controller
 {
-    protected $url = "https://yxtechdev-beta-dev-yxe1-main-29885483.dev.odoo.com";
-    protected $db = 'yxtechdev-beta-dev-yxe1-main-29885483';
+    protected $url = "https://yxtechdev-alpha-dev-yxe.odoo.com";
+    protected $db = 'yxtechdev-alpha-dev-yxe-production-alpha-34805791';
     // protected $odoo_url = "http://192.168.76.205:8080/odoo/jsonrpc";
-    protected $odoo_url = "https://yxtechdev-beta-dev-yxe1-main-29885483.dev.odoo.com/jsonrpc";
+    protected $odoo_url = "https://yxtechdev-alpha-dev-yxe.odoo.com/jsonrpc";
 
 
 
@@ -552,6 +552,11 @@ class TransactionController extends Controller
                 ];
                 $ffUpdateRes = jsonRpcRequest($odooUrl, $updateFFContainer);
                 Log::info("Updated container number {$containerNumber} in FF for bookingRef {$bookingRef}, ffIds: " . json_encode($ffIds));
+                if (isset($ffUpdateRes['result']) && $ffUpdateRes['result'] === true) {
+                    Log::info("✅ Updated container_number in FF for bookingRef {$bookingRef}");
+                } else {
+                    Log::error("❌ Failed updating FF", ['response' => $ffUpdateRes]);
+                }
             } else {
                 Log::warning("No FF found for bookingRef {$bookingRef}");
             }
