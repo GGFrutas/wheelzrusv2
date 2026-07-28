@@ -26,8 +26,8 @@ use Ripcord\Ripcord;
 class AuthenticationController extends Controller
 {
 
-    protected $db = 'jralejandria-alpha-dev-yxe1-production-alpha-26901548';
-    protected $url = "https://jralejandria-alpha-dev-yxe.odoo.com/jsonrpc";
+    protected $db = 'yxtechdev-alpha-dev-yxe-production-alpha-34805791';
+    protected $url = "https://yxtechdev-alpha-dev-yxe.odoo.com/jsonrpc";
 
     public function getOdooUsers()
     {
@@ -377,6 +377,16 @@ class AuthenticationController extends Controller
                 'message' => 'Access denied. Only drivers can log in.'
             ], 403);
         }
+
+        // $token = bin2hex(random_bytes(32));
+        // $expiration = now()->addHours(1);
+
+        // DB:table('user_sessions')->insert([
+        //     'uid' -> $uid,
+        //     'token' -> $token,
+        //     'expires_at' -> now(),
+        //     'updated_at' -> now(),
+        // ]);
        
         
         return response()->json([
