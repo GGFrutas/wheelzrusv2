@@ -20,8 +20,8 @@ class PodModelAdapter extends TypeAdapter<PodModel> {
       uri: fields[0] as String,
       headers: (fields[1] as Map).cast<String, String>(),
       body: (fields[2] as Map).cast<String, dynamic>(),
-      isUploading: fields[3] as bool,
-      uuid: fields[4] as String,
+      isUploading: fields[3] as bool? ?? false,
+uuid: fields[4] as String? ?? const Uuid().v4(),
     );
   }
 

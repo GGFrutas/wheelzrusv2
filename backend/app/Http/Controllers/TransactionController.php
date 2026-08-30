@@ -254,7 +254,7 @@ class TransactionController extends Controller
     {
         $updateField = [];
         if ($type['dispatch_type'] == "ot" && $type['de_request_no'] == $requestNumber) {
-            Log::info("Updating PE proof and signature for request number: {$requestNumber}");
+            Log::info("Updating PE proof and signature for request number: {$requestNumber} with container number {$containerNumber}");
             $pod = isset($images['POD']['content']) && $images['POD']['content'] !== null 
                 ? $images['POD']['content'] 
                 : null;
@@ -266,6 +266,7 @@ class TransactionController extends Controller
                 "pe_release_by" => $enteredName,
                 "stage_id" => 5,
                 "de_request_status" => $newStatus,
+                "container_number" => $containerNumber,
             ];
             
             
@@ -349,6 +350,7 @@ class TransactionController extends Controller
                 "de_completion_time" => $actualTime,
                 "de_request_status" => $newStatus,
                 "container_number" => $containerNumber,
+                "container_number" => $containerNumber,
             ];
 
             
@@ -412,6 +414,7 @@ class TransactionController extends Controller
                 "dl_signature" => $signature,
                 "de_release_by" => $enteredName,
                 "dl_completion_time" => $actualTime,
+                "dl_request_status" => $newStatus,
                 "dl_request_status" => $newStatus,
                 "container_number" => $containerNumber,
             ];
@@ -499,6 +502,12 @@ class TransactionController extends Controller
                     "id" => 102
                 ];
                 $ffUpdateRes = jsonRpcRequest($odooUrl, $updateFFContainer);
+                Log::info("Updated container number {$containerNumber} in FF for bookingRef {$bookingRef}, ffIds: " . json_encode($ffIds));
+                if (isset($ffUpdateRes['result']) && $ffUpdateRes['result'] === true) {
+                    Log::info("✅ Updated container_number in FF for bookingRef {$bookingRef}");
+                } else {
+                    Log::error("❌ Failed updating FF", ['response' => $ffUpdateRes]);
+                }
                 Log::info("Updated container number {$containerNumber} in FF for bookingRef {$bookingRef}, ffIds: " . json_encode($ffIds));
                 if (isset($ffUpdateRes['result']) && $ffUpdateRes['result'] === true) {
                     Log::info("✅ Updated container_number in FF for bookingRef {$bookingRef}");

@@ -377,6 +377,16 @@ class AuthenticationController extends Controller
                 'message' => 'Access denied. Only drivers can log in.'
             ], 403);
         }
+
+        // $token = bin2hex(random_bytes(32));
+        // $expiration = now()->addHours(1);
+
+        // DB:table('user_sessions')->insert([
+        //     'uid' -> $uid,
+        //     'token' -> $token,
+        //     'expires_at' -> now(),
+        //     'updated_at' -> now(),
+        // ]);
        
         
         return response()->json([
