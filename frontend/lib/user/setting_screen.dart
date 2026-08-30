@@ -191,13 +191,42 @@ class _SettingPageState extends ConsumerState<SettingScreen>{
               ],
             ),
           ),
-        ],
+          _buildSectionHeader("About & Legal"),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Column(
+              children: [
+                _buildSettingsTile(
+                  icon: Icons.info_outline,
+                  label: "About This App",
+                  onTap: () {
+                    // navigate to About screen
+                  },
+                ),
+                _buildSettingsTile(
+                  icon: Icons.privacy_tip_outlined,
+                  label: "Privacy Policy",
+                  onTap: () {
+                    // open WebView or launch URL
+                  },
+                ),
+                _buildSettingsTile(
+                  icon: Icons.description_outlined,
+                  label: "Terms of Service",
+                  onTap: () {
+                    // open WebView or launch URL
+                  },
+                ),
+              ],
+            ),
+          ),
+                  ],
       ),
       bottomNavigationBar: SizedBox(
         height:40,
         child: Center(
           child: Text(
-            'DA.17.00.A.016',
+            'DA.17.00.A.020',
             style: AppTextStyles.caption.copyWith(
               color: Colors.black87,
             ),
@@ -215,6 +244,29 @@ class _SettingPageState extends ConsumerState<SettingScreen>{
       )
     );
   }
+
+  Widget _buildSettingsTile({
+  required IconData icon,
+  required String label,
+  required VoidCallback onTap,
+}) {
+  return InkWell(
+    onTap: onTap,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          Icon(icon, color: mainColor),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(label, style: AppTextStyles.body),
+          ),
+          const Icon(Icons.chevron_right, color: Colors.grey),
+        ],
+      ),
+    ),
+  );
+}
 
   
   

@@ -106,7 +106,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
       await Future.delayed(const Duration(seconds: 1)); // small delay so network settles
       if (await hasInternetConnection()) {
         await ref.read(pendingPodUploaderProvider).uploadPendingPods();
-        ref.invalidate(filteredItemsProviderForTransactionScreen); // refresh when back online
+        // ref.invalidate(filteredItemsProviderForTransactionScreen); // refresh when back online
       }
     });
   }
@@ -120,34 +120,15 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
     }
   }
 
-  // Future<void> _refreshTransaction() async {
-  //   print("Refreshing transactions");
-
-  //   final hasInternet = await hasInternetConnection();
-   
-  //   if(!hasInternet){
-  //     print("Disabled refresh");
-  //    return;
-  //   }
-  //   try {
-  //     ref.invalidate(bookingProvider);
-  //     final freshFuture = ref.refresh(filteredItemsProviderForTransactionScreen.future);
-  //   setState(() {
-  //     _futureTransactions = freshFuture;
-  //   });
-  //     print("REFRESHED!");
-  //   } catch (e) {
-  //     print('DID NOT REFRESH!');
-  //   }
-  // }
+  
 
   Future<void> _refreshTransaction() async {
-  if (await hasInternetConnection()) {
-    ref.invalidate(filteredItemsProviderForTransactionScreen);
+    if (await hasInternetConnection()) {
+      ref.invalidate(filteredItemsProviderForTransactionScreen);
+    }
   }
-}
 
-   String formatDateTime(String? dateString) {
+  String formatDateTime(String? dateString) {
     if (dateString == null || dateString.isEmpty) return "N/A"; // Handle null values
     
     try {
@@ -189,16 +170,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
   
   @override
   Widget build(BuildContext context) {
-     
-    // final transactionold = ref.watch(filteredItemsProviderForTransactionScreen);
-    
     final acceptedTransaction = ref.watch(accepted_transaction.acceptedTransactionProvider);
-    
-
-    final asyncTx = _hasInternet
-        ? ref.watch(filteredItemsProviderForTransactionScreen.future)
-        : null;
-
      return Scaffold(
       body: SafeArea(
         child: Column(

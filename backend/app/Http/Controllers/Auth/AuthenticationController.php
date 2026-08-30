@@ -46,7 +46,7 @@ class AuthenticationController extends Controller
         if ($request->hasFile('picture')) {
             // Store the image and get the file path
             $path = $request->file('picture')->store('profile_pictures', 'public');
-            $validatedData['picture'] = $path; // Save the path in validated data
+            $validatedData['picture'] = $path; // Save the path in validated datarda_beta_new
         }
         $userData = [
             'name' => $validatedData['name'],
@@ -77,10 +77,10 @@ class AuthenticationController extends Controller
         $password = $credentials['password']; // Odoo password
        
 
-        $url = $this->url;
-        $db = $this->db;
-       
+        $url = $this->odooUrl . "/jsonrpc";
+        $db = $this->odooDb;
         
+
         $jsonrequest = [
             "jsonrpc" => "2.0",
             "method" => "call",
@@ -124,8 +124,8 @@ class AuthenticationController extends Controller
 
     public function getUser($username,$uid, $odooPassword)
     {
-        $url = $this->url;
-        $db = $this->db;
+        $url = $this->odooUrl . "/jsonrpc";
+        $db = $this->odooDb;
 
         Log::info("🔍 Searching for Odoo user with email: $username");
         
@@ -291,8 +291,8 @@ class AuthenticationController extends Controller
     public function login(Request $request){
         $credentials = $request->only('email', 'password');
         $odooPassword = $credentials['password'];
-        $url = $this->url;
-        $db = $this->db;
+        $url = $this->odooUrl . "/jsonrpc";
+        $db = $this->odooDb;
         
         //Check authentication
         $uid = $this->authenticateOdooUser($credentials);
@@ -384,7 +384,6 @@ class AuthenticationController extends Controller
             'message' => 'User authenticated successfully',
             'user' => $user,
             'uid' => $uid,
-            'password' => $odooPassword,
             'mobile' => $mobile,
             'phone' => $phone,
             'license_number' => $licenseNumber,

@@ -2,6 +2,37 @@ import 'package:frontend/models/consolidation_model.dart';
 import 'package:frontend/models/driver_reassignment_model.dart';
 import 'package:frontend/models/milestone_history_model.dart';
 
+// A checklist item from the internal system's dispatch.document.requirement
+// model — the customer-specific DI/DR document checklist for a dispatch leg.
+class DocumentRequirementFile {
+  final int id;
+  final String name;
+  final String? routeType;
+  final bool isSubmitted;
+  final String? submittedFilename;
+  final String? submittedFile; // base64 content, only present once submitted
+
+  const DocumentRequirementFile({
+    required this.id,
+    required this.name,
+    this.routeType,
+    required this.isSubmitted,
+    this.submittedFilename,
+    this.submittedFile,
+  });
+
+  factory DocumentRequirementFile.fromJson(Map<String, dynamic> json) {
+    return DocumentRequirementFile(
+      id: json['id'] is int ? json['id'] as int : int.tryParse('${json['id']}') ?? 0,
+      name: (json['name'] ?? '').toString(),
+      routeType: json['route_type']?.toString(),
+      isSubmitted: json['is_submitted'] == true,
+      submittedFilename: json['submitted_filename']?.toString(),
+      submittedFile: json['submitted_file'] is String ? json['submitted_file'] as String : null,
+    );
+  }
+}
+
 class Transaction {
   final int id;
   final String? name;
@@ -129,6 +160,8 @@ class Transaction {
   final String? salesInvoice;
   final String? salesInvoiceFilename;
 
+  final List<DocumentRequirementFile> documentRequirements;
+
   final String? rawOrigin;
 
   final String? rawDestination;
@@ -247,6 +280,7 @@ class Transaction {
      this.stockDeliveryFilename,
      this.salesInvoice,
      this.salesInvoiceFilename,
+     this.documentRequirements = const [],
     this.isReassigned = false,
     this.rawOrigin,
     this.rawDestination
@@ -255,7 +289,7 @@ class Transaction {
   factory Transaction.fromJson(Map<String, dynamic> json) {
     // print('knii Raw transaction JSON: $json');
     final rawConsolidation = json['backload_consolidation'];
-    print("this is raw origin: ${json['origin_port']}"); // Likely null or empty
+    // print("this is raw origin: ${json['origin_port']}"); // Likely null or empty
 
 
     return Transaction(
@@ -426,8 +460,14 @@ class Transaction {
       salesInvoice: json['dl_sales_invoice'].toString(),
       salesInvoiceFilename: json['dl_sales_invoice_filename'].toString(),
 
+      documentRequirements: (json['document_requirements'] is List)
+          ? (json['document_requirements'] as List)
+              .whereType<Map>()
+              .map((r) => DocumentRequirementFile.fromJson(Map<String, dynamic>.from(r)))
+              .toList()
+          : const [],
 
-      
+
     );
   }
 
@@ -580,6 +620,7 @@ class Transaction {
       stockDeliveryFilename: stockDeliveryFilename,
       salesInvoice: salesInvoice,
       salesInvoiceFilename: salesInvoiceFilename,
+      documentRequirements: documentRequirements,
 
       isReassigned: isReassigned ?? this.isReassigned
       

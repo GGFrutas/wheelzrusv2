@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/models/transaction_model.dart';
 import 'package:frontend/notifiers/auth_notifier.dart';
 import 'package:frontend/provider/accepted_transaction.dart' as accepted_transaction;
+import 'package:frontend/provider/base_url_provider.dart';
 import 'package:frontend/provider/theme_provider.dart';
 import 'package:frontend/provider/transaction_list_notifier.dart';
 import 'package:frontend/provider/transaction_provider.dart';
@@ -40,47 +41,94 @@ class _ConfirmationState extends ConsumerState<ConfirmationScreen> {
  
  late List<List<UploadImage>> _imageLists;
 
- late List<String> limit;
+ List<DocumentRequirement> _requirements = [];
+ bool _loadingRequirements = true;
+ // true when _requirements came from the internal system's DI/DR checklist;
+ // false when there was no checklist for this leg and we fell back to a single POD photo.
+ bool _usingChecklist = false;
 
- final List<String> labels = [
-  'Transfer of Liability Form',
-  'HWB—Signed',
-  'Delivery Receipt',
-  'Packing List',
-  'Delivery Note',
-  'Stock Delivery Receipt',
-  'Sales Invoice',
-  'Stock Transfer',
-  'POD'
- ];
-
-List<String> getUploadLimit(){
-  final requestNumber = widget.transaction?.requestNumber ?? '';
-  
-  if(widget.transaction?.dlRequestNumber == requestNumber && widget.transaction?.dlRequestStatus == "Ongoing") {
-    print('dl_requestNumber: ${widget.transaction?.dlRequestNumber}');
-    return [
-      labels[0],
-      labels[1],
-      labels[2],
-      labels[3],
-      labels[4],
-      labels[5],
-      labels[6],
-
-    ];
-  } else if (widget.transaction?.plRequestNumber == requestNumber && widget.transaction?.plRequestStatus == "Assigned"){
-    print('plRequestNumber: ${widget.transaction?.plRequestNumber}');
-    return [
-      labels[6],
-      labels[7],
-
-    ];
-  } else {
-    print('RequestNumber for upload: ${widget.transaction?.requestNumber}');
-    return [labels.last];
-    
+ // Which leg (route_type) of the dispatch is currently active, matching the
+ // ROUTE_TYPES on dispatch.document.requirement in the internal system.
+ String? _resolveRouteType() {
+  final requestNumber = widget.transaction?.requestNumber;
+  if (requestNumber == null || requestNumber.isEmpty || requestNumber == 'null') {
+    return null;
   }
+  if (widget.transaction?.plRequestNumber == requestNumber) return 'PL';
+  if (widget.transaction?.dlRequestNumber == requestNumber) return 'DL';
+  if (widget.transaction?.peRequestNumber == requestNumber) return 'PE';
+  if (widget.transaction?.deRequestNumber == requestNumber) return 'DE';
+  return null;
+ }
+
+ // Matches the pre-refactor hardcoded rules for when each leg's DI/DR checklist applies:
+ // DE/DL only on the Ongoing -> Completed transition, PL/PE only on the
+ // Accepted/Pending/Assigned -> Ongoing transition. Outside those windows the leg
+ // always stays a plain POD photo, regardless of what Odoo's checklist has configured.
+ bool _checklistEligible(String routeType) {
+  if (routeType == 'DE') return widget.transaction?.deRequestStatus == 'Ongoing';
+  if (routeType == 'DL') return widget.transaction?.dlRequestStatus == 'Ongoing';
+  if (routeType == 'PL') return widget.transaction?.plRequestStatus == 'Assigned';
+  if (routeType == 'PE') return widget.transaction?.peRequestStatus == 'Assigned';
+  return true;
+ }
+
+ Future<void> _fetchDocumentRequirements() async {
+  final routeType = _resolveRouteType();
+  final dispatchId = widget.transaction?.id;
+
+  List<DocumentRequirement> requirements = [];
+  bool usingChecklist = false;
+
+  if (routeType != null && dispatchId != null && _checklistEligible(routeType)) {
+    try {
+      final baseUrl = ref.read(baseUrlProvider);
+      final auth = ref.read(authNotifierProvider);
+      final url = Uri.parse(
+        '$baseUrl/api/odoo/booking/document-requirements/$dispatchId?uid=${widget.uid}&route_type=$routeType',
+      );
+
+      final response = await http.get(
+        url,
+        headers: {
+          'Accept': 'application/json',
+          'login': auth.login ?? '',
+          'password': auth.password ?? '',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        final list = (body['data']?['requirements'] as List<dynamic>?) ?? [];
+        requirements = list
+            .whereType<Map<String, dynamic>>()
+            .map((r) => DocumentRequirement(
+                  id: r['id'] as int,
+                  name: (r['name'] ?? '').toString(),
+                ))
+            .toList();
+        usingChecklist = requirements.isNotEmpty;
+      } else {
+        print('Failed to load document checklist: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Failed to load document checklist: $e');
+    }
+  }
+
+  // No checklist configured in the internal system for this leg — fall back
+  // to the single always-required delivery photo.
+  if (!usingChecklist) {
+    requirements = [DocumentRequirement(id: 0, name: 'POD')];
+  }
+
+  if (!mounted) return;
+  setState(() {
+    _requirements = requirements;
+    _usingChecklist = usingChecklist;
+    _imageLists = List.generate(_requirements.length, (_) => <UploadImage>[]);
+    _loadingRequirements = false;
+  });
  }
 
   Future<void> _pickImage(int index) async {
@@ -131,7 +179,7 @@ List<String> getUploadLimit(){
                     } else {
                       // ✅ Valid file
                       validFiles.add(
-                        UploadImage(file: file, label: limit[index]),
+                        UploadImage(file: file, label: _requirements[index].name),
                       );
                     }
                   }
@@ -180,7 +228,7 @@ List<String> getUploadLimit(){
                   } else {
                     setState(() {
                       _imageLists[index].add(
-                        UploadImage(file: file, label: limit[index]),
+                        UploadImage(file: file, label: _requirements[index].name),
                       );
                     });
                   }
@@ -205,33 +253,35 @@ List<String> getUploadLimit(){
     return base64Images;
   }
 
+  // Returns the extra body fields the proof-of-delivery submission should merge in:
+  // {'documents': {requirementId: {...}}} when driven by the internal system's checklist,
+  // or {'images': {'POD': {...}}} for the single-photo fallback (no checklist configured).
   Future<Map<String, dynamic>> buildUploadMap() async {
-    final Map<String, dynamic> uploadMap = {};
-    for (int i = 0; i < limit.length; i++) {
-      final label = limit[i];
+    final Map<String, dynamic> documentMap = {};
+    for (int i = 0; i < _requirements.length; i++) {
+      final requirement = _requirements[i];
 
-      if(_imageLists[i].isNotEmpty) {
-        final upload = _imageLists[i].first;
-        final file = upload.file;
+      if (_imageLists[i].isEmpty) continue;
 
-        final ext = file.path.split('.').last.toLowerCase();
-        final safeExt = (ext == 'jpg' || ext == 'png') ? ext: 'jpg';
+      final upload = _imageLists[i].first;
+      final file = upload.file;
 
-        final bytes = await file.readAsBytes();
+      final ext = file.path.split('.').last.toLowerCase();
+      final safeExt = (ext == 'jpg' || ext == 'png') ? ext : 'jpg';
 
-        final base64Str = base64Encode(bytes);
+      final bytes = await file.readAsBytes();
+      final base64Str = base64Encode(bytes);
 
-        final filename = '${label.replaceAll(' ', '_')}.$safeExt';
+      final filename = '${requirement.name.replaceAll(' ', '_')}.$safeExt';
+      final key = _usingChecklist ? requirement.id.toString() : requirement.name;
 
-        uploadMap[label] = {
-          'filename': filename,
-          'content': base64Str,
-        };
-      }else{
-        uploadMap[label] = null;
-      }
+      documentMap[key] = {
+        'filename': filename,
+        'content': base64Str,
+      };
     }
-    return uploadMap;
+
+    return {_usingChecklist ? 'documents' : 'images': documentMap};
   }
 
 
@@ -240,8 +290,8 @@ List<String> getUploadLimit(){
   @override
   void initState() {
     super.initState();
-    limit = getUploadLimit();
-    _imageLists = List.generate(limit.length, (_) => <UploadImage>[]);
+    _imageLists = [];
+    _fetchDocumentRequirements();
   }
 
   String getNullableValue(String? value, {String fallback = ''}) {
@@ -279,9 +329,17 @@ List<String> getUploadLimit(){
    
 
    
-    return WillPopScope(
-  onWillPop: () async {
-    return await _showConfirmationDialog(context);
+    final navigator = Navigator.of(context);
+    final dialogContext = context;
+
+
+    return PopScope(
+      canPop: false,
+  onPopInvokedWithResult:  (didPop, result) async {
+   final shouldpop = await _showConfirmationDialog(dialogContext);
+   if(shouldpop && !didPop){
+     navigator.maybePop();
+   }
   },
   child: Scaffold(
       appBar: AppBar(
@@ -307,8 +365,11 @@ List<String> getUploadLimit(){
 
               const SizedBox(height: 20),
 
+             if (_loadingRequirements)
+               const Center(child: CircularProgressIndicator())
+             else
              GridView.builder(
-                itemCount: limit.length,
+                itemCount: _requirements.length,
                 shrinkWrap: true, // ✅ prevents unbounded height error
             physics: const NeverScrollableScrollPhysics(), // ✅ disables nested scrolling
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -318,7 +379,7 @@ List<String> getUploadLimit(){
                   childAspectRatio: 1,
                 ),
               itemBuilder: (context,index) {
-              
+
                 return Container (
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
@@ -329,7 +390,7 @@ List<String> getUploadLimit(){
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Text(
-                        limit[index],
+                        _requirements[index].name,
                         style:  AppTextStyles.caption,
                       ),
                       // const SizedBox(height: 5),
@@ -580,10 +641,10 @@ List<String> getUploadLimit(){
                         final navigator  = Navigator.of(context);
                         final base64Images =  await _convertImagestoBase64(validImages);
                         print('Base64 Image: $base64Images\n');
-                        final uploadMap = await buildUploadMap();
+                        final podPayloadExtras = await buildUploadMap();
                         navigator.push(
                           MaterialPageRoute(
-                            builder: (context) => ProofOfDeliveryScreen(uid: widget.uid, transaction: widget.transaction, base64ImagesWithLabels: uploadMap),
+                            builder: (context) => ProofOfDeliveryScreen(uid: widget.uid, transaction: widget.transaction, podPayloadExtras: podPayloadExtras),
                           ),
                         );
                       }
@@ -614,17 +675,21 @@ List<String> getUploadLimit(){
           NavigationMenu(
             onItemTap: (index) async {
               // Intercept menu taps
-              final shouldLeave = await _showConfirmationDialog(context);
+              final navigator = Navigator.of(context);
+              final dialogContext = context;
+              if(!context.mounted) return;
+              final shouldLeave = await _showConfirmationDialog(dialogContext);
+              if(!navigator.mounted) return;
               if (shouldLeave) {
                 switch (index) {
                   case 0:
-                    Navigator.of(context).popUntil((route) => route.isFirst);
+                    navigator.popUntil((route) => route.isFirst);
                     break;
                   case 1:
-                    Navigator.of(context).popUntil((route) => route.isFirst);
+                    navigator.popUntil((route) => route.isFirst);
                     break;
                   case 2:
-                    Navigator.of(context).popUntil((route) => route.isFirst);
+                    navigator.popUntil((route) => route.isFirst);
                     break;
                 }
               }
@@ -725,6 +790,13 @@ class UploadImage {
   final String label;
 
   UploadImage({required this.file, required this.label});
+}
+
+class DocumentRequirement {
+  final int id;
+  final String name;
+
+  DocumentRequirement({required this.id, required this.name});
 }
 
 Future<bool> _showConfirmationDialog(BuildContext context) async {

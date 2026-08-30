@@ -44,6 +44,9 @@ Route::middleware([HandleCors::class])->group(function () {
     Route::get('/odoo/booking/transaction_details/{id}', [FetchDataController::class, 'getSecondScreenData']);
     Route::get('/odoo/booking/history_details/{id}', [FetchDataController::class, 'getHistoryDetails']);
 
+    // Required-document checklist (dispatch.document.requirement) for the proof-of-delivery screen
+    Route::get('/odoo/booking/document-requirements/{id}', [FetchDataController::class, 'getDocumentRequirements']);
+
     Route::post('/odoo/notify', [TransactionController::class, 'notifyShipperConsignee']);
 
     Route::get('/odoo/booking/reassignment', [FetchDataController::class, 'reassignment']);

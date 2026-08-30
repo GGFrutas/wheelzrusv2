@@ -30,8 +30,9 @@ import 'package:signature/signature.dart';
 class ScheduleScreen extends ConsumerStatefulWidget {
   final String uid;
   final Transaction? transaction;
+  final List<Transaction>? legs; // NEW: both leg Transactions when merged (DE + PL)
 
-  const ScheduleScreen({super.key, required this.uid, required this.transaction, required relatedFF});
+  const ScheduleScreen({super.key, required this.uid, required this.transaction, required relatedFF, this.legs});
 
   @override
   ConsumerState<ScheduleScreen> createState() => _ScheduleState();
@@ -51,12 +52,65 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
     return value ?? fallback;
   }
 
-  Map<String, MilestoneHistoryModel?> getPickupAndDeliverySchedule(Transaction? transaction) {
+  // The leg entries (Transaction objects) whose schedule should be rendered
+  // as separate blocks. For a merged (DE + PL) booking this holds both legs;
+  // otherwise it falls back to the single opened transaction.
+  List<Transaction> get _legEntries {
+    if (widget.legs != null && widget.legs!.isNotEmpty) {
+      return widget.legs!;
+    }
+    if (widget.transaction != null) {
+      return [widget.transaction!];
+    }
+    return const [];
+  }
+
+  // Section title: merged (DE + PL) bookings always show the fixed combined
+  // label, matching the tile/TransactionDetails/DetailedDetailScreen;
+  // otherwise falls back to the leg's own name.
+  String get _sectionTitle {
+    if (widget.legs != null && widget.legs!.length > 1) {
+      return 'Deliver Empty - Pickup Laden';
+    }
+    return getNullableValue(widget.transaction?.name);
+  }
+
+  // Identifies which named leg a requestNumber belongs to, the same way
+  // TransactionDetails labels its blocks (matching against de/pl/dl/pe
+  // requestNumber fields on the shared booking transaction).
+  String? _legLabel(Transaction entry) {
+    final requestNumber = entry.requestNumber;
+    final isDT = widget.transaction?.dispatchType == 'dt';
+    if (isDT) {
+      if (requestNumber == widget.transaction?.dlRequestNumber) return 'Deliver Laden Schedule';
+      if (requestNumber == widget.transaction?.peRequestNumber) return 'Pickup Empty Schedule';
+    } else {
+      if (requestNumber == widget.transaction?.deRequestNumber) return 'Deliver Empty Schedule';
+      if (requestNumber == widget.transaction?.plRequestNumber) return 'Pickup Laden Schedule';
+    }
+    return null;
+  }
+
+  // The leg (from _legEntries) that supports the "Notify" email action —
+  // only the pl (OT) or pe (DT) leg has an email milestone code. Falls back
+  // to widget.transaction for the non-merged case so behavior is unchanged.
+  Transaction? get _notifiableLeg {
+    for (final entry in _legEntries) {
+      final requestNumber = entry.requestNumber;
+      if (requestNumber == widget.transaction?.plRequestNumber ||
+          requestNumber == widget.transaction?.peRequestNumber) {
+        return entry;
+      }
+    }
+    return widget.transaction;
+  }
+
+  Map<String, MilestoneHistoryModel?> getPickupAndDeliverySchedule(Transaction? transaction, {String? requestNumberOverride}) {
     final dispatchType = transaction!.dispatchType;
     final history = transaction.history;
     final serviceType = transaction.serviceType;
     final dispatchId = transaction.id;
-    final requestNumber = transaction.requestNumber;
+    final requestNumber = requestNumberOverride ?? transaction.requestNumber;
      final transportMode = transaction.landTransport;
 
     final fclPrefixes = {
@@ -211,6 +265,8 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
  
     url = Uri.parse('$baseUrl/api/odoo/notify?uid=$uid');
 
+    final notifyRequestNumber = _notifiableLeg?.requestNumber ?? widget.transaction?.requestNumber;
+
     var response = await http.post(url,
       headers: {
         'Content-Type': 'application/json',
@@ -222,7 +278,7 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
         'id': widget.transaction?.id,
         'uid': uid,
         'dispatch_type': widget.transaction?.dispatchType,
-        'request_number': widget.transaction?.requestNumber,
+        'request_number': notifyRequestNumber,
         'timestamp': timestamp,
       }),
     );
@@ -231,7 +287,7 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
   
     if (!mounted) return;
     if (response.statusCode == 200) {
-    final scheduleMap = getPickupAndDeliverySchedule(widget.transaction!);
+    final scheduleMap = getPickupAndDeliverySchedule(widget.transaction!, requestNumberOverride: notifyRequestNumber);
     final emailModel = scheduleMap['email'];
 
     if (emailModel != null && widget.transaction?.history != null) {
@@ -291,17 +347,148 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
       return {"date": "N/A", "time": "N/A"}; // Return default values on error
     }
   }
+
+  /// Renders the "Pick Up Schedule" + "Delivery Schedule" rows for a single
+  /// leg's resolved schedule. Called once per leg — twice when merged.
+  Widget _buildScheduleRows(MilestoneHistoryModel? pickup, MilestoneHistoryModel? delivery) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            const SizedBox(width: 8),
+            const Icon(
+              Icons.check_circle,
+              color: mainColor,
+              size: 20,
+            ),
+            const SizedBox(width: 15),
+            Expanded(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children:[
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                      "Pick Up Schedule: ",
+                        style: AppTextStyles.caption.copyWith(
+                          color: mainColor,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        "Pick up Time: ",
+                        style: AppTextStyles.caption.copyWith(
+                          color: mainColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        separateDateTime(pickup?.scheduledDatetime)["date"] ?? "N/A",
+                        style: AppTextStyles.caption.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: mainColor,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                        Text(
+                          separateDateTime(pickup?.scheduledDatetime)["time"] ?? "N/A",
+                          style: AppTextStyles.caption.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: mainColor,
+                          ),
+                        )
+                    ],
+                  )
+                ]
+              ),
+            )
+          ],
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            const SizedBox(width: 8),
+            const Icon(
+              Icons.check_circle,
+              color: mainColor,
+              size: 20,
+            ),
+            const SizedBox(width: 15),
+            Expanded(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children:[
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                      "Delivery Schedule: ",
+                        style: AppTextStyles.caption.copyWith(
+                          color: mainColor,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        "Delivery Time: ",
+                        style: AppTextStyles.caption.copyWith(
+                          color: mainColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        separateDateTime(delivery?.scheduledDatetime)["date"] ?? "N/A",
+                        style: AppTextStyles.caption.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: mainColor,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        separateDateTime(delivery?.scheduledDatetime)["time"] ?? "N/A",
+                        style: AppTextStyles.caption.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: mainColor,
+                        ),
+                      )
+                    ],
+                  )
+                ]
+              ),
+            )
+          ],
+        ),
+      ],
+    );
+  }
     
   
   @override
   Widget build(BuildContext context) {
-   final scheduleMap = getPickupAndDeliverySchedule(widget.transaction!);
-  final pickup = scheduleMap['pickup'];
-  final delivery = scheduleMap['delivery'];
-  final email = scheduleMap['email'];
+   // One schedule block per leg entry (2 blocks when merged, 1 otherwise),
+   // each resolved against its own requestNumber.
+   final legScheduleBlocks = _legEntries.map((entry) {
+     final scheduleMap = getPickupAndDeliverySchedule(widget.transaction, requestNumberOverride: entry.requestNumber);
+     return {
+       'label': _legLabel(entry),
+       'pickup': scheduleMap['pickup'],
+       'delivery': scheduleMap['delivery'],
+     };
+   }).toList();
 
+   // Notify-email state still keys off whichever leg supports it (pl/pe),
+   // not necessarily widget.transaction itself when merged.
+   final notifyScheduleMap = getPickupAndDeliverySchedule(widget.transaction, requestNumberOverride: _notifiableLeg?.requestNumber);
+   final email = notifyScheduleMap['email'];
   
-  // bool isAlreadyNotified = email?.actualDatetime != null ;
   final hasActualDatetime = email?.actualDatetime != null &&
     email!.actualDatetime.trim().isNotEmpty;
 
@@ -341,7 +528,7 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
               Container(
                 padding: const EdgeInsets.all(8.0),
                 child: Text(
-                  getNullableValue(widget.transaction?.name).toUpperCase(),
+                  _sectionTitle.toUpperCase(),
                   style:AppTextStyles.body.copyWith(
                     fontWeight: FontWeight.bold,
                     color: mainColor,
@@ -372,136 +559,33 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
                   ),
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.all(16.0), // Add padding inside the container
-                decoration: BoxDecoration(
-                  color: bgColor,
-                  borderRadius: BorderRadius.circular(20.0), // Rounded edges
-                ),
-                child: Column(
-                  children:[
-                   
-                      Row(
-                        children: [
-                          const SizedBox(width: 8),
-                          const Icon(
-                            Icons.check_circle,
-                            color: mainColor,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 15),
-                          Expanded(
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children:[
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                    "Pick Up Schedule: ",
-                                      // Use the originPort variable here
-                                      style: AppTextStyles.caption.copyWith(
-                                        color: mainColor,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 5), // Space between label and value
-                                    Text(
-                                      "Pick up Time: ",
-                                      style: AppTextStyles.caption.copyWith(
-                                        color: mainColor,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Text(
-                                      separateDateTime(pickup?.scheduledDatetime)["date"] ?? "N/A",
-                                      style: AppTextStyles.caption.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        color: mainColor,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 5), // Space between label and value
-                                      Text(
-                                        separateDateTime(pickup?.scheduledDatetime)["time"] ?? "N/A",
-                                        style: AppTextStyles.caption.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                          color: mainColor,
-                                        ),
-                                      )
-                                  ],
-                                )
-                              ]
-                            ),
-                          )
-                        ],
+              for (int i = 0; i < legScheduleBlocks.length; i++) ...[
+                if (legScheduleBlocks.length > 1 && legScheduleBlocks[i]['label'] != null)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8.0, bottom: 6.0),
+                    child: Text(
+                      legScheduleBlocks[i]['label'] as String,
+                      style: AppTextStyles.body.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: mainColor,
                       ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          const SizedBox(width: 8),
-                          const Icon(
-                            Icons.check_circle,
-                            color: mainColor,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 15),
-                          Expanded(
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children:[
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                    "Delivery Schedule: ",
-                                      // Use the originPort variable here
-                                      style: AppTextStyles.caption.copyWith(
-                                        color: mainColor,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 5), // Space between label and value
-                                    Text(
-                                      "Delivery Time: ",
-                                      style: AppTextStyles.caption.copyWith(
-                                        color: mainColor,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Text(
-                                      separateDateTime(delivery?.scheduledDatetime)["date"] ?? "N/A",
-                                      style: AppTextStyles.caption.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        color: mainColor,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 5), // Space between label and value
-                                    Text(
-                                      separateDateTime(delivery?.scheduledDatetime)["time"] ?? "N/A",
-                                      style: AppTextStyles.caption.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        color: mainColor,
-                                      ),
-                                    )
-                                  ],
-                                )
-                              ]
-                            ),
-                          )
-                        ],
-                      ),
-                  ]
+                    ),
+                  ),
+                Container(
+                  padding: const EdgeInsets.all(16.0), // Add padding inside the container
+                  decoration: BoxDecoration(
+                    color: bgColor,
+                    borderRadius: BorderRadius.circular(20.0), // Rounded edges
+                  ),
+                  child: _buildScheduleRows(
+                    legScheduleBlocks[i]['pickup'] as MilestoneHistoryModel?,
+                    legScheduleBlocks[i]['delivery'] as MilestoneHistoryModel?,
+                  ),
                 ),
-                
-              ),
+                if (i != legScheduleBlocks.length - 1) const SizedBox(height: 16),
+              ],
               const SizedBox(height: 20),
-              if(widget.transaction?.plRequestNumber == widget.transaction?.requestNumber || widget.transaction?.peRequestStatus == widget.transaction?.requestNumber)
+              if(_notifiableLeg != null)
 
               Text (
                 "Optional",
@@ -511,7 +595,7 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
                 ),
               ),
               
-              if(widget.transaction?.plRequestNumber == widget.transaction?.requestNumber|| widget.transaction?.peRequestNumber == widget.transaction?.requestNumber)...[
+              if(_notifiableLeg != null)...[
               Column (
                 mainAxisSize: MainAxisSize.min,
                 children: [
