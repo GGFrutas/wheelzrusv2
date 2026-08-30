@@ -8,7 +8,7 @@
         "php": "^8.2",
         "eteamsys/ripcord": "^1.0",
         "laravel/framework": "^11.9",
-        "laravel/sanctum": "^4.0",
+        "laravel/sanctum": "^4.2",
         "laravel/tinker": "^2.9",
         "phpxmlrpc/phpxmlrpc": "^4.11"
     },

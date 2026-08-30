@@ -27,8 +27,8 @@ class FetchDataController extends Controller
 
     private function authenticateDriver(Request $request)
     {
-        $url = $this->url;
-        $db = $this->db;
+        $url = $this->odooUrl;
+        $db = $this->odooDb;
       
         $uid = $request->query('uid') ;
         $login = $request->header('login'); 
@@ -40,7 +40,7 @@ class FetchDataController extends Controller
             return response()->json(['success' => false, 'message' => 'UID is required'], 400);
         }
 
-        $odooUrl = "{$this->url}/jsonrpc"; 
+        $odooUrl = "$url/jsonrpc"; 
        
         
         $response = jsonRpcRequest("$odooUrl", [
@@ -137,9 +137,9 @@ class FetchDataController extends Controller
 
     private function processDispatchManagers(array $domain, array $fields, array $fieldsToString, string $partnerId, bool $filterByDriver = true): array
     {
-        $odooUrl = "{$this->url}/jsonrpc";
-        $jobUrl = "{$this->url}/job_dispatcher/queue_job";
-        $db = $this->db;
+        $odooUrl = "{$this->odooUrl}/jsonrpc";
+        $jobUrl = "{$this->odooUrl}/job_dispatcher/queue_job";
+        $db = $this->odooDb;
         $uid = request()->query('uid');
         $login = request()->header('login');
         $password = request()->header('password');
@@ -320,14 +320,79 @@ class FetchDataController extends Controller
         return $filtered;
     }
 
+    /**
+     * Fetch the required-document checklist (dispatch.document.requirement) for a dispatch.
+     * Pass $routeType (DE/PL/DL/PE) to scope it to one leg; omit to fetch every leg's rows.
+     * $withContent controls whether the (potentially large) submitted_file binary is included.
+     */
+    private function fetchDocumentRequirements($dispatchId, string $db, $uid, string $odooPassword, string $odooUrl, ?string $routeType = null, bool $withContent = false): array
+    {
+        $domain = [['dispatch_id', '=', (int) $dispatchId]];
+        if ($routeType) {
+            $domain[] = ['route_type', '=', $routeType];
+        }
+
+        $fields = ['id', 'name', 'code', 'route_type', 'is_submitted', 'submitted_filename', 'submitted_date'];
+        if ($withContent) {
+            $fields[] = 'submitted_file';
+        }
+
+        $response = jsonRpcRequest($odooUrl, [
+            'jsonrpc' => '2.0',
+            'method' => 'call',
+            'params' => [
+                'service' => 'object',
+                'method' => 'execute_kw',
+                'args' => [
+                    $db, $uid, $odooPassword,
+                    'dispatch.document.requirement', 'search_read',
+                    [$domain],
+                    ['fields' => $fields]
+                ]
+            ],
+            'id' => rand(1000, 9999)
+        ]);
+
+        if (!isset($response['result'])) {
+            Log::error('❌ Failed to fetch dispatch.document.requirement', ['dispatch_id' => $dispatchId, 'response' => $response]);
+            return [];
+        }
+
+        return $response['result'];
+    }
+
+    /**
+     * Driver-facing checklist for the proof-of-delivery screen: what documents does the
+     * customer's DI/DR checklist require for this dispatch's active leg (route_type)?
+     */
+    public function getDocumentRequirements(Request $request, $id)
+    {
+        $user = $this->authenticateDriver($request);
+        if (!is_array($user)) return $user;
+
+        $odooUrl = "{$this->odooUrl}/jsonrpc";
+        $db = $this->odooDb;
+        $uid = $user['uid'];
+        $odooPassword = $request->header('password');
+        $routeType = $request->query('route_type');
+
+        if (!$routeType) {
+            return response()->json(['success' => false, 'message' => 'route_type is required'], 400);
+        }
+
+        $requirements = $this->fetchDocumentRequirements($id, $db, $uid, $odooPassword, $odooUrl, $routeType, false);
+
+        return response()->json(['data' => ['requirements' => $requirements]]);
+    }
+
     public function getSecondScreenData(Request $request, $id)
     {
         $user = $this->authenticateDriver($request);
         if(!is_array($user)) return $user;
 
-        $url = $this->url;
-        $db = $this->db;
-        $odooUrl = $this->odoo_url;  
+        $url = $this->odooUrl;
+        $db = $this->odooDb;
+        $odooUrl = '$url/jsonrpc';  
 
         $uid = $user['uid'];
         $odooPassword = $request->header('password');
@@ -400,6 +465,13 @@ class FetchDataController extends Controller
         // 🔹 Step 4: merge driver + FF results
         $data = array_merge($driverData, $ffData);
 
+        // 🔹 Step 5: attach the customer's DI/DR document checklist for this dispatch
+        $docOdooUrl = "{$this->odooUrl}/jsonrpc";
+        foreach ($data as &$tx) {
+            $tx['document_requirements'] = $this->fetchDocumentRequirements($tx['id'], $db, $uid, $odooPassword, $docOdooUrl, null, true);
+        }
+        unset($tx);
+
 
         // ✅ Final return
         return response()->json([
@@ -409,11 +481,11 @@ class FetchDataController extends Controller
         ]);
     }
 
-    
+
 
     private function fetchReassignedData(string $db, int $uid, string $password, string $partnerId)
     {
-        $odooUrl = "{$this->url}/jsonrpc";
+        $odooUrl = "{$this->odooUrl}/jsonrpc";
       
         $domain = [
             ['driver_id', '=', (int)$partnerId],
@@ -454,9 +526,9 @@ class FetchDataController extends Controller
         $user = $this->authenticateDriver($request);
         if(!is_array($user)) return $user;
 
-        $url = $this->url;
-        $db = $this->db;
-        $odooUrl = $this->odoo_url;  
+        $url = $this->odooUrl;
+        $db = $this->odooDb;
+        $odooUrl = "$url/jsonrpc";  
 
         $uid = $user['uid'];
         $odooPassword = $request->header('password');
@@ -558,9 +630,9 @@ class FetchDataController extends Controller
         $user = $this->authenticateDriver($request);
         if(!is_array($user)) return $user;
 
-        $url = $this->url;
-        $db = $this->db;
-        $odooUrl = $this->odoo_url;  
+        $url = $this->odooUrl;
+        $db = $this->odooDb;
+        $odooUrl = '$url/jsonrpc';  
 
         $uid = $user['uid'];
         $odooPassword = $request->header('password');
@@ -623,14 +695,14 @@ class FetchDataController extends Controller
 
     public function getHistoryBooking(Request $request)
     {
-        $url = $this->url;
-        $db = $this->db;
+        $url = $this->odooUrl;
+        $db = $this->odooDb;
       
         $user = $this->authenticateDriver($request);
         if(!is_array($user)) return $user;
 
         
-        $odooUrl = $this->odoo_url;  
+        $odooUrl = '$url/jsonrpc';  
 
         $uid = $user['uid'];
         $odooPassword = $request->header('password');
@@ -740,14 +812,14 @@ class FetchDataController extends Controller
 
     public function getHistoryDetails(Request $request, $id)
     {
-        $url = $this->url;
-        $db = $this->db;
+        $url = $this->odooUrl;
+        $db = $this->odooDb;
       
         $user = $this->authenticateDriver($request);
         if(!is_array($user)) return $user;
 
         
-        $odooUrl = $this->odoo_url;  
+        $odooUrl = '$url/jsonrpc';  
 
         $uid = $user['uid'];
         $odooPassword = $request->header('password');
@@ -803,9 +875,11 @@ class FetchDataController extends Controller
 
         $reassigned = $this->fetchReassignedData($db, $uid, $odooPassword, $partnerId);
 
-       
-      
+        $docOdooUrl = "{$this->odooUrl}/jsonrpc";
+
        foreach ($data as &$tx) {
+            $tx['document_requirements'] = $this->fetchDocumentRequirements($tx['id'], $db, $uid, $odooPassword, $docOdooUrl, null, true);
+
             // Collect all possible driver IDs in this transaction
             $txDriverIds = [];
 
@@ -854,13 +928,13 @@ class FetchDataController extends Controller
 
     public function getAllHistory(Request $request)
     {
-        $url = $this->url;
-        $db = $this->db;
+        $url = $this->odooUrl;
+        $db = $this->odooDb;
       
         $user = $this->authenticateDriver($request);
         if(!is_array($user)) return $user;
 
-        $odooUrl = $this->odoo_url;  
+        $odooUrl = '$url/jsonrpc';  
 
         $uid = $user['uid'];
         $odooPassword = $request->header('password');
@@ -972,9 +1046,9 @@ class FetchDataController extends Controller
         if(!is_array($user)) return $user;
 
        $partnerId = $user['partner_id'];
-        $odooUrl = $this->odoo_url;  
-        $url = $this->url;
-        $db = $this->db;
+        $odooUrl = '$url/jsonrpc';  
+        $url = $this->odooUrl;
+        $db = $this->odooDb;
        
         $partnerName = $user['partner_name'];
        

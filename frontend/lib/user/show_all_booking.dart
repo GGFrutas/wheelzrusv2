@@ -24,6 +24,40 @@ import 'package:frontend/util/transaction_utils.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 
+/// Wraps a group of legs that belong to the same freight booking
+/// (same freightBookingNumber) so they can be rendered as a single tile.
+class _GroupedBookingTransaction {
+  final Transaction representative;
+  final List<Transaction> legs; // all legs in this group (1 normally, 2 when merged)
+  final List<String> requestNumbers;
+  final bool isMerged;
+  // True when this booking has 2 legs total (same freightBookingNumber)
+  // even if only one of them currently qualifies for this week's filter —
+  // e.g. its sibling already progressed to Ongoing/Completed and dropped
+  // out of the status filter here.
+  final bool cameFromMergedBooking;
+
+  _GroupedBookingTransaction({
+    required this.representative,
+    required this.legs,
+    required this.requestNumbers,
+    required this.isMerged,
+    required this.cameFromMergedBooking,
+  });
+
+  /// When two legs of the same freight booking are merged, always show the
+  /// fixed "Deliver Empty - Pickup Laden" label. Otherwise fall back to the
+  /// single leg's own name.
+  String get displayName =>
+      isMerged ? 'Deliver Empty - Pickup Laden' : (representative.name ?? '');
+
+  /// True only for the "orphaned" case: this booking has 2 legs total, but
+  /// only this one is currently showing on its own — not when both legs are
+  /// shown together (isMerged), and not for a genuine standalone booking
+  /// that was never paired with a sibling at all.
+  bool get isLeftoverFromMerge => cameFromMergedBooking && !isMerged;
+}
+
 class AllBookingScreen extends ConsumerStatefulWidget{
   final String uid;
   final Transaction? transaction; 
@@ -256,7 +290,7 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
 
           
 
-            final ongoingTransactions = expandedTransactions.where((tx) {
+            final filteredForWeek = expandedTransactions.where((tx) {
               final isOngoing = [
                 "Accepted",
                 "Pending",
@@ -290,6 +324,56 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
               }
             }).toList();
 
+            // --- Merge legs that belong to the same freight booking ---
+            // Same logic as the Homepage: group by freightBookingNumber so
+            // both legs of a booking assigned to this driver render as one
+            // tile instead of two.
+            final Map<String, List<Transaction>> grouped = {};
+            for (final tx in filteredForWeek) {
+              final key = tx.freightBookingNumber?.toString() ??
+                  'no-booking-${tx.id}-${tx.requestNumber}';
+              grouped.putIfAbsent(key, () => []).add(tx);
+            }
+
+            // Total leg count per booking across ALL expanded legs (not
+            // just the ones passing this week's status filter) — catches
+            // the case where one leg already moved on to Ongoing/Completed
+            // and dropped out of filteredForWeek, leaving only its sibling
+            // visible here as a seemingly "single" tile.
+            final Map<String, int> totalLegCountByBooking = {};
+            for (final tx in expandedTransactions) {
+              final key = tx.freightBookingNumber?.toString() ??
+                  'no-booking-${tx.id}-${tx.requestNumber}';
+              totalLegCountByBooking[key] = (totalLegCountByBooking[key] ?? 0) + 1;
+            }
+
+            final ongoingTransactions = grouped.entries.map((entry) {
+              final key = entry.key;
+              final group = entry.value;
+              // Legs only differ by assignedDate/requestNumber; use the
+              // most recently assigned leg as the tile's representative.
+              group.sort((a, b) {
+                final dA = DateTime.tryParse(a.assignedDate ?? '') ?? DateTime(0);
+                final dB = DateTime.tryParse(b.assignedDate ?? '') ?? DateTime(0);
+                return dB.compareTo(dA);
+              });
+
+              final requestNumbers = group
+                  .map((t) => t.requestNumber?.toString())
+                  .where((s) => s != null && s.isNotEmpty)
+                  .cast<String>()
+                  .toSet()
+                  .toList();
+
+              return _GroupedBookingTransaction(
+                representative: group.first,
+                legs: group,
+                requestNumbers: requestNumbers,
+                isMerged: group.length > 1,
+                cameFromMergedBooking: (totalLegCountByBooking[key] ?? group.length) > 1,
+              );
+            }).toList();
+
 
                   
             if (ongoingTransactions.isEmpty) {
@@ -318,31 +402,39 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
               // controller: _scrollableController,
               itemCount: ongoingTransactions.length,
               itemBuilder: (context, index) {
-                final item = ongoingTransactions[index];
+                final group = ongoingTransactions[index];
+                final item = group.representative;
                 return Container(
                   margin: const EdgeInsets.only(bottom: 20),
                   decoration: BoxDecoration(
-                    color: mainColor,
+                    // Flags a tile whose sibling leg already moved on
+                    // elsewhere (Ongoing/Completed) and is no longer visible
+                    // together here — status never unifies across a merged
+                    // pair, so this is the only visual cue it's "half" of a
+                    // booking, not a standalone one.
+                    color: group.isLeftoverFromMerge
+                        ? const Color(0xFFFBC926)
+                        : mainColor,
                     borderRadius: BorderRadius.circular(12),
-                    
                   ),
                   child: InkWell(
                     onTap: () async {
+                      final navigator = Navigator.of(context);
                       final hasInternet = await hasInternetConnection();
+                      if(!navigator.mounted) return;
                       if (hasInternet) {
-                        Navigator.push(
-                          context,
+                        navigator.push(
                           MaterialPageRoute(
                             builder: (context) => TransactionDetails(
                               transaction: item,
+                              legs: group.legs,
                               id: item.id,
                               uid: widget.uid,
                             ),
                           ),
                         );
                       } else {
-                        Navigator.push(
-                          context,
+                        navigator.push(
                           MaterialPageRoute(
                             builder: (context) => ConfirmationScreen(
                               transaction: item,
@@ -369,7 +461,7 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text (
-                                      item.name!,
+                                      group.displayName,
                                       style: AppTextStyles.body.copyWith(
                                         fontSize: 14,
                                         fontWeight: FontWeight.bold,
@@ -413,7 +505,9 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
                                         ),
                                         Flexible(
                                           child: Text(
-                                            (item.requestNumber?.toString() ?? 'No Request Number Available'),
+                                            (group.requestNumbers.isNotEmpty
+                                                ? group.requestNumbers.join(', ')
+                                                : 'No Request Number Available'),
                                             style: AppTextStyles.caption.copyWith(
                                               color: Colors.white
                                             ),

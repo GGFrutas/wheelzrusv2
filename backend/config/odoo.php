@@ -1,6 +1,6 @@
 <?php
 
 return [
-    'url' => env('ODOO_URL','https://yxtechdev-alpha-dev-yxe.odoo.com'),
-    'db' => env('ODOO_DB','yxtechdev-alpha-dev-yxe-production-alpha-34805791'),
+    'odoo_url' => env('ODOO_URL', 'http://gsq-ibx-rda:8068'),
+    'odoo_db' => env('ODOO_DB', 'rda_beta_new'),
 ];

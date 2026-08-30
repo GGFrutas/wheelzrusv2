@@ -50,12 +50,14 @@ import 'package:device_info_plus/device_info_plus.dart';
 class TransactionDetails extends ConsumerStatefulWidget {
   final Transaction? transaction; // Keep it nullable
   final String uid; // Add a field for uid
+  final List<Transaction>? legs; // NEW: when merged, both leg Transactions from the homepage tile
 
   // Constructor to accept the nullable Transaction object
   const TransactionDetails({
     super.key,
     required this.transaction,
     required this.uid, required int id,
+    this.legs,
   });
 
   // Helper function to handle null values and provide fallback
@@ -110,6 +112,59 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
       
   }
    Transaction? leg;
+
+   // The leg entries (Transaction objects) whose address/schedule should be
+   // rendered as separate blocks. For a merged (DE + PL) booking this holds
+   // both legs; otherwise it falls back to the single opened transaction.
+   List<Transaction> get _legEntries {
+     if (widget.legs != null && widget.legs!.isNotEmpty) {
+       return widget.legs!;
+     }
+     if (widget.transaction != null) {
+       return [widget.transaction!];
+     }
+     return const [];
+   }
+
+   // Section title covering Request Number through Container Number.
+   // Merged (DE + PL) bookings always show the fixed combined label,
+   // matching the homepage tile; otherwise falls back to the leg's own name.
+   String get _sectionTitle {
+     if (widget.legs != null && widget.legs!.length > 1) {
+       return 'Deliver Empty - Pickup Laden';
+     }
+     return getNullableValue(widget.transaction?.name);
+   }
+
+   // Request Number display: joins every leg's requestNumber when merged,
+   // otherwise falls back to the single opened transaction's number.
+   String get _requestNumberDisplay {
+     final numbers = _legEntries
+         .map((t) => t.requestNumber)
+         .where((s) => s != null && s.isNotEmpty)
+         .cast<String>()
+         .toSet()
+         .toList();
+     if (numbers.isNotEmpty) {
+       return numbers.join(' - ');
+     }
+     return widget.transaction?.requestNumber ?? '';
+   }
+
+   // Origin address display: joins every leg's originAddress when merged,
+   // otherwise falls back to the single opened transaction's address.
+   String get _originAddressDisplay {
+     final addresses = _legEntries
+         .map((t) => t.originAddress)
+         .where((s) => s != null && s.isNotEmpty)
+         .cast<String>()
+         .toSet()
+         .toList();
+     if (addresses.isNotEmpty) {
+       return addresses.join(' - ');
+     }
+     return widget.transaction?.originAddress ?? '';
+   }
 
    
   
@@ -210,6 +265,247 @@ Future<void> _fetchTransactionDetails() async {
     }
   } 
 
+  /// Resolves the matched leg + pickup/delivery schedule for a single
+  /// leg entry (one requestNumber) against the fetched booking `transaction`.
+  Map<String, dynamic> _resolveLegBlockData(Transaction entry, String driverId) {
+    final expandedList = TransactionUtils.expandTransaction(transaction!, driverId);
+    final requestNumber = entry.requestNumber;
+
+    Transaction? matchedLeg;
+    if (transaction!.dispatchType == "ot") {
+      matchedLeg = expandedList.firstWhere(
+        (tx) => (tx.plTruckDriverName == driverId || tx.deTruckDriverName == driverId) &&
+                tx.requestNumber == requestNumber,
+        orElse: () => expandedList.first,
+      );
+    } else if (transaction!.dispatchType == "dt") {
+      matchedLeg = expandedList.firstWhere(
+        (tx) => (tx.dlTruckDriverName == driverId || tx.peTruckDriverName == driverId) &&
+                tx.requestNumber == requestNumber,
+        orElse: () => expandedList.first,
+      );
+    }
+
+    final scheduleMap = TransactionUtils.getScheduleForTransaction(transaction!, driverId, requestNumber);
+
+    // Identify which named leg this requestNumber belongs to, the same way
+    // _buildFreightTab / _buildShipConsTab already tell DE/PL (or DL/PE) apart.
+    String? label;
+    final isDT = transaction?.dispatchType == 'dt';
+    if (isDT) {
+      if (requestNumber == transaction?.dlRequestNumber) {
+        label = 'Deliver Laden';
+      } else if (requestNumber == transaction?.peRequestNumber) {
+        label = 'Pickup Empty';
+      }
+    } else {
+      if (requestNumber == transaction?.deRequestNumber) {
+        label = 'Deliver Empty';
+      } else if (requestNumber == transaction?.plRequestNumber) {
+        label = 'Pickup Laden';
+      }
+    }
+
+    return {
+      'leg': matchedLeg,
+      'pickup': scheduleMap['pickup'],
+      'delivery': scheduleMap['delivery'],
+      'label': label,
+    };
+  }
+
+  /// Renders the origin/destination pins + pickup/delivery date rows for a
+  /// single leg block. Called once per leg — twice when merged (DE + PL).
+  /// `showLabel` is only true when there's more than one block, so a
+  /// single-leg booking's layout stays exactly as before.
+  Widget _buildLegLocationDateBlock(Map<String, dynamic> legData, {bool showLabel = false}) {
+    final Transaction? blockLeg = legData['leg'] as Transaction?;
+    final pickup = legData['pickup'];
+    final delivery = legData['delivery'];
+    final String? label = legData['label'] as String?;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        if (showLabel && label != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4.0),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                label,
+                style: AppTextStyles.body.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: mainColor,
+                ),
+              ),
+            ),
+          ),
+        Container(
+          padding: const EdgeInsets.all(7.0),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.location_on,
+                color: mainColor,
+                size: 30,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      blockLeg?.origin ?? '',
+                      style: AppTextStyles.subtitle.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: mainColor,
+                      ),
+                    ),
+                    Text(
+                      "Pick-up Address",
+                      style: AppTextStyles.caption.copyWith(
+                        color: mainColor,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            ],
+          ),
+        ),
+        Row(
+          children: [
+            const SizedBox(width: 18),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: List.generate(3, (_) => const Padding(
+                padding: EdgeInsets.symmetric(vertical: .0),
+                child: Icon(
+                  Icons.circle_rounded,
+                  color: mainColor,
+                  size: 8,
+                ),
+              )),
+            ),
+          ],
+        ),
+        Container(
+          padding: const EdgeInsets.all(7.0),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const SizedBox(width: 5),
+              const Icon(
+                Icons.circle_rounded,
+                color: mainColor,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      blockLeg?.destination ?? '',
+                      style: AppTextStyles.subtitle.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: mainColor,
+                      )
+                    ),
+                    Text(
+                      "Delivery Address",
+                      style: AppTextStyles.caption.copyWith(
+                        color: mainColor,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            ],
+          ),
+        ),
+        Column(
+          children: [
+            if (!(transaction?.serviceType == "Less-Than-Container Load" && transaction?.dispatchType == 'DT'))
+              Container(
+                padding: const EdgeInsets.all(7.0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const SizedBox(width: 5),
+                    const Icon(
+                      Icons.calendar_today_outlined,
+                      color: mainColor,
+                      size: 24,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            formatDateTime(pickup?.scheduledDatetime),
+                            style: AppTextStyles.subtitle.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: mainColor,
+                            ),
+                          ),
+                          Text(
+                            "Pick-up Date",
+                            style: AppTextStyles.caption.copyWith(
+                              color: mainColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  ],
+                ),
+              ),
+            if (!(transaction?.serviceType == "Less-Than-Container Load" && transaction?.dispatchType == 'OT'))
+              Container(
+                padding: const EdgeInsets.all(7.0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const SizedBox(width: 5),
+                    const Icon(
+                      Icons.calendar_today_outlined,
+                      color: mainColor,
+                      size: 24,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            formatDateTime(delivery?.scheduledDatetime),
+                            style: AppTextStyles.subtitle.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: mainColor,
+                            ),
+                          ),
+                          Text(
+                            "Delivery Date",
+                            style: AppTextStyles.caption.copyWith(
+                              color: mainColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
  
  
   
@@ -228,29 +524,18 @@ Future<void> _fetchTransactionDetails() async {
   final bookingNumber = transaction?.bookingRefNumber?.trim();
   final String driverId = ref.watch(authNotifierProvider).partnerId ?? '';
 
-  final Map<String, dynamic> scheduleMap = TransactionUtils.getScheduleForTransaction(transaction!, driverId, widget.transaction?.requestNumber);
-  final expandedList = TransactionUtils.expandTransaction(transaction!, driverId);
-  final openedRequestNumber = widget.transaction?.requestNumber;
+  // Resolve one location/date block per leg entry (2 blocks when merged,
+  // 1 block otherwise). Also keep `leg` pointing at the first entry's
+  // matched leg for the existing bottom "View Booking" button behavior.
+  final legBlocksData = _legEntries
+      .map((entry) => _resolveLegBlockData(entry, driverId))
+      .toList();
+  leg = legBlocksData.isNotEmpty ? legBlocksData.first['leg'] as Transaction? : null;
 
-  // For OT
-  if (transaction!.dispatchType == "ot") {
-    leg = expandedList.firstWhere(
-      (tx) => (tx.plTruckDriverName == driverId || tx.deTruckDriverName == driverId) &&
-              tx.requestNumber == openedRequestNumber,
-      orElse: () => expandedList.first,
-    );
-  } else if (transaction!.dispatchType == "dt") {
-    leg = expandedList.firstWhere(
-      (tx) => (tx.dlTruckDriverName == driverId || tx.peTruckDriverName == driverId) &&
-              tx.requestNumber == openedRequestNumber,
-      orElse: () => expandedList.first,
-    );
-  }
+  final openedRequestNumber = widget.transaction?.requestNumber;
  
 
 
-  final pickup = scheduleMap['pickup'];
-  final delivery = scheduleMap['delivery'];
   final showTabs = widget.transaction?.requestStatus == "Ongoing";
     return Consumer(
       builder: (context, ref, child) {
@@ -293,7 +578,7 @@ Future<void> _fetchTransactionDetails() async {
                       // color: Colors.green[500], // Set background color for this section
                       padding: const EdgeInsets.all(8.0),
                       child: Text(
-                        getNullableValue(widget.transaction?.name).toUpperCase(), // Section Title
+                        _sectionTitle.toUpperCase(), // Section Title
                         style: AppTextStyles.body.copyWith(
                           fontWeight: FontWeight.bold,
                           color: mainColor,
@@ -304,7 +589,7 @@ Future<void> _fetchTransactionDetails() async {
                     Padding(
                  
                       padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                      child: Text(widget.transaction?.originAddress?.toUpperCase() ?? '',
+                      child: Text(_originAddressDisplay.toUpperCase(),
                         style: AppTextStyles.caption.copyWith(
                           fontWeight: FontWeight.bold,
                           color: mainColor,
@@ -397,7 +682,7 @@ Future<void> _fetchTransactionDetails() async {
                             ),
                           ),
                           Text(
-                            widget.transaction?.requestNumber ?? '',
+                            _requestNumberDisplay,
                             style: AppTextStyles.subtitle.copyWith(
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
@@ -559,221 +844,62 @@ Future<void> _fetchTransactionDetails() async {
                   ),
                 ),
 
-                Column( // Use a Column to arrange the widgets vertically
-                  crossAxisAlignment: CrossAxisAlignment.center, // Align text to the left
+                // --- Location + schedule blocks: one per leg. Merged (DE + PL)
+                // bookings render two stacked blocks; a single-leg booking
+                // renders just one, unchanged from before. ---
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(7.0),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center, // Align top of icon and text
-                        children: [
-                          const Icon(
-                            Icons.location_on,
-                            color: mainColor,
-                            size: 30,
-                          ),
-                          const SizedBox(width: 8), // Space between icon and text
-                          Expanded (
-                            child: Column(
+                    for (int i = 0; i < legBlocksData.length; i++) ...[
+                      _buildLegLocationDateBlock(
+                        legBlocksData[i],
+                        showLabel: legBlocksData.length > 1,
+                      ),
+                      if (i != legBlocksData.length - 1) const SizedBox(height: 20),
+                    ],
+                    if (transaction?.landTransport != "transport")
+                      Container(
+                        padding: const EdgeInsets.all(7.0),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center, // Align top of icon and text
+                          children: [
+                            const SizedBox(width: 5),
+                            const Icon(
+                              Icons.directions_boat_filled_outlined,
+                              color: mainColor,
+                              size: 24,
+                            ),
+                            const SizedBox(width: 8), // Space between icon and text
+
+                            Expanded(
+                              child:Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 // Space between label and value
                                 Text(
-                                  leg?.origin ?? '',
-                                  style: AppTextStyles.subtitle.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: mainColor,
-                                  ),
-                                ),
-                              Text(
-                                  "Pick-up Address",
-                                  style: AppTextStyles.caption.copyWith(
-                                    color: mainColor,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )
-                        ],
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        const SizedBox(width: 18), // Match left padding with location icon
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.center, // Center dots with the location pin tip
-                          children: List.generate(3, (_) => const Padding(
-                            padding: EdgeInsets.symmetric(vertical: .0), // Adjust spacing
-                            child: Icon(
-                              Icons.circle_rounded,
-                              color: mainColor,
-                              size: 8,
-                            ),
-                          )),
-                        ),
-                      ],
-                    ),
-                    
-                    // const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.all(7.0),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center, // Align top of icon and text
-                        children: [
-                          const SizedBox(width: 5),
-                          const Icon(
-                            Icons.circle_rounded,
-                            color: mainColor,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8), // Space between icon and text
-                          Expanded (
-                            child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Space between label and value
-                                Text(
-                                 leg?.destination ?? '',
+                                  transaction?.dispatchType == 'ot' ? formatDateTime(transaction?.departureDate)
+                                  : formatDateTime(transaction?.arrivalDate),
                                   style: AppTextStyles.subtitle.copyWith(
                                     fontWeight: FontWeight.bold,
                                     color: mainColor,
                                   )
                                 ),
                                 Text(
-                                  "Delivery Address",
+                                 transaction?.dispatchType == 'ot' ? " Vessel Departure Date"
+                                  :  "Vessel Arrival Date",
                                   style: AppTextStyles.caption.copyWith(
                                     color: mainColor,
                                   ),
                                 ),
                               ],
                             ),
-                          )
-                        ],
-                      ),
-                    ),
-                    Column(
-  children: [
-    if (!(transaction?.serviceType == "Less-Than-Container Load" && transaction?.dispatchType == 'DT')) // Show pickup unless serviceType=2 and dispatchType=DT
-      Container(
-        padding: const EdgeInsets.all(7.0),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            const SizedBox(width: 5),
-            const Icon(
-              Icons.calendar_today_outlined,
-              color: mainColor,
-              size: 24,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  formatDateTime(pickup?.scheduledDatetime),
-                  style: AppTextStyles.subtitle.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: mainColor,
-                  ),
-                ),
-                Text(
-                  "Pick-up Date",
-                  style: AppTextStyles.caption.copyWith(
-                    color: mainColor,
-                  ),
-                ),
-              ],
-            ),
-            )
-            
-          ],
-        ),
-      ),
+                            )
 
-    if (!(transaction?.serviceType == "Less-Than-Container Load" && transaction?.dispatchType == 'OT')) // Show delivery unless serviceType=2 and dispatchType=OT
-      Container(
-        padding: const EdgeInsets.all(7.0),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            const SizedBox(width: 5),
-            const Icon(
-              Icons.calendar_today_outlined,
-              color: mainColor,
-              size: 24,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  formatDateTime(delivery?.scheduledDatetime),
-                  style: AppTextStyles.subtitle.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: mainColor,
-                  ),
-                ),
-                Text(
-                  "Delivery Date",
-                  style: AppTextStyles.caption.copyWith(
-                    color: mainColor,
-                  ),
-                ),
-              ],
-            ),
-            )
-            
-          ],
-        ),
-      ),
-  ],
-),
-
-                    if(transaction?.landTransport != "transport")
-                    Container(
-                      padding: const EdgeInsets.all(7.0),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center, // Align top of icon and text
-                        children: [
-                          const SizedBox(width: 5),
-                          const Icon(
-                            Icons.directions_boat_filled_outlined,
-                            color: mainColor,
-                            size: 24,
-                          ),
-                          const SizedBox(width: 8), // Space between icon and text
-                          
-                          Expanded(
-                            child:Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Space between label and value
-                              Text( 
-                                transaction?.dispatchType == 'ot' ? formatDateTime(transaction?.departureDate)
-                                : formatDateTime(transaction?.arrivalDate),
-                                style: AppTextStyles.subtitle.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: mainColor,
-                                )
-                              ),
-                              Text(
-                               transaction?.dispatchType == 'ot' ? " Vessel Departure Date" 
-                                :  "Vessel Arrival Date",
-                                style: AppTextStyles.caption.copyWith(
-                                  color: mainColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                          )
-                          
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
                     const SizedBox(height: 8),
-                
+
                   ],
                 ),
                 SizedBox(
@@ -841,7 +967,7 @@ Future<void> _fetchTransactionDetails() async {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => DetailedDetailScreen(uid: widget.uid, transaction: leg, relatedFF: relatedFF),
+                              builder: (context) => DetailedDetailScreen(uid: widget.uid, transaction: leg, legs: _legEntries, relatedFF: relatedFF),
                             ),
                           );
                         }
@@ -1012,7 +1138,9 @@ Future<void> _fetchTransactionDetails() async {
     String? signBase64;
     String? proofBase64;
     String? filename;
-    
+    // Matches the ROUTE_TYPES on the internal system's dispatch.document.requirement
+    // (DE/PL -> shipper, DL/PE -> consignee), used below to pull in that leg's checklist docs.
+    String? routeType;
 
     if (isDT) {
       if (widget.transaction?.requestNumber == transaction?.dlRequestNumber) {
@@ -1020,11 +1148,13 @@ Future<void> _fetchTransactionDetails() async {
         proofBase64 = transaction?.dlProof;
         filename = transaction?.dlProofFilename;
         addFile(shipperConsigneeFiles, transaction?.dlProof, transaction?.dlProofFilename);
+        routeType = 'DL';
       } else if (widget.transaction?.requestNumber == transaction?.peRequestNumber) {
         signBase64 = transaction?.peSign;
         proofBase64 = transaction?.peProof;
         filename = transaction?.peProofFilename;
-        addFile(shipperConsigneeFiles, transaction?.peProof, transaction?.peProofFilename); 
+        addFile(shipperConsigneeFiles, transaction?.peProof, transaction?.peProofFilename);
+        routeType = 'PE';
       }
     } else {
       if (widget.transaction?.requestNumber == transaction?.deRequestNumber) {
@@ -1032,12 +1162,24 @@ Future<void> _fetchTransactionDetails() async {
         proofBase64 = transaction?.deProof;
         filename = transaction?.deProofFilename;
         addFile(shipperConsigneeFiles, transaction?.deProof, transaction?.deProofFilename);
+        routeType = 'DE';
       } else if (widget.transaction?.requestNumber == transaction?.plRequestNumber) {
         signBase64 = transaction?.plSign;
         proofBase64 = transaction?.plProof;
         filename = transaction?.dlProofFilename;
         addFile(shipperConsigneeFiles, transaction?.plProof, transaction?.plProofFilename); // shipper has plProof
         addFile(shipperConsigneeFiles, transaction?.proofStock, transaction?.proofStockFilename); // shipper has stock transfer
+        routeType = 'PL';
+      }
+    }
+
+    // Checklist documents (dispatch.document.requirement) submitted for this leg,
+    // fetched dynamically instead of relying on a fixed field per document type.
+    if (routeType != null) {
+      for (final requirement in transaction?.documentRequirements ?? const []) {
+        if (requirement.routeType == routeType && requirement.isSubmitted) {
+          addFile(shipperConsigneeFiles, requirement.submittedFile, requirement.submittedFilename ?? requirement.name);
+        }
       }
     }
 
@@ -1129,27 +1271,28 @@ Future<void> _fetchTransactionDetails() async {
                   final file = File('${dir.path}/$uniqueFileName');
                   await file.writeAsBytes(bytes);
                   
-                  if(context.mounted){
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          '✅ Downloaded: $uniqueFileName',
-                          style: AppTextStyles.caption.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
-                          ),
+                  if(!context.mounted) return;
+                  
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        '✅ Downloaded: $uniqueFileName',
+                        style: AppTextStyles.caption.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w500,
                         ),
-                        duration: const Duration(seconds: 2),
-                        behavior: SnackBarBehavior.floating, // ✅ Makes it float with margin
-                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        shape: RoundedRectangleBorder( // ✅ Rounded corners
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        backgroundColor: mainColor, // ✅ Soft black, not pure #000
-                        elevation: 6, // ✅ Soft shadow for depth
                       ),
-                    );
-                  }
+                      duration: const Duration(seconds: 2),
+                      behavior: SnackBarBehavior.floating, // ✅ Makes it float with margin
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      shape: RoundedRectangleBorder( // ✅ Rounded corners
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      backgroundColor: mainColor, // ✅ Soft black, not pure #000
+                      elevation: 6, // ✅ Soft shadow for depth
+                    ),
+                  );
+                  
 
                   print('✅ File saved: ${file.path}');
                 } catch (e) {
@@ -1217,4 +1360,3 @@ class FullScreenImage extends StatelessWidget{
     );
   }
 }
-

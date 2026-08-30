@@ -17,6 +17,7 @@ import 'package:frontend/provider/base_url_provider.dart';
 import 'package:frontend/provider/hive_offline_provider.dart';
 import 'package:frontend/provider/reject_provider.dart';
 import 'package:frontend/provider/transaction_list_notifier.dart';
+import 'package:frontend/services/assignment_notification_service.dart';
 import 'package:frontend/user/map_api.dart';
 import 'package:frontend/util/transaction_utils.dart';
 import 'package:http/http.dart' as http;
@@ -242,6 +243,10 @@ final filteredItemsProvider = FutureProvider<List<Transaction>>((ref) async {
   //     .where((tx) => tx.dispatchType.toLowerCase() != 'ff')
   //     .toList();
   ref.read(transactionListProvider.notifier).loadTransactions(transactions);
+
+
+  // 🔔 Check for new assignments and notify
+  await AssignmentNotificationService.checkAndNotifyNewAssignments(transactions);
   return transactions;
 });
 
@@ -296,6 +301,7 @@ final allTransactionProvider = FutureProvider<List<Transaction>>((ref) async {
   // final filtered = transactions
   //     .where((tx) => tx.dispatchType.toLowerCase() != 'ff')
   //     .toList();
+  await AssignmentNotificationService.checkAndNotifyNewAssignments(transactions);
   ref.read(transactionListProvider.notifier).loadTransactions(transactions);
   return transactions;
 });

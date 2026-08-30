@@ -1,3 +1,16 @@
+
+buildscript {
+    ext.kotlin_version = '1.9.10' // ✅ required for WorkManager
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.1.0' // ✅ AGP version compatible with Kotlin 1.9+
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
 allprojects {
     repositories {
         google()
