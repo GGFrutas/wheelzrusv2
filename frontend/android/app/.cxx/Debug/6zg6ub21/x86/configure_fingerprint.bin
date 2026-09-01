@@ -2,6 +2,7 @@ C/C++ Structured Logw
 u
 sC:\Program Files\flutter_windows_3.24.5-stable\flutter\packages\flutter_tools\gradle\src\main\groovy\CMakeLists.txtC
 A
+<<<<<<< HEAD
 ?com.android.build.gradle.internal.cxx.io.EncodedFileFingerPrint	 •£€ 3§ ù•ßÜ2e
 c
 aC:\Projects\wheelzrusv2\frontend\android\app\.cxx\Debug\6zg6ub21\x86\additional_project_files.txt	 •£€ 3 Žüî‚3b
@@ -26,3 +27,29 @@ Y
 WC:\Projects\wheelzrusv2\frontend\android\app\.cxx\Debug\6zg6ub21\x86\prefab_config.json	 •£€ 3( ®üî‚3`
 ^
 \C:\Projects\wheelzrusv2\frontend\android\app\.cxx\Debug\6zg6ub21\x86\symbol_folder_index.txt	 •£€ 3S ®üî‚3
+=======
+?com.android.build.gradle.internal.cxx.io.EncodedFileFingerPrint	•Ìä‚¼3§ ù•ßÜ2e
+c
+aC:\Projects\wheelzrusv2\frontend\android\app\.cxx\Debug\6zg6ub21\x86\additional_project_files.txt	•Ìä‚¼3 Žüî‚3b
+`
+^C:\Projects\wheelzrusv2\frontend\android\app\.cxx\Debug\6zg6ub21\x86\android_gradle_build.json	•Ìä‚¼3Ä žüî‚3g
+e
+cC:\Projects\wheelzrusv2\frontend\android\app\.cxx\Debug\6zg6ub21\x86\android_gradle_build_mini.json	•Ìä‚¼3£ £üî‚3T
+R
+PC:\Projects\wheelzrusv2\frontend\android\app\.cxx\Debug\6zg6ub21\x86\build.ninja	•Ìä‚¼3ÜÑ ¢øî‚3X
+V
+TC:\Projects\wheelzrusv2\frontend\android\app\.cxx\Debug\6zg6ub21\x86\build.ninja.txt	•Ìä‚¼3]
+[
+YC:\Projects\wheelzrusv2\frontend\android\app\.cxx\Debug\6zg6ub21\x86\build_file_index.txt	•Ìä‚¼3s ®üî‚3^
+\
+ZC:\Projects\wheelzrusv2\frontend\android\app\.cxx\Debug\6zg6ub21\x86\compile_commands.json	•Ìä‚¼3	b
+`
+^C:\Projects\wheelzrusv2\frontend\android\app\.cxx\Debug\6zg6ub21\x86\compile_commands.json.bin	•Ìä‚¼3
+h
+f
+dC:\Projects\wheelzrusv2\frontend\android\app\.cxx\Debug\6zg6ub21\x86\metadata_generation_command.txt	•Ìä‚¼3Å ®üî‚3[
+Y
+WC:\Projects\wheelzrusv2\frontend\android\app\.cxx\Debug\6zg6ub21\x86\prefab_config.json	•Ìä‚¼3( ®üî‚3`
+^
+\C:\Projects\wheelzrusv2\frontend\android\app\.cxx\Debug\6zg6ub21\x86\symbol_folder_index.txt	•Ìä‚¼3S ®üî‚3
+>>>>>>> ccf3b69ba41e689a32361cb6dc6692af92ca7947

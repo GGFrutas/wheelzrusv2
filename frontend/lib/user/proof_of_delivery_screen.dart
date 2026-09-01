@@ -33,10 +33,12 @@ import 'package:uuid/uuid.dart';
 
 class ProofOfDeliveryScreen extends ConsumerStatefulWidget{
   final String uid;
-  final Transaction? transaction; 
-  final Map<String, dynamic> base64ImagesWithLabels;
-  
-  const ProofOfDeliveryScreen({super.key, required this.uid, required this.transaction,required this.base64ImagesWithLabels});
+  final Transaction? transaction;
+  // Either {'documents': {requirementId: {...}}} (internal-system checklist) or
+  // {'images': {'POD': {...}}} (fallback single photo), built by ConfirmationScreen.
+  final Map<String, dynamic> podPayloadExtras;
+
+  const ProofOfDeliveryScreen({super.key, required this.uid, required this.transaction,required this.podPayloadExtras});
 
   @override
 
@@ -129,7 +131,7 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
       'id': widget.transaction?.id,
       'newStatus': nextStatus,
       'signature': base64Signature,
-      'images': widget.base64ImagesWithLabels,
+      ...widget.podPayloadExtras,
       'dispatch_type': widget.transaction?.dispatchType,
       'request_number': widget.transaction?.requestNumber,
       'timestamp': timestamp,
@@ -157,6 +159,7 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
 
         if (response.statusCode == 200) {
           print("🚀 POD uploaded successfully!");
+          if (!mounted) return;
           showSuccessDialog(
               context, "Success!", icon: Icons.check_rounded, iconColor: mainColor, invalidateProviders: true);
           return;
@@ -171,7 +174,7 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
     // IF FAILED OR NO INTERNET → SAVE OFFLINE
     // -----------------------------------------------------------------------
     await savePodToHive(uri: url.toString(), headers: podHeaders, body: podBody);
-
+  if (!mounted) return;
     showSuccessDialog(
       context,
       "No Internet. POD saved locally.",
@@ -210,11 +213,17 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
   
   @override
   Widget build(BuildContext context) {
+    final navigator = Navigator.of(context);
+    final dialogContext = context;
 
 
-    return WillPopScope(
-  onWillPop: () async {
-    return await _showConfirmationDialog(context);
+    return PopScope(
+      canPop: false,
+  onPopInvokedWithResult:  (didPop, result) async {
+   final shouldpop = await _showConfirmationDialog(dialogContext);
+   if(shouldpop && !didPop){
+     navigator.maybePop();
+   }
   },
   child: Scaffold(
       backgroundColor: bgColor,
@@ -491,17 +500,21 @@ class _ProofOfDeliveryPageState extends ConsumerState<ProofOfDeliveryScreen>{
            NavigationMenu(
             onItemTap: (index) async {
               // Intercept menu taps
-              final shouldLeave = await _showConfirmationDialog(context);
+              final navigator = Navigator.of(context);
+              final dialogContext = context;
+              if(!context.mounted) return;
+              final shouldLeave = await _showConfirmationDialog(dialogContext);
+              if(!navigator.mounted) return;
               if (shouldLeave) {
                 switch (index) {
                   case 0:
-                    Navigator.of(context).popUntil((route) => route.isFirst);
+                   navigator.popUntil((route) => route.isFirst);
                     break;
                   case 1:
-                    Navigator.of(context).popUntil((route) => route.isFirst);
+                   navigator.popUntil((route) => route.isFirst);
                     break;
                   case 2:
-                    Navigator.of(context).popUntil((route) => route.isFirst);
+                   navigator.popUntil((route) => route.isFirst);
                     break;
                 }
               }

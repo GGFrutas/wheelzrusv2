@@ -170,16 +170,7 @@ class _TransactionScreenState extends ConsumerState<TransactionScreen> {
   
   @override
   Widget build(BuildContext context) {
-     
-    // final transactionold = ref.watch(filteredItemsProviderForTransactionScreen);
-    
     final acceptedTransaction = ref.watch(accepted_transaction.acceptedTransactionProvider);
-    
-
-    final asyncTx = _hasInternet
-        ? ref.watch(filteredItemsProviderForTransactionScreen.future)
-        : null;
-
      return Scaffold(
       body: SafeArea(
         child: Column(

@@ -254,7 +254,7 @@ class TransactionController extends Controller
     {
         $updateField = [];
         if ($type['dispatch_type'] == "ot" && $type['de_request_no'] == $requestNumber) {
-            Log::info("Updating PE proof and signature for request number: {$requestNumber}");
+            Log::info("Updating PE proof and signature for request number: {$requestNumber} with container number {$containerNumber}");
             $pod = isset($images['POD']['content']) && $images['POD']['content'] !== null 
                 ? $images['POD']['content'] 
                 : null;
@@ -266,39 +266,32 @@ class TransactionController extends Controller
                 "pe_release_by" => $enteredName,
                 "stage_id" => 5,
                 "de_request_status" => $newStatus,
+                "container_number" => $containerNumber,
             ];
             
             
         } elseif ($type['dispatch_type'] == "ot" && $type['pl_request_no'] == $requestNumber) {
             Log::info("Updating PL proof and signature for request number: {$requestNumber}");
-            $sales_invoice = isset($images['Sales Invoice']['content']) && $images['Sales Invoice']['content'] !== null 
-                ? $images['Sales Invoice']['content'] 
+            $pod = isset($images['POD']['content']) && $images['POD']['content'] !== null
+                ? $images['POD']['content']
                 : null;
-
-            $sales_invoice_filename = isset($images['Sales Invoice']['filename']) ? $images['Sales Invoice']['filename'] : null;
-
-            $stock_transfer = isset($images['Stock Transfer']['content']) && $images['Stock Transfer']['content'] !== null 
-                ? $images['Stock Transfer']['content'] 
-                : null;
-
-            $stock_transfer_filename = isset($images['Stock Transfer']['filename']) ? $images['Stock Transfer']['filename'] : null;
+            $podFilename = isset($images['POD']['filename']) ? $images['POD']['filename'] : null;
 
             $updateField = [
-                "pl_proof" => $sales_invoice,
                 "pl_signature" => $signature,
                 "dl_receive_by" => $enteredName,
                 "pl_request_status" => $newStatus,
                 "container_number" => $containerNumber,
-                "pl_proof_stock" => $stock_transfer,
-                "pl_proof_filename_stock" => $stock_transfer_filename,
-                "pl_proof_filename" => $sales_invoice_filename
-                
             ];
+            if ($pod !== null) {
+                $updateField["pl_proof"] = $pod;
+                $updateField["pl_proof_filename"] = $podFilename;
+            }
             if($serviceType == 2){
                 $updateField["stage_id"] = 5;
             }
-            
-            
+
+
         }
 
         if ($type['dispatch_type'] == "dt" && $type['dl_request_no'] == $requestNumber) {
@@ -356,6 +349,8 @@ class TransactionController extends Controller
                 "de_release_by" => $enteredName,
                 "de_completion_time" => $actualTime,
                 "de_request_status" => $newStatus,
+                "container_number" => $containerNumber,
+                "container_number" => $containerNumber,
             ];
 
             
@@ -371,7 +366,7 @@ class TransactionController extends Controller
                 "dl_proof_filename" => $podFilename,
                 "dl_signature" => $signature,
                 "pl_receive_by" => $enteredName,
-                "stage_id" => 7,
+                "stage_id" => 8,
                 "pl_completion_time" => $actualTime,
                 "pl_request_status" => $newStatus,
                 "container_number" => $containerNumber,
@@ -395,7 +390,7 @@ class TransactionController extends Controller
                 "dl_signature" => $signature,
                 "de_release_by" => $enteredName,
                 "dl_completion_time" => $actualTime,
-                "stage_id" => 7,
+                "stage_id" => 8,
                 "dl_request_status" => $newStatus,
                 "container_number" => $containerNumber,
                 
@@ -406,73 +401,31 @@ class TransactionController extends Controller
 
         }   
         if($type['dispatch_type'] === "dt" && $type['dl_request_no'] === $requestNumber) {
-            $transfer_of_liability = isset($images['Transfer of Liability Form']['content']) && $images['Transfer of Liability Form']['content'] !== null 
-                ? $images['Transfer of Liability Form']['content'] 
+            // Document-checklist content (Transfer of Liability Form, HWB, etc.) no longer
+            // lands on fixed dispatch.manager fields — it's written per-requirement onto
+            // dispatch.document.requirement by submitDocumentRequirements(), driven by
+            // whatever the customer's DI/DR checklist actually asks for.
+            $pod = isset($images['POD']['content']) && $images['POD']['content'] !== null
+                ? $images['POD']['content']
                 : null;
-            
-            $transfer_filename = isset($images['Transfer of Liability Form']['filename']) ? $images['Transfer of Liability Form']['filename'] : null;
-
-            $hwb_signed = isset($images['HWB—Signed']['content']) && $images['HWB—Signed']['content'] !== null 
-                ? $images['HWB—Signed']['content'] 
-                : null;
-
-            $hwb_signed_filename = isset($images['HWB—Signed']['filename']) ? $images['HWB—Signed']['filename'] : null;
-
-            $delivery_receipt = isset($images['Delivery Receipt']['content']) && $images['Delivery Receipt']['content'] !== null 
-                ? $images['Delivery Receipt']['content'] 
-                : null;
-
-            $delivery_receipt_filename = isset($images['Delivery Receipt']['filename']) ? $images['Delivery Receipt']['filename'] : null;
-
-            $packing_list = isset($images['Packing List']['content']) && $images['Packing List']['content'] !== null 
-                ? $images['Packing List']['content'] 
-                : null;
-
-            $packing_list_filename = isset($images['Packing List']['filename']) ? $images['Packing List']['filename'] : null;
-
-            $delivery_note = isset($images['Delivery Note']['content']) && $images['Delivery Note']['content'] !== null 
-                ? $images['Delivery Note']['content'] 
-                : null;
-
-            $delivery_note_filename = isset($images['Delivery Note']['filename']) ? $images['Delivery Note']['filename'] : null;
-
-            $stock_delivery_receipt = isset($images['Stock Delivery Receipt']['content']) && $images['Stock Delivery Receipt']['content'] !== null 
-                ? $images['Stock Delivery Receipt']['content'] 
-                : null;
-
-            $stock_delivery_receipt_filename = isset($images['Stock Delivery Receipt']['filename']) ? $images['Stock Delivery Receipt']['filename'] : null;
-
-            $sales_invoice = isset($images['Sales Invoice']['content']) && $images['Sales Invoice']['content'] !== null 
-                ? $images['Sales Invoice']['content'] 
-                : null;
-
-            $sales_invoice_filename = isset($images['Sales Invoice']['filename']) ? $images['Sales Invoice']['filename'] : null;
+            $podFilename = isset($images['POD']['filename']) ? $images['POD']['filename'] : null;
 
             $updateField = [
-                "dl_proof" => $transfer_of_liability,
-                "dl_proof_filename" => $transfer_filename,
                 "dl_signature" => $signature,
                 "de_release_by" => $enteredName,
                 "dl_completion_time" => $actualTime,
                 "dl_request_status" => $newStatus,
+                "dl_request_status" => $newStatus,
                 "container_number" => $containerNumber,
-                "dl_hwb_signed" => $hwb_signed,
-                "dl_hwb_signed_filename" => $hwb_signed_filename,
-                "dl_delivery_receipt" => $delivery_receipt,
-                "dl_delivery_receipt_filename" => $delivery_receipt_filename,
-                "dl_packing_list" => $packing_list,
-                "dl_packing_list_filename" => $packing_list_filename,
-                "dl_delivery_note" => $delivery_note,
-                "dl_delivery_note_filename" => $delivery_note_filename,
-                "dl_stock_delivery_receipt" => $stock_delivery_receipt,
-                "dl_stock_delivery_receipt_filename" => $stock_delivery_receipt_filename,
-                "dl_sales_invoice" => $sales_invoice,
-                "dl_sales_invoice_filename" => $sales_invoice_filename
             ];
+            if ($pod !== null) {
+                $updateField["dl_proof"] = $pod;
+                $updateField["dl_proof_filename"] = $podFilename;
+            }
             $updateBookingStatus = [
                 "booking_status" => 1
             ];
-        }  
+        }
         if ($type['dispatch_type'] === "dt" && $type['pe_request_no'] === $requestNumber) {
             Log::info("Updating DE proof and signature for request number: {$requestNumber}");
             $pod = isset($images['POD']['content']) && $images['POD']['content'] !== null 
@@ -484,9 +437,9 @@ class TransactionController extends Controller
                 "de_proof_filename" => $podFilename,
                 "de_signature" => $signature,
                 "pl_receive_by" => $enteredName,
-                "stage_id" => 7,
+                "stage_id" => 8,
                 "pe_completion_time" => $actualTime,
-                "pe_request_status" => $newStatus,
+                // "pe_request_status" => $newStatus,
                 "container_number" => $containerNumber
             ];
         }
@@ -549,7 +502,18 @@ class TransactionController extends Controller
                     "id" => 102
                 ];
                 $ffUpdateRes = jsonRpcRequest($odooUrl, $updateFFContainer);
-                Log::info("Updated container_number in FF for bookingRef {$bookingRef}, ffIds: " . json_encode($ffIds));
+                Log::info("Updated container number {$containerNumber} in FF for bookingRef {$bookingRef}, ffIds: " . json_encode($ffIds));
+                if (isset($ffUpdateRes['result']) && $ffUpdateRes['result'] === true) {
+                    Log::info("✅ Updated container_number in FF for bookingRef {$bookingRef}");
+                } else {
+                    Log::error("❌ Failed updating FF", ['response' => $ffUpdateRes]);
+                }
+                Log::info("Updated container number {$containerNumber} in FF for bookingRef {$bookingRef}, ffIds: " . json_encode($ffIds));
+                if (isset($ffUpdateRes['result']) && $ffUpdateRes['result'] === true) {
+                    Log::info("✅ Updated container_number in FF for bookingRef {$bookingRef}");
+                } else {
+                    Log::error("❌ Failed updating FF", ['response' => $ffUpdateRes]);
+                }
             } else {
                 Log::warning("No FF found for bookingRef {$bookingRef}");
             }
@@ -596,6 +560,46 @@ class TransactionController extends Controller
 
         return json_decode($response, true);
 
+    }
+
+    /**
+     * Write submitted checklist files onto their dispatch.document.requirement rows.
+     * $documents is keyed by requirement id: [requirementId => ['filename' => ..., 'content' => base64]]
+     */
+    private function submitDocumentRequirements(array $documents, $db, $uid, $odooPassword, $odooUrl, $submittedDate)
+    {
+        foreach ($documents as $requirementId => $document) {
+            if (empty($document['content'])) {
+                continue;
+            }
+
+            $response = jsonRpcRequest($odooUrl, [
+                'jsonrpc' => '2.0',
+                'method' => 'call',
+                'params' => [
+                    'service' => 'object',
+                    'method' => 'execute_kw',
+                    'args' => [
+                        $db, $uid, $odooPassword,
+                        'dispatch.document.requirement', 'write',
+                        [
+                            [(int) $requirementId],
+                            [
+                                'submitted_file' => $document['content'],
+                                'submitted_filename' => $document['filename'] ?? null,
+                                'is_submitted' => true,
+                                'submitted_date' => $submittedDate,
+                            ]
+                        ]
+                    ]
+                ],
+                'id' => rand(1000, 9999)
+            ]);
+
+            if (!($response['result'] ?? false)) {
+                Log::error("❌ Failed to submit document requirement {$requirementId}", ['response' => $response]);
+            }
+        }
     }
 
     private function getMilestoneHistory($transactionId, $db, $uid, $odooPassword, $odooUrl)
@@ -1745,6 +1749,11 @@ class TransactionController extends Controller
             return response()->json(['success' => false, 'message' => 'Failed to upload POD'], 500);
         }
 
+        $documents = $request->input('documents', []);
+        if (!empty($documents)) {
+            $this->submitDocumentRequirements($documents, $db, $uid, $odooPassword, $odooUrl, $actualTime);
+        }
+
         $this->updateFFContainerNumber($type, $containerNumber, $db, $uid, $odooPassword, $odooUrl);
 
         $bookingRef = $type['booking_reference_no'] ?? null; // needed by divertedConsol
@@ -1898,6 +1907,11 @@ class TransactionController extends Controller
         if (!($updateResponse['result'] ?? false)) {
             Log::error("Failed to insert image", ["response" => $updateResponse]);
             return response()->json(['success' => false, 'message' => 'Failed to upload POD'], 500);
+        }
+
+        $documents = $request->input('documents', []);
+        if (!empty($documents)) {
+            $this->submitDocumentRequirements($documents, $db, $uid, $odooPassword, $odooUrl, $actualTime);
         }
 
         $bookingRef = $type['booking_reference_no'] ?? null;

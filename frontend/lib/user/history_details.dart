@@ -692,6 +692,9 @@ Future<void> _fetchHistoryDetails() async {
     // final proofBytes = decodeBase64(proofBase64);
 
     final reqNo = widget.transaction?.requestNumber;
+    // Matches the ROUTE_TYPES on the internal system's dispatch.document.requirement
+    // (DE/PL -> shipper, DL/PE -> consignee), used below to pull in that leg's checklist docs.
+    String? routeType;
 
   if (isDT && reqNo == transaction.dlRequestNumber) {
     // DT + dlRequestNumber:
@@ -706,26 +709,40 @@ Future<void> _fetchHistoryDetails() async {
     addFile(shipperConsigneeFiles,transaction.deliveryNote,transaction.deliveryNoteFilename);
     addFile(shipperConsigneeFiles,transaction.stockDelivery,transaction.stockDeliveryFilename);
     addFile(shipperConsigneeFiles,transaction.salesInvoice,transaction.salesInvoiceFilename);
+    routeType = 'DL';
   }else  if (isDT && reqNo == transaction.peRequestNumber) {
     // DT + dlRequestNumber:
     // Yard: only plProof
     addFile(yardFiles, transaction.peProof, transaction.peProofFilename ?? "POD");
     addFile(shipperConsigneeFiles, transaction.deProof, transaction.deProofFilename ?? "POD");
-  } 
+    routeType = 'PE';
+  }
   else if (!isDT && reqNo == transaction.plRequestNumber) {
     // OT + plRequestNumber:
     addFile(shipperConsigneeFiles, transaction.dlProof, transaction.dlProofFilename); // yard has dlProof
     addFile(yardFiles, transaction.plProof, transaction.plProofFilename); // shipper has plProof
     addFile(yardFiles, transaction.proofStock, transaction.proofStockFilename); // shipper has stock transfer
+    routeType = 'PL';
   } else if (!isDT && reqNo == transaction.deRequestNumber) {
     // Fallback: if nothing matches, attempt to add any non-null generic files so user can still download what's available
-   
+
     addFile(yardFiles, transaction.peProof, transaction.peProofFilename);
     addFile(shipperConsigneeFiles, transaction.deProof, transaction.deProofFilename);
+    routeType = 'DE';
 
   }
 
-    
+    // Checklist documents (dispatch.document.requirement) submitted for this leg,
+    // fetched dynamically instead of relying on a fixed field per document type.
+    if (routeType != null) {
+      for (final requirement in transaction.documentRequirements) {
+        if (requirement.routeType == routeType && requirement.isSubmitted) {
+          addFile(shipperConsigneeFiles, requirement.submittedFile, requirement.submittedFilename ?? requirement.name);
+        }
+      }
+    }
+
+
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

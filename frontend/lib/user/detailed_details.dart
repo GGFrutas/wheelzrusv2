@@ -28,12 +28,14 @@ class DetailedDetailScreen extends ConsumerStatefulWidget {
   final String uid;
   final Transaction? transaction;
   final Transaction? relatedFF;
+  final List<Transaction>? legs; // NEW: both leg Transactions when merged (DE + PL)
 
   const DetailedDetailScreen({
     super.key,
     required this.uid,
     required this.transaction,
     required this.relatedFF,
+    this.legs,
   });
 
   @override
@@ -56,6 +58,44 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
       await _fetchTransactionTransactions();
       _evaluatePrerequisites(); // 👈 compute once after load
     });
+  }
+
+  // The leg entries (Transaction objects) that back the title/Request Number
+  // display. For a merged (DE + PL) booking this holds both legs; otherwise
+  // it falls back to the single opened transaction.
+  List<Transaction> get _legEntries {
+    if (widget.legs != null && widget.legs!.isNotEmpty) {
+      return widget.legs!;
+    }
+    if (widget.transaction != null) {
+      return [widget.transaction!];
+    }
+    return const [];
+  }
+
+  // Section title: merged (DE + PL) bookings always show the fixed combined
+  // label, matching the tile/TransactionDetails screen; otherwise falls back
+  // to the leg's own name.
+  String get _sectionTitle {
+    if (widget.legs != null && widget.legs!.length > 1) {
+      return 'Deliver Empty - Pickup Laden';
+    }
+    return getNullableValue(widget.transaction?.name);
+  }
+
+  // Request Number display: joins every leg's requestNumber when merged,
+  // otherwise falls back to the single opened transaction's number.
+  String get _requestNumberDisplay {
+    final numbers = _legEntries
+        .map((t) => t.requestNumber)
+        .where((s) => s != null && s.isNotEmpty)
+        .cast<String>()
+        .toSet()
+        .toList();
+    if (numbers.isNotEmpty) {
+      return numbers.join(' - ');
+    }
+    return widget.transaction?.requestNumber ?? 'N/A';
   }
 
   Future<void> _fetchTransactionTransactions() async {
@@ -214,7 +254,7 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
                 Container(
                   padding: const EdgeInsets.all(8.0),
                   child: Text(
-                    getNullableValue(transaction.name).toUpperCase(),
+                    _sectionTitle.toUpperCase(),
                     style: AppTextStyles.body.copyWith(
                       fontWeight: FontWeight.bold,
                       color: mainColor,
@@ -277,7 +317,7 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
                             children: [
                               // Space between label and value
                               Text(
-                                widget.transaction?.requestNumber ?? 'N/A',
+                                _requestNumberDisplay,
                                 style: AppTextStyles.subtitle.copyWith(
                                   color: mainColor,
                                 ),
@@ -666,7 +706,7 @@ class _DetailedDetailState extends ConsumerState<DetailedDetailScreen> {
                             MaterialPageRoute(
                               builder: (context) => ScheduleScreen(
                                 uid: widget.uid,
-                                transaction: widget.transaction, relatedFF: relatedFF,
+                                transaction: widget.transaction, legs: widget.legs, relatedFF: relatedFF,
                               ),
                             ),
                           );

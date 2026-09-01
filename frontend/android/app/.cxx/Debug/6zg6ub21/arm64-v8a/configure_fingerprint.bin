@@ -2,6 +2,7 @@ C/C++ Structured Logw
 u
 sC:\Program Files\flutter_windows_3.24.5-stable\flutter\packages\flutter_tools\gradle\src\main\groovy\CMakeLists.txtC
 A
+<<<<<<< HEAD
 ?com.android.build.gradle.internal.cxx.io.EncodedFileFingerPrint	±”£€ 3§ ù•ßÜ2k
 i
 gC:\Projects\wheelzrusv2\frontend\android\app\.cxx\Debug\6zg6ub21\arm64-v8a\additional_project_files.txt	±”£€ 3 Áí‚3h
@@ -26,3 +27,29 @@ _
 ]C:\Projects\wheelzrusv2\frontend\android\app\.cxx\Debug\6zg6ub21\arm64-v8a\prefab_config.json	±”£€ 3( çí‚3f
 d
 bC:\Projects\wheelzrusv2\frontend\android\app\.cxx\Debug\6zg6ub21\arm64-v8a\symbol_folder_index.txt	±”£€ 3Y êí‚3
+=======
+?com.android.build.gradle.internal.cxx.io.EncodedFileFingerPrint	ýÊä‚¼3§ ù•ßÜ2k
+i
+gC:\Projects\wheelzrusv2\frontend\android\app\.cxx\Debug\6zg6ub21\arm64-v8a\additional_project_files.txt	ýÊä‚¼3 Áí‚3h
+f
+dC:\Projects\wheelzrusv2\frontend\android\app\.cxx\Debug\6zg6ub21\arm64-v8a\android_gradle_build.json	ýÊä‚¼3Ð Ìí‚3m
+k
+iC:\Projects\wheelzrusv2\frontend\android\app\.cxx\Debug\6zg6ub21\arm64-v8a\android_gradle_build_mini.json	ýÊä‚¼3¯ Þí‚3Z
+X
+VC:\Projects\wheelzrusv2\frontend\android\app\.cxx\Debug\6zg6ub21\arm64-v8a\build.ninja	ýÊä‚¼3úÑ £‹í‚3^
+\
+ZC:\Projects\wheelzrusv2\frontend\android\app\.cxx\Debug\6zg6ub21\arm64-v8a\build.ninja.txt	ýÊä‚¼3c
+a
+_C:\Projects\wheelzrusv2\frontend\android\app\.cxx\Debug\6zg6ub21\arm64-v8a\build_file_index.txt	ýÊä‚¼3s ìí‚3d
+b
+`C:\Projects\wheelzrusv2\frontend\android\app\.cxx\Debug\6zg6ub21\arm64-v8a\compile_commands.json	ýÊä‚¼3	h
+f
+dC:\Projects\wheelzrusv2\frontend\android\app\.cxx\Debug\6zg6ub21\arm64-v8a\compile_commands.json.bin	ýÊä‚¼3
+n
+l
+jC:\Projects\wheelzrusv2\frontend\android\app\.cxx\Debug\6zg6ub21\arm64-v8a\metadata_generation_command.txt	ýÊä‚¼3ã äí‚3a
+_
+]C:\Projects\wheelzrusv2\frontend\android\app\.cxx\Debug\6zg6ub21\arm64-v8a\prefab_config.json	ýÊä‚¼3( çí‚3f
+d
+bC:\Projects\wheelzrusv2\frontend\android\app\.cxx\Debug\6zg6ub21\arm64-v8a\symbol_folder_index.txt	ýÊä‚¼3Y êí‚3
+>>>>>>> ccf3b69ba41e689a32361cb6dc6692af92ca7947

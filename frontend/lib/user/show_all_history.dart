@@ -210,15 +210,6 @@ Future<bool> hasInternetConnection() async {
   
   @override
   Widget build(BuildContext context) {
-  //    final transaction = widget.transaction;
-     
-  //  final scheduleMap = getPickupAndDeliverySchedule(transaction);
-
-  //    final delivery = scheduleMap['delivery'];
-    
-    // final acceptedTransaction = ref.watch(accepted_transaction.acceptedTransactionProvider);
-
-    
 
     return Scaffold(
       appBar: AppBar(
@@ -262,17 +253,6 @@ Future<bool> hasInternetConnection() async {
                     }
 
                     final transactionList = snapshot.data ?? [];
-
-
-                    // If acceptedTransaction is a list, convert it to a Set of IDs for faster lookup
-                    // final acceptedTransactionIds = acceptedTransaction;
-
-                    // Filtered list excluding transactions with IDs in acceptedTransaction
-                    // final transaction = transactionList.where((t) {
-                    //   final key = "${t.id}-${t.requestNumber}";
-                    //     return !acceptedTransactionIds.contains(key);
-                    // }).toList();
-
                    
                     final authPartnerId = ref.watch(authNotifierProvider).partnerId;
                     final driverId = authPartnerId?.toString();
