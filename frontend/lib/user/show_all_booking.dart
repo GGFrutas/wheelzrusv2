@@ -45,11 +45,16 @@ class _GroupedBookingTransaction {
     required this.cameFromMergedBooking,
   });
 
-  /// When two legs of the same freight booking are merged, always show the
-  /// fixed "Deliver Empty - Pickup Laden" label. Otherwise fall back to the
-  /// single leg's own name.
-  String get displayName =>
-      isMerged ? 'Deliver Empty - Pickup Laden' : (representative.name ?? '');
+  /// When two legs of the same freight booking are merged, show a fixed
+  /// label depending on dispatch type: "ot" bookings pair Deliver
+  /// Empty/Pickup Laden legs, "dt" bookings pair Deliver Laden/Pickup Empty
+  /// legs. Otherwise fall back to the single leg's own name.
+  String get displayName {
+    if (!isMerged) return representative.name ?? '';
+    return representative.dispatchType == 'dt'
+        ? 'Deliver Laden - Pickup Empty'
+        : 'Deliver Empty - Pickup Laden';
+  }
 
   /// True only for the "orphaned" case: this booking has 2 legs total, but
   /// only this one is currently showing on its own — not when both legs are
@@ -325,12 +330,14 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
             }).toList();
 
             // --- Merge legs that belong to the same freight booking ---
-            // Same logic as the Homepage: group by freightBookingNumber so
-            // both legs of a booking assigned to this driver render as one
-            // tile instead of two.
+            // Same logic as the Homepage: group by the booking's original
+            // name (bookingRefNo holds the raw booking "name" from before
+            // expandTransaction overwrites it per-leg, so both legs of the
+            // same booking always share it) so both legs of a booking
+            // assigned to this driver render as one tile instead of two.
             final Map<String, List<Transaction>> grouped = {};
             for (final tx in filteredForWeek) {
-              final key = tx.freightBookingNumber?.toString() ??
+              final key = tx.bookingRefNo?.toString() ??
                   'no-booking-${tx.id}-${tx.requestNumber}';
               grouped.putIfAbsent(key, () => []).add(tx);
             }
@@ -342,7 +349,7 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
             // visible here as a seemingly "single" tile.
             final Map<String, int> totalLegCountByBooking = {};
             for (final tx in expandedTransactions) {
-              final key = tx.freightBookingNumber?.toString() ??
+              final key = tx.bookingRefNo?.toString() ??
                   'no-booking-${tx.id}-${tx.requestNumber}';
               totalLegCountByBooking[key] = (totalLegCountByBooking[key] ?? 0) + 1;
             }
@@ -412,9 +419,10 @@ class _AllBookingPageState extends ConsumerState<AllBookingScreen>{
                     // together here — status never unifies across a merged
                     // pair, so this is the only visual cue it's "half" of a
                     // booking, not a standalone one.
-                    color: group.isLeftoverFromMerge
-                        ? const Color(0xFFFBC926)
-                        : mainColor,
+                    // color: group.isLeftoverFromMerge
+                    //     ? const Color(0xFFFBC926)
+                    //     : mainColor,
+                        color:mainColor,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: InkWell(

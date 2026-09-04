@@ -127,11 +127,15 @@ class _TransactionDetailsState extends ConsumerState<TransactionDetails> {
    }
 
    // Section title covering Request Number through Container Number.
-   // Merged (DE + PL) bookings always show the fixed combined label,
-   // matching the homepage tile; otherwise falls back to the leg's own name.
+   // Merged bookings always show a fixed combined label depending on
+   // dispatch type, matching the homepage/all-bookings tile: "dt" bookings
+   // pair Deliver Laden/Pickup Empty legs, everything else pairs Deliver
+   // Empty/Pickup Laden legs. Otherwise falls back to the leg's own name.
    String get _sectionTitle {
      if (widget.legs != null && widget.legs!.length > 1) {
-       return 'Deliver Empty - Pickup Laden';
+       return widget.transaction?.dispatchType == 'dt'
+           ? 'Deliver Laden - Pickup Empty'
+           : 'Deliver Empty - Pickup Laden';
      }
      return getNullableValue(widget.transaction?.name);
    }

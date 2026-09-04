@@ -357,13 +357,13 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                       final today = DateTime(now.year, now.month, now.day);
                       final tomorrow = today.add(const Duration(days: 1));
 
-                      final ongoingTransactions = expandedTransactions
+                      final filteredForHomepage = expandedTransactions
                           .where((tx) {
                             // final statusOk = tx.requestStatus == "Accepted" || tx.requestStatus == "Assigned" || tx.requestStatus == "Pending";
                             final notCancelled = tx.stageId != "Cancelled";
                             // Get the relevant date depending on dispatch type
                             String? dateStr;
-                            
+
                             if (tx.dispatchType == "ot") {
                               if (tx.requestStatus == "Accepted" || tx.requestStatus == "Assigned" || tx.requestStatus == "Pending"){
                                 dateStr = tx.pickupDate;
@@ -383,9 +383,18 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
 
                             return notCancelled && (dateOnly == today || dateOnly == tomorrow);
                           })
+                          .toList();
+
+                      // --- Merge legs that belong to the same freight booking ---
+                      // Same logic as "Show All Bookings": group by the
+                      // booking's original name so both legs of a booking
+                      // assigned to this driver render as one tile instead
+                      // of two, then cap the merged list at 5 tiles.
+                      final ongoingTransactions = TransactionUtils
+                          .groupByBookingName(filteredForHomepage, expandedTransactions)
                           .take(5)
                           .toList();
-                     
+
                       
                       return CustomScrollView(
                         physics: const AlwaysScrollableScrollPhysics(),
@@ -407,7 +416,8 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                           SliverList(
                             delegate: SliverChildBuilderDelegate(
                               (context, index) {
-                                final item = ongoingTransactions[index];
+                                final group = ongoingTransactions[index];
+                                final item = group.representative;
                                 return Container(
                                   margin: const EdgeInsets.only(bottom: 20),
                                   child: Material(
@@ -421,6 +431,7 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                                             MaterialPageRoute(
                                               builder: (context) => TransactionDetails(
                                                 transaction: item,
+                                                legs: group.legs,
                                                 id: item.id,
                                                 uid: uid ?? '',
                                               ),
@@ -439,7 +450,7 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                                           );
                                         }
 
-                                        
+
                                       },
                                       child: Padding(
                                         padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -467,7 +478,7 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                                                       crossAxisAlignment: CrossAxisAlignment.start,
                                                       children: [
                                                         Text (
-                                                          item.name!,
+                                                          group.displayName,
                                                           style: AppTextStyles.body.copyWith(
                                                             fontSize: 14,
                                                             fontWeight: FontWeight.bold,
@@ -512,7 +523,9 @@ class _HomepageScreenState extends ConsumerState<HomepageScreen> {
                                                             ),
                                                             Flexible(
                                                               child: Text(
-                                                                (item.requestNumber?.toString() ?? 'No Request Number Available'),
+                                                                (group.requestNumbers.isNotEmpty
+                                                                    ? group.requestNumbers.join(', ')
+                                                                    : 'No Request Number Available'),
                                                                 style: AppTextStyles.caption.copyWith(
                                                                   color: Colors.white
                                                                 ),

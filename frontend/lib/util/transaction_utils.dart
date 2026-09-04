@@ -3,7 +3,44 @@ import 'package:frontend/models/milestone_history_model.dart';
 import 'package:frontend/models/transaction_model.dart';
 import 'package:collection/collection.dart';
 
+/// Wraps a group of legs that belong to the same freight booking
+/// (same freightBookingNumber) so they can be rendered as a single tile.
+class GroupedBookingTransaction {
+  final Transaction representative;
+  final List<Transaction> legs; // all legs in this group (1 normally, 2 when merged)
+  final List<String> requestNumbers;
+  final bool isMerged;
+  // True when this booking has 2 legs total (same freightBookingNumber)
+  // even if only one of them currently qualifies for this view's filter —
+  // e.g. its sibling already progressed to Ongoing/Completed and dropped
+  // out of the status filter here.
+  final bool cameFromMergedBooking;
 
+  GroupedBookingTransaction({
+    required this.representative,
+    required this.legs,
+    required this.requestNumbers,
+    required this.isMerged,
+    required this.cameFromMergedBooking,
+  });
+
+  /// When two legs of the same freight booking are merged, show a fixed
+  /// label depending on dispatch type: "ot" bookings pair Deliver
+  /// Empty/Pickup Laden legs, "dt" bookings pair Deliver Laden/Pickup Empty
+  /// legs. Otherwise fall back to the single leg's own name.
+  String get displayName {
+    if (!isMerged) return representative.name ?? '';
+    return representative.dispatchType == 'dt'
+        ? 'Deliver Laden - Pickup Empty'
+        : 'Deliver Empty - Pickup Laden';
+  }
+
+  /// True only for the "orphaned" case: this booking has 2 legs total, but
+  /// only this one is currently showing on its own — not when both legs are
+  /// shown together (isMerged), and not for a genuine standalone booking
+  /// that was never paired with a sibling at all.
+  bool get isLeftoverFromMerge => cameFromMergedBooking && !isMerged;
+}
 
 class TransactionUtils {
   static String removeBrackets(String input) {
@@ -161,6 +198,61 @@ class TransactionUtils {
     return transactions
         .expand((item) => expandTransaction(item, driverId))
         .toList();
+  }
+
+  /// Groups [filteredList] by the booking's original name so both legs of
+  /// the same booking assigned to this driver render as one tile instead of
+  /// two. `bookingRefNo` holds the raw booking "name" from before
+  /// expandTransaction overwrites `name` per-leg, so both legs of the same
+  /// booking always share it, unlike freightBookingNumber which isn't
+  /// always reliably populated.
+  /// [allExpandedTransactions] should be the full expanded list (before any
+  /// view-specific filtering) so a sibling leg that filtered out elsewhere
+  /// (e.g. already Ongoing/Completed) is still detected as part of the pair.
+  static List<GroupedBookingTransaction> groupByBookingName(
+    List<Transaction> filteredList,
+    List<Transaction> allExpandedTransactions,
+  ) {
+    final Map<String, List<Transaction>> grouped = {};
+    for (final tx in filteredList) {
+      final key = tx.bookingRefNo?.toString() ??
+          'no-booking-${tx.id}-${tx.requestNumber}';
+      grouped.putIfAbsent(key, () => []).add(tx);
+    }
+
+    final Map<String, int> totalLegCountByBooking = {};
+    for (final tx in allExpandedTransactions) {
+      final key = tx.bookingRefNo?.toString() ??
+          'no-booking-${tx.id}-${tx.requestNumber}';
+      totalLegCountByBooking[key] = (totalLegCountByBooking[key] ?? 0) + 1;
+    }
+
+    return grouped.entries.map((entry) {
+      final key = entry.key;
+      final group = entry.value;
+      // Legs only differ by assignedDate/requestNumber; use the most
+      // recently assigned leg as the tile's representative.
+      group.sort((a, b) {
+        final dA = DateTime.tryParse(a.assignedDate ?? '') ?? DateTime(0);
+        final dB = DateTime.tryParse(b.assignedDate ?? '') ?? DateTime(0);
+        return dB.compareTo(dA);
+      });
+
+      final requestNumbers = group
+          .map((t) => t.requestNumber?.toString())
+          .where((s) => s != null && s.isNotEmpty)
+          .cast<String>()
+          .toSet()
+          .toList();
+
+      return GroupedBookingTransaction(
+        representative: group.first,
+        legs: group,
+        requestNumbers: requestNumbers,
+        isMerged: group.length > 1,
+        cameFromMergedBooking: (totalLegCountByBooking[key] ?? group.length) > 1,
+      );
+    }).toList();
   }
 
 static List<Transaction> expandReassignments(
