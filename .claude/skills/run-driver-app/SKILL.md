@@ -39,7 +39,7 @@ ran `php artisan serve` in step 1:
   else reads `base_url_provider`)
 
 Find your machine's LAN IP (`ipconfig` on Windows) and update both constants
-if it differs from what's currently checked in (`10.174.185.53` at time of
+if it differs from what's currently checked in (`192.168.214.155` at time of
 writing). Use the real LAN IP (not the Android emulator's `10.0.2.2` alias)
 in both places — it works for the emulator and physical devices alike as
 long as they're on the same network as the machine running `php artisan serve`.

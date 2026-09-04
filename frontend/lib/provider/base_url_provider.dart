@@ -2,5 +2,5 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final baseUrlProvider = Provider<String>((ref) {
   // You can change the base URL here
-  return 'http://10.174.185.53:8000'; // Replace with your actual base URL
+  return 'http://192.168.214.155:8000'; // Replace with your actual base URL
 });
