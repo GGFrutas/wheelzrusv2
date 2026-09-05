@@ -78,7 +78,7 @@
             android:name="io.flutter.embedding.android.NormalTheme"
             android:resource="@style/NormalTheme"/>
         <meta-data android:name="com.google.android.geo.API_KEY"
-               android:value="AIzaSyCxfpVRem7IRj6vnsc3X9854sbDWYU6YAY"/>
+               android:value=value/>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
