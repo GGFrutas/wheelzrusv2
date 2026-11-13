@@ -491,7 +491,6 @@ class _ScheduleState extends ConsumerState<ScheduleScreen> {
   
   final hasActualDatetime = email?.actualDatetime != null &&
     email!.actualDatetime.trim().isNotEmpty;
-    email!.actualDatetime.trim().isNotEmpty;
 
   int currentStep = 2; // Assuming Schedule is step 2 (0-based index)
   final bookingNumber = widget.transaction?.bookingRefNumber;

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -53,20 +54,26 @@ void main() async {
   Hive.registerAdapter(PodModelAdapter());
   await Hive.openBox<PodModel>('pendingPods');
 
-  // Request notification permission BEFORE scheduling or showing notifications
-  await NotificationService.requestPermission();
-  await NotificationService.initialize();
+  // Background upload retries + native push notifications are mobile-only
+  // concerns (workmanager has no web implementation at all, and the
+  // browser's own notification-permission prompt can sit unanswered
+  // indefinitely) — skip them on web so main() can still reach runApp().
+  if (!kIsWeb) {
+    // Request notification permission BEFORE scheduling or showing notifications
+    await NotificationService.requestPermission();
+    await NotificationService.initialize();
 
-  // Initialize Workmanager
-  await Workmanager().initialize(callbackDispatch);
+    // Initialize Workmanager
+    await Workmanager().initialize(callbackDispatch);
 
-  // Register periodic task (example: every 15 minutes)
-  await Workmanager().registerPeriodicTask(
-    "uploadPendingPodsTask",
-    "uploadPendingPods",
-    frequency: const Duration(minutes: 15),
-    constraints: Constraints(networkType: NetworkType.connected),
-  );
+    // Register periodic task (example: every 15 minutes)
+    await Workmanager().registerPeriodicTask(
+      "uploadPendingPodsTask",
+      "uploadPendingPods",
+      frequency: const Duration(minutes: 15),
+      constraints: Constraints(networkType: NetworkType.connected),
+    );
+  }
 
   runApp(const ProviderScope(child: MainApp()));
 }

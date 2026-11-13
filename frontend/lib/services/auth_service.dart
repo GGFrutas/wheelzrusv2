@@ -10,7 +10,7 @@ final authServiceProvider = Provider<AuthService>((ref) => AuthService());
 class AuthService {
   final _dio = Dio(
     BaseOptions(
-      baseUrl: 'http://192.168.214.155:8000/api',
+      baseUrl: 'http://192.168.215.25:8000/api',
       headers: {
         'Accept': 'application/json',
       },

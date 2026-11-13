@@ -19,10 +19,10 @@ use Carbon\Carbon;
 
 class TransactionController extends Controller
 {
-    protected $url = "http://gsq-ibx-rda:8068";
-    protected $db = 'rda_beta_new';
-    // protected $odoo_url = "http://192.168.214.155:8000/odoo/jsonrpc";
-    protected $odoo_url = "http://gsq-ibx-rda:8068/jsonrpc";
+    // protected $url = "http://gsq-ibx-rda:8068";
+    // protected $db = 'rda_beta_new';
+    // // protected $odoo_url = "http://192.168.215.25:8000/odoo/jsonrpc";
+    // protected $odoo_url = "http://gsq-ibx-rda:8068/jsonrpc";
 
 
 
@@ -37,8 +37,8 @@ class TransactionController extends Controller
             'timestamp' => 'required|date',
         ]);
        
-        $url = $this->url;
-        $db = $this->db;
+        $url = $this->odooUrl;
+        $db = $this->odooDb;
 
         $uid = $request->query('uid') ;
         $odooPassword = $request->header('password');
@@ -48,7 +48,7 @@ class TransactionController extends Controller
         }
         
         
-        $odooUrl = $this->odoo_url;
+        $odooUrl = "{$this->odooUrl}/jsonrpc";
         $updateStatus = [
             "jsonrpc" => "2.0",
             "method" => "call",
@@ -170,8 +170,8 @@ class TransactionController extends Controller
 
     private function handleDispatchRequest(Request $request)
     {
-        $url = $this->url;
-        $db = $this->db;
+        $url = $this->odooUrl;
+        $db = $this->odooDb;
         $uid = $request->query('uid') ;
         $odooPassword = $request->header('password');
         $images = $request->input('images');
@@ -202,7 +202,7 @@ class TransactionController extends Controller
             return response()->json(['success' => false, 'message' => 'UID is required'], 400);
         }
 
-        $odooUrl = $this->odoo_url;
+        $odooUrl = "{$this->odooUrl}/jsonrpc";
         $proof_attach = [
             "jsonrpc" => "2.0",
             "method" => "call",
@@ -1717,8 +1717,8 @@ class TransactionController extends Controller
     public function uploadPOD(Request $request)
     {
         
-        $url = $this->url;
-        $db = $this->db;
+        $url = $this->odooUrl;
+        $db = $this->odooDb;
         $uid = $request->query('uid') ;
         $odooPassword = $request->header('password');
         $images = $request->input('images');
@@ -1730,7 +1730,7 @@ class TransactionController extends Controller
         $enteredName = $request->input('enteredName');
         $newStatus = $request->input('newStatus');
         $containerNumber = $request->input('enteredContainerNumber');
-        $odooUrl = $this->odoo_url;
+        $odooUrl = "{$this->odooUrl}/jsonrpc";
 
         $type = $this->handleDispatchRequest($request);
         if ($type instanceof \Illuminate\Http\JsonResponse) return $type;
@@ -1870,8 +1870,8 @@ class TransactionController extends Controller
 
     public function uploadPOD_sec(Request $request)
     {
-        $url = $this->url;
-        $db = $this->db;
+        $url = $this->odooUrl;
+        $db = $this->odooDb;
         $uid = $request->query('uid') ;
         $odooPassword = $request->header('password');
         $images = $request->input('images');
@@ -1884,7 +1884,7 @@ class TransactionController extends Controller
         $enteredName = $request->input('enteredName');
         $newStatus = $request->input('newStatus');
         $containerNumber = $request->input('enteredContainerNumber');
-        $odooUrl = $this->odoo_url;
+        $odooUrl = "{$this->odooUrl}/jsonrpc";
 
 
        
@@ -2036,15 +2036,15 @@ class TransactionController extends Controller
     public function notifyShipperConsignee(Request $request)
     {
         
-        $url = $this->url;
-        $db = $this->db;
+        $url = $this->odooUrl;
+        $db = $this->odooDb;
         $uid = $request->query('uid') ;
         $odooPassword = $request->header('password');
         $transactionId = (int)$request->input('id');
         $dispatchType = $request->input('dispatch_type');
         $requestNumber = $request->input('request_number');
         $actualTime = $request->input('timestamp');
-        $odooUrl = $this->odoo_url;
+        $odooUrl = "{$this->odooUrl}/jsonrpc";
 
         // ✅ UID validation (prevents Odoo TypeError)
         if (!$uid || !is_numeric($uid)) {

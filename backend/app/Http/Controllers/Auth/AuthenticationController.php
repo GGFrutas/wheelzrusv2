@@ -26,9 +26,6 @@ use Ripcord\Ripcord;
 class AuthenticationController extends Controller
 {
 
-    protected $db = 'rda_beta_new';
-    protected $url = "http://gsq-ibx-rda:8068/jsonrpc";
-
     public function getOdooUsers()
     {
         // Fetch all users
@@ -79,7 +76,6 @@ class AuthenticationController extends Controller
 
         $url = $this->odooUrl . "/jsonrpc";
         $db = $this->odooDb;
-        
 
         $jsonrequest = [
             "jsonrpc" => "2.0",
