@@ -20,10 +20,10 @@ use Illuminate\Support\Facades\Cache;
 
 class FetchDataController extends Controller
 {
-    protected $url = "https://yxtechdev-alpha-dev-yxe.odoo.com";
-    protected $db = 'yxtechdev-alpha-dev-yxe-production-alpha-34805791';
-    // protected $odoo_url = "http://192.168.76.205:8080/odoo/jsonrpc";
-    protected $odoo_url = "https://yxtechdev-alpha-dev-yxe.odoo.com/jsonrpc";
+    // protected $url = "https://yxtechdev-alpha-dev-yxe.odoo.com";
+    // protected $db = 'yxtechdev-alpha-dev-yxe-production-alpha-34805791';
+    // // protected $odoo_url = "http://192.168.76.205:8080/odoo/jsonrpc";
+    // protected $odoo_url = "https://yxtechdev-alpha-dev-yxe.odoo.com/jsonrpc";
 
     private function authenticateDriver(Request $request)
     {
@@ -34,7 +34,7 @@ class FetchDataController extends Controller
         $login = $request->header('login'); 
         $odooPassword = $request->header('password');
      
-        Log::info("Login is {$login}, UID is {$uid}, Password is {$odooPassword}");
+        Log::info("Login is {$login}, UID is {$uid}");
         
         if (!$uid) {
             return response()->json(['success' => false, 'message' => 'UID is required'], 400);
@@ -1062,7 +1062,7 @@ class FetchDataController extends Controller
         // $data = Cache::remember($cacheKey, now()->addMinutes(1), function () use ($user, $request, $partnerId, $partnerName) {
         //     \Log::info("Cache MISS: fetching fresh Odoo data for driver {$partnerName}");
           
-            $db = $this->db;
+            $db = $this->odooDb;;
             $uid = $user['uid'];
             $odooPassword = $request->header('password');
 
@@ -1181,8 +1181,8 @@ class FetchDataController extends Controller
 
     public function reassignment(Request $request)
     {
-        $db = $this->db;
-        $odooUrl = $this->odoo_url;
+        $db = $this->odooDb;;
+        $odooUrl = $this->odooUrl . "/jsonrpc"; ;
     
         $user = $this->authenticateDriver($request);
         if (!is_array($user)) return $user;

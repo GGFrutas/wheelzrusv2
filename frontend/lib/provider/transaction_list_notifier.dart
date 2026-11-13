@@ -86,4 +86,18 @@ final historyTransactionProvider =
   (ref) => TransactionListNotifier(),
 );
 
+// Whether this driver has any booking sitting in "Assigned" status on any
+// leg — drives the plain red dot on the homepage bell icon. No extra
+// filtering: the transaction list is already scoped to this driver by the
+// API, so this just checks the four leg status fields directly.
+final hasAssignedBookingProvider = Provider<bool>((ref) {
+  final allTransactions = ref.watch(transactionListProvider);
+  return allTransactions.any((tx) =>
+      tx.requestStatus == 'Assigned' ||
+      tx.deRequestStatus == 'Assigned' ||
+      tx.plRequestStatus == 'Assigned' ||
+      tx.dlRequestStatus == 'Assigned' ||
+      tx.peRequestStatus == 'Assigned');
+});
+
 

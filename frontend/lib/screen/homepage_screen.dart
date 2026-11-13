@@ -10,7 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/notifiers/auth_notifier.dart';
 import 'package:frontend/notifiers/navigation_notifier.dart';
 import 'package:frontend/provider/theme_provider.dart';
-import 'package:frontend/provider/transaction_list_notifier.dart';
+import 'package:frontend/provider/transaction_list_notifier.dart' show hasAssignedBookingProvider;
 import 'package:frontend/provider/transaction_provider.dart';
 import 'package:frontend/screen/login_screen.dart';
 import 'package:frontend/screen/navigation_menu.dart';
@@ -93,10 +93,42 @@ class HomePage extends ConsumerWidget {
           backgroundColor: const Color.fromARGB(255, 255, 255, 255),
           centerTitle: true,
           actions: [
-            IconButton(
-              icon: const Icon(Icons.notifications_none, color: mainColor),
-              onPressed: () {
-                // Handle notification tap
+            Builder(
+              builder: (context) {
+                final hasAssignedBooking = ref.watch(hasAssignedBookingProvider);
+                return Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.notifications_none, color: mainColor),
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              hasAssignedBooking
+                                  ? "You still have an assigned dispatch that needs to be done. See Show All."
+                                  : "You have no assigned dispatch right now.",
+                            ),
+                            backgroundColor: mainColor,
+                          ),
+                        );
+                      },
+                    ),
+                    if (hasAssignedBooking)
+                      Positioned(
+                        right: 10,
+                        top: 10,
+                        child: Container(
+                          width: 10,
+                          height: 10,
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                  ],
+                );
               },
             ),
           ],
@@ -134,18 +166,18 @@ class HomePage extends ConsumerWidget {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 12),
-                          TextField(
-                            decoration: InputDecoration(
-                                hintText: 'Search',
-                                hintStyle: AppTextStyles.caption.copyWith(color: Colors.black, fontWeight: FontWeight.w500),
-                                prefixIcon: const Icon(Icons.search),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8.0),
-                                  borderSide: const BorderSide(color: mainColor),
-                                ),
-                              ),
-                          ),
+                          // const SizedBox(height: 12),
+                          // TextField(
+                          //   decoration: InputDecoration(
+                          //       hintText: 'Search',
+                          //       hintStyle: AppTextStyles.caption.copyWith(color: Colors.black, fontWeight: FontWeight.w500),
+                          //       prefixIcon: const Icon(Icons.search),
+                          //       border: OutlineInputBorder(
+                          //         borderRadius: BorderRadius.circular(8.0),
+                          //         borderSide: const BorderSide(color: mainColor),
+                          //       ),
+                          //     ),
+                          // ),
                         ],
                       ),
                     ),

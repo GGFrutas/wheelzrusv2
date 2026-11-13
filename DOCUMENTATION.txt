@@ -1,0 +1,398 @@
+===============================================================================
+                     WHEELZRUS / YELLOX DRIVER APP
+                          Project Documentation
+===============================================================================
+
+Last updated: 2026-11-03
+
+
+-------------------------------------------------------------------------------
+1. OVERVIEW
+-------------------------------------------------------------------------------
+
+WheelzRus is a mobile app for truck drivers. Drivers use it to:
+
+  - log in with their Odoo account
+  - see the bookings (dispatch jobs) assigned to them for today and later
+  - accept or reject a booking
+  - move a booking through its stages (Accepted -> Ongoing -> Completed)
+  - submit proof of delivery (POD): photos, signature, receiver name,
+    container number and required documents
+  - view booking history and booking details
+  - get notified when a new booking is assigned to them
+
+The project has two parts:
+
+  backend/    Laravel 11 (PHP 8.2) REST API
+  frontend/   Flutter (Dart SDK ^3.5.1) driver app, mainly Android
+
+Odoo is the system of record. Bookings, drivers, milestones and email
+templates all live in Odoo. The Laravel backend is a thin layer that
+authenticates the driver against Odoo, calls Odoo over JSON-RPC, and
+returns cleaned-up JSON to the Flutter app.
+
+    +----------------+      HTTP/JSON       +-----------------+   JSON-RPC   +--------+
+    |  Flutter app   |  ----------------->  |  Laravel API    |  --------->  |  Odoo  |
+    |  (driver's     |  <-----------------  |  (backend/)     |  <---------  |        |
+    |   phone)       |                      |                 |              |        |
+    +----------------+                      +-----------------+              +--------+
+
+
+-------------------------------------------------------------------------------
+2. REPOSITORY LAYOUT
+-------------------------------------------------------------------------------
+
+  backend/
+    app/Http/Controllers/
+      Controller.php                 Base controller. Loads odooUrl / odooDb
+                                     from config/odoo.php.
+      Auth/AuthenticationController  Login (Odoo credentials), user lookup.
+      FetchDataController.php        Read endpoints: today's bookings,
+                                     ongoing, history, details, document
+                                     requirements, reassignment.
+      TransactionController.php      Write endpoints: status updates, POD
+                                     upload, milestones,
+                                     status-change emails, consolidation.
+    app/Helpers/json_rpc_helper.php  Global jsonRpcRequest() helper for all
+                                     Odoo calls (Guzzle, 30s timeout).
+    app/Models/                      Eloquent models (User, Transaction,
+                                     TransactionImage, RejectionReason, ...).
+                                     Mostly legacy; driver endpoints talk to
+                                     Odoo directly instead.
+    config/odoo.php                  ODOO_URL and ODOO_DB settings.
+    routes/api.php                   All API routes.
+    database/migrations/             Local tables (users, tokens, legacy
+                                     transactions). Default DB is SQLite.
+
+  frontend/
+    lib/main.dart                    App entry. Sets up Hive, notifications,
+                                     Workmanager background task, Riverpod.
+    lib/splashscreen.dart            First screen shown.
+    lib/screen/                      Login, registration, navigation menu,
+                                     terms/privacy dialogs.
+    lib/user/                        Driver screens: home, schedule,
+                                     transaction details, proof of delivery,
+                                     history, profile, settings, map.
+    lib/models/                      Data models (transaction, user,
+                                     milestone, consolidation, offline POD).
+    lib/provider/                    Riverpod providers (base URL, booking
+                                     lists, history, offline uploader,
+                                     theme, location).
+    lib/notifiers/                   State notifiers (auth, pagination,
+                                     transactions, navigation, location).
+    lib/services/                    AuthService (login), TransactionService,
+                                     NotificationService,
+                                     AssignmentNotificationService.
+    lib/theme/, color_palette.dart   Colors and text styles.
+    lib/widgets/                     Shared widgets.
+
+  .claude/skills/                    Notes for Claude Code on running the app,
+                                     Odoo conventions and offline sync.
+
+
+-------------------------------------------------------------------------------
+3. REQUIREMENTS
+-------------------------------------------------------------------------------
+
+  Backend
+    - PHP 8.2 or newer
+    - Composer
+    - Network access to the Odoo server (default http://gsq-ibx-rda:8068,
+      an internal host; you need to be on the office network or VPN)
+
+  Frontend
+    - Flutter SDK (Dart ^3.5.1)
+    - Android Studio / Android SDK, or a physical Android device
+    - The phone or emulator must be on the same network as the machine
+      running the backend
+
+
+-------------------------------------------------------------------------------
+4. SETUP AND RUNNING
+-------------------------------------------------------------------------------
+
+4.1 Backend
+
+    cd backend
+    composer install
+    copy .env.example .env          (first time only)
+    php artisan key:generate        (first time only)
+    php artisan migrate             (first time only)
+
+  Set the Odoo connection in backend/.env:
+
+    ODOO_URL=http://gsq-ibx-rda:8068
+    ODOO_DB=rda_beta_new
+
+  Start the server so that devices on the network can reach it:
+
+    php artisan serve --host=0.0.0.0 --port=8000
+
+  Note: --host=0.0.0.0 is required. The default 127.0.0.1 can only be
+  reached from the same machine, not from a phone.
+
+  Quick check: open http://<your-ip>:8000/api/test in a browser. It should
+  return {"message": "Api is working"}.
+
+4.2 Frontend
+
+  The backend address is hardcoded in two files. Set both to your
+  computer's LAN IP (find it with "ipconfig" on Windows):
+
+    frontend/lib/provider/base_url_provider.dart
+        return 'http://<your-ip>:8000';
+
+    frontend/lib/services/auth_service.dart
+        baseUrl: 'http://<your-ip>:8000/api',
+
+  Then:
+
+    cd frontend
+    flutter pub get
+    flutter devices                 (find your device id)
+    flutter run -d <device-id>
+
+  To build a release APK:
+
+    flutter build apk --release
+
+  If you change the Hive model (lib/models/pod_offline_model.dart),
+  regenerate the adapter:
+
+    dart run build_runner build --delete-conflicting-outputs
+
+4.3 Logging in
+
+  Log in with an Odoo email and password. The Odoo user's partner record
+  (res.partner) must have "driver_access" set to true. A valid Odoo user
+  without driver access can log in but will be rejected with "Not a driver"
+  on the booking screens.
+
+4.4 Permissions
+
+  On first run the app asks for notification permission. Camera, storage
+  and location permissions are requested when the driver opens the proof of
+  delivery, photo or map screens. If a permission is denied, that feature
+  stops working quietly instead of showing an error.
+
+
+-------------------------------------------------------------------------------
+5. HOW AUTHENTICATION WORKS
+-------------------------------------------------------------------------------
+
+  1. The app sends email + password to POST /api/login.
+  2. The backend calls Odoo "common.login" to get the user id (uid), then
+     reads res.users and res.partner to check driver_access.
+  3. The app stores the uid, login and password.
+  4. Every later request sends:
+       - ?uid=<odoo uid>          as a query parameter
+       - login: <email>           as a header
+       - password: <password>     as a header
+  5. Driver read endpoints (FetchDataController) re-check these credentials
+     against Odoo on every request.
+
+  Laravel Sanctum tokens are not used for the driver flow.
+
+
+-------------------------------------------------------------------------------
+6. API ENDPOINTS
+-------------------------------------------------------------------------------
+
+  All routes are under /api. Odoo-backed routes need the uid / login /
+  password described in section 5. List endpoints return:
+
+      { "data": { "transactions": [ ... ] } }
+
+  General
+    GET   /test                                  Health check
+    POST  /login                                 Log in with Odoo account
+    POST  /register                              Register a user
+    GET   /odoo/users                            Get Odoo user info
+
+  Bookings (read)
+    GET   /odoo/booking/today                    Today's assigned bookings
+    GET   /odoo/booking/ongoing                  Bookings in progress
+    GET   /odoo/booking/all-bookings             All active bookings
+    GET   /odoo/booking/history                  Recent history
+    GET   /odoo/booking/all-history              Full history
+    GET   /odoo/booking/transaction_details/{id} Details for one booking
+    GET   /odoo/booking/history_details/{id}     Details for a past booking
+    GET   /odoo/booking/document-requirements/{id}
+                                                 Required documents
+                                                 checklist for POD
+    GET   /odoo/booking/reassignment             Bookings reassigned to or
+                                                 away from the driver
+
+  Bookings (write)
+    POST  /odoo/{transactionId}/status           Change a leg's status
+                                                 (body: requestNumber,
+                                                 requestStatus, timestamp)
+    POST  /odoo/pod-accepted-to-ongoing          Upload first POD
+                                                 (Accepted -> Ongoing)
+    POST  /odoo/pod-ongoing-to-complete          Upload second POD
+                                                 (Ongoing -> Completed)
+    POST  /odoo/notify                           Email shipper/consignee
+
+  POD upload body fields: id, dispatch_type, request_number, timestamp,
+  images, signature, enteredName, enteredContainerNumber, newStatus,
+  documents (optional list for the document checklist).
+
+  Broken routes: these are defined in routes/api.php but their controller
+  methods do not exist, so calling them returns a server error:
+
+    POST  /createTransaction        TransactionController::create
+    POST  /loginDriver              AuthenticationController::loginDriver
+    POST  /logout                   AuthenticationController::logout
+                                    (commented out)
+    PUT   /update                   AuthenticationController::updateProfile
+                                    (commented out)
+    GET   /odoo/history             FetchDataController::getHistory
+    GET   /odoo/reason              FetchDataController::getRejectionReason
+    POST  /odoo/reject-booking      TransactionController::rejectBooking
+    GET   /odoo/reject_vendor       TransactionController::rejectVendor
+
+
+-------------------------------------------------------------------------------
+7. BUSINESS CONCEPTS
+-------------------------------------------------------------------------------
+
+  Booking (dispatch.manager)
+    One Odoo record per booking. A booking can have up to four legs, each
+    with its own request number, status, driver, proof and signature:
+
+      de_   delivery empty
+      pl_   pickup laden
+      dl_   delivery laden
+      pe_   pickup empty
+
+    A driver may be assigned to only some of the legs.
+
+  Leg statuses
+    Assigned -> Accepted -> Ongoing -> Completed
+    A booking can also be Rejected by the driver.
+
+  Freight forwarder bookings (dispatch_type = 'ff')
+    These are left out of the normal driver query, then fetched separately
+    by booking_reference_no and merged back into the list.
+
+  Milestones (dispatch.milestone.history)
+    Each status change writes an actual date/time to a milestone identified
+    by an fcl_code (e.g. TYOT, TEOT, CLOT, GYDT, LCLDT). Some milestones
+    also trigger an Odoo email template to notify the customer.
+
+  Consolidation / backload / diverted
+    Consolidated bookings link an origin and a destination booking through
+    pd.consol.master. When their status changes, the backend updates the
+    consolidation record, both bookings, and the related
+    freight.management stage together.
+
+  Data normalization
+    Odoo returns linked fields as [id, "Name"] and empty values as false.
+    The backend converts these into plain strings before sending them to the
+    app. When adding a new field, add it to both the "fields" list and the
+    "fieldsToString" list in FetchDataController.
+
+
+-------------------------------------------------------------------------------
+8. OFFLINE PROOF OF DELIVERY
+-------------------------------------------------------------------------------
+
+  Drivers often have poor signal, so POD uploads are not lost when they
+  fail:
+
+  1. If a POD upload fails, the request (url, headers, body) is saved in a
+     local Hive box called "pendingPods" (model: PodModel).
+  2. A Workmanager background task ("uploadPendingPodsTask") runs every
+     15 minutes when the phone has internet, even if the app is closed.
+  3. The task retries every saved POD. Successful ones are removed from the
+     box and the driver gets an "Upload Successful" notification.
+
+  Files: lib/models/pod_offline_model.dart,
+         lib/provider/hive_offline_provider.dart,
+         lib/main.dart (callbackDispatch),
+         lib/services/notification_service.dart
+
+  New booking notifications: AssignmentNotificationService compares the
+  driver's current bookings with a saved list of already-seen request
+  numbers and notifies only for new ones. No notifications fire on the
+  very first run.
+
+
+-------------------------------------------------------------------------------
+9. ADDING A NEW FEATURE (CHECKLIST)
+-------------------------------------------------------------------------------
+
+  New backend endpoint
+    1. Add the route in backend/routes/api.php under the /odoo prefix.
+    2. In the controller, call authenticateDriver() first if the endpoint
+       is for drivers.
+    3. Copy the closest existing endpoint's domain, fields and
+       fieldsToString arrays as a starting point.
+    4. Call Odoo with jsonRpcRequest(), not file_get_contents().
+    5. Return { "data": { "transactions": [...] } }.
+
+  New status transition
+    1. Update resolveMilestoneCode / 2 / 3 in TransactionController.
+    2. If an email should go out, add the fcl_code to $fcl_code_email.
+
+  New offline upload type
+    Reuse PodModel if the request looks like a POD. If not, create a new
+    Hive model with an unused typeId and register its adapter in both
+    main() and callbackDispatch() in main.dart.
+
+
+-------------------------------------------------------------------------------
+10. KNOWN ISSUES AND TECH DEBT
+-------------------------------------------------------------------------------
+
+  - Eight routes point to controller methods that don't exist (listed at
+    the end of section 6). Either add the methods or remove the routes.
+  - The backend URL is hardcoded in two frontend files instead of a config
+    file. Both must be changed together.
+  - TransactionController still has its own hardcoded Odoo URL and database
+    properties instead of using $this->odooUrl / $this->odooDb from
+    config/odoo.php.
+  - Some older TransactionController methods call Odoo with
+    file_get_contents() instead of jsonRpcRequest().
+  - TransactionController endpoints only check that uid is present; they do
+    not re-check driver_access the way FetchDataController does.
+  - The driver's Odoo password is sent as a header on every request and is
+    written to the Laravel log in authenticateDriver(). The log line should
+    be removed, and the app should be served over HTTPS in production.
+  - A POD left with isUploading = true after a crash is skipped forever by
+    the background uploader. There is no automatic reset.
+  - The "seen bookings" list for notifications is not separated per driver.
+    Switching drivers on the same phone can carry over old state.
+  - Automated tests are only the Laravel/Flutter defaults; there is no real
+    test coverage.
+
+
+-------------------------------------------------------------------------------
+11. TROUBLESHOOTING
+-------------------------------------------------------------------------------
+
+  App can't connect to the backend
+    - Backend must run with --host=0.0.0.0.
+    - Check that the IP in base_url_provider.dart and auth_service.dart
+      matches your computer's current LAN IP.
+    - Phone and computer must be on the same Wi-Fi/network.
+    - Check Windows Firewall allows port 8000.
+
+  Every /odoo/* request fails
+    - The backend can't reach Odoo. Check VPN / office network and the
+      ODOO_URL value in backend/.env.
+    - Check backend/storage/logs/laravel.log for the error.
+
+  Login works but bookings say "Not a driver"
+    - Set driver_access = true on the user's partner record in Odoo.
+
+  POD uploaded offline but never shows in Odoo
+    - Wait for the 15-minute background task with internet on.
+    - The entry may be stuck with isUploading = true (see section 10).
+
+  App crashes reading a booking field
+    - A new Odoo field was probably added to "fields" but not to
+      "fieldsToString", so the app received [id, "Name"] or false instead
+      of a string.
+
+===============================================================================
