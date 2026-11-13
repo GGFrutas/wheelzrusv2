@@ -19,13 +19,7 @@ use Carbon\Carbon;
 
 class TransactionController extends Controller
 {
-    // protected $url = "http://gsq-ibx-rda:8068";
-    // protected $db = 'rda_beta_new';
-    // // protected $odoo_url = "http://192.168.215.25:8000/odoo/jsonrpc";
-    // protected $odoo_url = "http://gsq-ibx-rda:8068/jsonrpc";
-
-
-
+    
     public function updateStatus(Request $request ,$transactionId)
     {
         // Log::info("Transaction ID is {$transactionId}");
